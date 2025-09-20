@@ -1,0 +1,16 @@
+@page "/test"
+
+<MudText Typo="Typo.h5">MudBlazor Test Page</MudText>
+<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleButtonClick">
+    Click Me
+</MudButton>
+<MudText Class="mt-4">@buttonClickMessage</MudText>
+
+@code {
+    private string buttonClickMessage = "Button not clicked yet.";
+
+    private void HandleButtonClick()
+    {
+        buttonClickMessage = "Button was clicked!";
+    }
+}
