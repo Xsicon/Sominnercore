@@ -1,0 +1,11 @@
+:root {
+    --color-primary: #0d9488;
+    --color-secondary: #f97316;
+    --font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --spacing-unit: 8px;
+}
+
+body {
+    font-family: var(--font-family);
+    margin: 0;
+}

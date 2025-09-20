@@ -1,1 +1,13 @@
 .vs/
+bin/
+obj/
+[Oo]bj/
+[Bb]in/
+.terraform/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.tfstate
+*.tfstate.backup
+*migrations
