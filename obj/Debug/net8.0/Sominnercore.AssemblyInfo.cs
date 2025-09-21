@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+def52d820b9ca93d92f921f04efde6ad90f374fb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+949b8d4114d6f2a61a7ec13e87520786bc11e85f")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
