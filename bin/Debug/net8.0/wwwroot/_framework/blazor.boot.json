@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "Sominnercore",
   "resources": {
-    "hash": "sha256-3iFUfRYLMIAirjffZ0TeLMENK2T7f/UM4T66GFAXgIw=",
+    "hash": "sha256-wVeRVkFwfI9iXGJmT6ISf2SqT3wGNwUkfOnmJtoMAZM=",
     "jsModuleNative": {
       "dotnet.native.8.0.7.37dkch2d2y.js": "sha256-tFsxPBbhkdn6GKNBKvCRLzrfAHdyM86odYTe0MtrwMk="
     },
@@ -208,10 +208,10 @@
       "mscorlib.wasm": "sha256-fLbZiSHBNdpHoh4EgRqMaNP5NQyIK5TEj6AXFLqo8m8=",
       "netstandard.wasm": "sha256-d4xbAE8qrKq5euUoZHPO+jkYPjlCYBzUew45MKsYKic=",
       "System.Private.CoreLib.wasm": "sha256-8yi6NcX1lkNQgV4WKjnMBYIZyKh4P+OXnXVQmgxGZD4=",
-      "Sominnercore.wasm": "sha256-pdJ4NDbScLhKkUhqPqWP9gu3gurxSxI8NjFfLu43a2w="
+      "Sominnercore.wasm": "sha256-jgMA/ofuKQGzzyil12VOCFVQR5RD/gEjY2JvVW7jDh4="
     },
     "pdb": {
-      "Sominnercore.pdb": "sha256-NrGqkczBhwQ19eoOJl+U1WslD1RlYCVWfAlRKp+6rEY="
+      "Sominnercore.pdb": "sha256-N1wqvozLsgbZNr3YGfF1y9LdOniaTdKu3tFwCiZAko0="
     }
   },
   "cacheBootResources": true,

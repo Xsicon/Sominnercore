@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53807a7b1384cae39547fdaac0c8f16df2a0dbdf")]
 [assembly: System.Reflection.AssemblyProductAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Sominnercore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
