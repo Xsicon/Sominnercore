@@ -9,7 +9,7 @@ public class CustomMudTheme : MudTheme
             Primary = "#0d9488",
             Secondary = "#f97316",
             Background = "#FFFFFF",
-            AppbarBackground = "#252525",
+            AppbarBackground = "#0A0A0A",
             AppbarText = "#FFFFFF"
         };
 

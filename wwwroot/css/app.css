@@ -16,3 +16,36 @@ body {
     font-size: 2rem;
     letter-spacing: 0.05em;
 }
+
+/* Header layout tweaks */
+.header-bar {
+    padding: 0 16px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: #C8C8C8;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 16px;
+   
+}
+
+.nav-links a{
+     padding: 5px;
+}
+
+.nav-links a:hover{
+    color: #2dd4bf;
+}
+
+.logo {
+    background: linear-gradient(to right, #0d9488, #f97316);
+    -webkit-background-clip: text; /* For Chrome, Safari */
+    -webkit-text-fill-color: transparent; /* For Chrome, Safari */
+    background-clip: text; /* For Firefox */
+    color: transparent;
+    font-size: 1.5rem;
+    font-weight: bold; /* optional */
+}

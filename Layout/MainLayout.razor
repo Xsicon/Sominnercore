@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <Header />
+
+    <MudMainContent>
+        <div class="p-4">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+
+@code {
+    private MudTheme _theme = new CustomMudTheme();
+}

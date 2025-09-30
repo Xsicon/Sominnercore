@@ -1,0 +1,31 @@
+@using MudBlazor
+
+<MudAppBar Elevation="0" Class="header-bar">
+    <!-- Logo -->
+    <MudText Typo="Typo.h6" Class="logo">
+        Sominnercore
+    </MudText>
+
+    <!-- Center Navigation Links (desktop only) -->
+    <MudSpacer />
+    <MudHidden Breakpoint="Breakpoint.Md">
+        <MudNavMenu Class="nav-links">
+            <MudNavLink Href="#home">Home</MudNavLink>
+            <MudNavLink Href="#services">Services</MudNavLink>
+            <MudNavLink Href="#about">About</MudNavLink>
+            <MudNavLink Href="#portfolio">Portfolio</MudNavLink>
+            <MudNavLink Href="#contact">Contact</MudNavLink>
+        </MudNavMenu>
+    </MudHidden>
+
+    <!-- Right Side -->
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit" Class="mr-2" />
+    <MudText Class="admin-text mr-3">Admin</MudText>
+    <MudButton Class="get-started-btn">Get Started</MudButton>
+
+    <!-- Mobile Hamburger -->
+    <MudHidden Breakpoint="Breakpoint.Md" Invert="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" />
+    </MudHidden>
+</MudAppBar>
