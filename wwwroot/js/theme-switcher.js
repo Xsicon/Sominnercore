@@ -8,32 +8,42 @@ function toggleThemeDropdown() {
 }
 
 function setTheme(theme) {
-    // Remove existing theme classes
-    document.body.classList.remove('light-theme', 'dark-theme', 'system-theme');
-    
-    // Apply new theme
-    if (theme === 'light') {
-        document.body.classList.add('light-theme');
-    } else if (theme === 'dark') {
-        document.body.classList.add('dark-theme');
-    } else if (theme === 'system') {
-        document.body.classList.add('system-theme');
-    }
-    
     // Store theme preference
     localStorage.setItem('theme', theme);
+    
+    // Update the theme icon
+    updateThemeIcon(theme);
     
     // Close dropdown
     const dropdown = document.getElementById('themeDropdown');
     if (dropdown) {
         dropdown.classList.remove('show');
     }
+    
+    // Reload the page to apply the new theme
+    window.location.reload();
 }
+
+function updateThemeIcon(theme) {
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    
+    if (theme === 'light') {
+        if (sunIcon) sunIcon.style.display = 'block';
+        if (moonIcon) moonIcon.style.display = 'none';
+    } else {
+        if (sunIcon) sunIcon.style.display = 'none';
+        if (moonIcon) moonIcon.style.display = 'block';
+    }
+}
+
+// Make the function globally accessible for Blazor
+window.updateThemeIcon = updateThemeIcon;
 
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
+    updateThemeIcon(savedTheme);
 });
 
 // Close dropdown when clicking outside

@@ -9,8 +9,21 @@ public class CustomMudTheme : MudTheme
             Primary = "#0d9488",
             Secondary = "#f97316",
             Background = "#FFFFFF",
-            AppbarBackground = "#0A0A0A",
-            AppbarText = "#FFFFFF"
+            AppbarBackground = "#FFFFFF",
+            AppbarText = "#1e293b",
+            TextPrimary = "#1e293b",
+            TextSecondary = "#64748b"
+        };
+
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#0d9488",
+            Secondary = "#f97316",
+            Background = "#000000",
+            AppbarBackground = "#000000",
+            AppbarText = "#ffffff",
+            TextPrimary = "#ffffff",
+            TextSecondary = "#cccccc"
         };
 
         Typography = new Typography()
