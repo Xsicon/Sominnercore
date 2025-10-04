@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+
+<MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout Style="@($"background-color:{(_isDarkMode ? _theme.PaletteDark.Background : _theme.PaletteLight.Background)}")">
+    <Header OnThemeChanged="OnThemeChanged" />
+
+    <MudMainContent Style="@($"background-color:{(_isDarkMode ? _theme.PaletteDark.Background : _theme.PaletteLight.Background)}")">
+        <div class="p-4">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+
+@code {
+    private MudTheme _theme = new CustomMudTheme();
+    private bool _isDarkMode = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var savedTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            if (savedTheme == "light")
+            {
+                _isDarkMode = false;
+                StateHasChanged();
+            }
+            
+            // Update the theme icon after the page loads
+            await JSRuntime.InvokeVoidAsync("updateThemeIcon", savedTheme ?? "dark");
+        }
+    }
+
+    private async Task OnThemeChanged(string theme)
+    {
+        _isDarkMode = theme == "dark";
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", theme);
+        StateHasChanged();
+    }
+}
