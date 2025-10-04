@@ -35,6 +35,8 @@ body {
     align-items: center;
     width: 100%;
     height: 64px;
+    overflow: visible;
+    flex-wrap: nowrap;
 }
 
 .nav-links {
@@ -148,13 +150,13 @@ body {
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     min-width: 160px;
-    z-index: 1000;
+    z-index: 9999;
     opacity: 0;
     visibility: hidden;
     transform: translateY(-8px) scale(0.95);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin-top: 8px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .theme-dropdown.show {
@@ -215,39 +217,476 @@ body.dark-theme .theme-option:hover {
     color: #2DD4BF;
 }
 
-/* Mobile hamburger button improvements */
-.mud-icon-button {
+/* Mobile hamburger button - ensure it's visible */
+.mobile-hamburger-container {
+    display: none; /* Hidden by default */
+}
+
+.mobile-hamburger {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: var(--text-primary) !important;
     transition: all 0.2s ease;
 }
 
-.mud-icon-button:hover {
-    color: #2DD4BF;
-    background-color: rgba(45, 212, 191, 0.1);
+.mobile-hamburger:hover {
+    color: #2DD4BF !important;
+    background-color: rgba(45, 212, 191, 0.1) !important;
     transform: translateY(-1px);
 }
 
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .header-content {
-        padding: 0 16px;
+/* Show hamburger menu only on mobile screens (not tablets) */
+@media (max-width: 640px) {
+    .mobile-hamburger-container {
+        display: flex !important;
+        visibility: visible !important;
     }
     
-    .nav-links {
-        gap: 16px;
+    .mobile-hamburger {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        padding: 6px;
+    }
+}
+
+/* Mobile Navigation Menu */
+.mobile-menu-wrapper {
+    position: relative;
+    width: 100%;
+    display: none; /* Hidden by default */
+}
+
+.mobile-nav-collapse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--header-bg);
+    border-top: 1px solid var(--header-border);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Show mobile menu wrapper only on mobile screens (not tablets) */
+@media (max-width: 640px) {
+    .mobile-menu-wrapper {
+        display: block !important;
+        visibility: visible !important;
+    }
+}
+
+.mobile-nav-menu {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mobile-nav-link {
+    padding: 12px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mobile-nav-link:hover {
+    background-color: var(--hover-bg);
+    color: #2DD4BF;
+    transform: translateX(4px);
+}
+
+/* Debug: Ensure mobile menu content is visible when expanded */
+.mud-collapse-expanded .mobile-nav-menu {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.mud-collapse-expanded .mobile-nav-link {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Debug: Make sure mobile menu is visible when open */
+.mobile-nav-collapse.mud-collapse-expanded {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure hamburger menu is visible on mobile */
+@media (max-width: 768px) {
+    .mud-icon-button {
+        padding: 6px;
+    }
+    
+    .mobile-nav-menu {
+        padding: 12px 20px;
+    }
+    
+    .mobile-nav-link {
+        padding: 10px 14px;
+        font-size: 15px;
     }
 }
 
 @media (max-width: 480px) {
+    .mud-icon-button {
+        padding: 4px;
+    }
+    
+    .mobile-nav-menu {
+        padding: 10px 16px;
+    }
+    
+    .mobile-nav-link {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1024px) {
     .header-content {
-        padding: 0 12px;
+        padding: 0 20px;
+    }
+    
+    .nav-links {
+        gap: 16px;
+        font-size: 14px;
     }
     
     .logo {
-        font-size: 1.5rem;
+        font-size: 1.6rem;
+    }
+}
+
+/* Tablet portrait optimization (810x1080) */
+@media (max-width: 810px) and (min-width: 769px) {
+    .header-content {
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    
+    .nav-links {
+        gap: 10px;
+        font-size: 12px;
+    }
+    
+    .logo {
+        font-size: 1.3rem;
+    }
+    
+    .admin-button {
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+        margin-right: 6px;
+    }
+    
+    .get-started-btn {
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 4px;
+    }
+    
+    .theme-switch-btn {
+        padding: 3px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* Tablet optimization - ensure all elements fit */
+@media (max-width: 768px) and (min-width: 641px) {
+    .header-content {
+        padding: 0 16px;
+        justify-content: space-between;
     }
     
     .nav-links {
         gap: 12px;
-        font-size: 14px;
+        font-size: 13px;
+    }
+    
+    .logo {
+        font-size: 1.4rem;
+    }
+    
+    .admin-button {
+        font-size: 11px !important;
+        padding: 5px 8px !important;
+        margin-right: 8px;
+    }
+    
+    .get-started-btn {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 6px;
+    }
+    
+    .theme-switch-btn {
+        padding: 4px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-content {
+        padding: 0 16px;
+        justify-content: space-between;
+    }
+    
+    .nav-links {
+        display: none; /* Hide desktop nav on mobile */
+    }
+    
+    .logo {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .admin-button {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+        margin-right: 8px;
+    }
+    
+    .get-started-btn {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 8px;
+        flex-shrink: 0;
+    }
+    
+    /* Ensure hamburger menu is visible */
+    .mud-icon-button {
+        display: flex !important;
+        flex-shrink: 0;
+    }
+    
+    /* Hide only the center spacer, keep others for layout */
+    .header-content .mud-spacer:nth-child(2) {
+        display: none;
+    }
+    
+    /* Debug: Force hamburger menu visibility */
+    .mud-icon-button {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        padding: 6px;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-content {
+        padding: 0 12px;
+        justify-content: space-between;
+    }
+    
+    .logo {
+        font-size: 1.4rem;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 6px;
+    }
+    
+    .theme-switch-btn {
+        padding: 4px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 480px) and (min-width: 376px) {
+    .header-content {
+        padding: 0 8px;
+        height: 56px;
+        justify-content: space-between;
+    }
+    
+    .header-bar {
+        min-height: 56px;
+    }
+    
+    .logo {
+        font-size: 1.3rem;
+    }
+    
+    .admin-button {
+        font-size: 10px !important;
+        padding: 4px 8px !important;
+        margin-right: 8px;
+    }
+    
+    .get-started-btn {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 4px;
+    }
+    
+    .theme-switch-btn {
+        padding: 3px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    .theme-dropdown {
+        min-width: 140px;
+        right: -10px;
+    }
+    
+    .theme-option {
+        padding: 12px 14px;
+        font-size: 13px;
+    }
+}
+
+/* iPhone X/11/12 screens (375x812) - specific sizing */
+@media (max-width: 375px) and (min-width: 360px) {
+    .header-content {
+        padding: 0 6px;
+        height: 56px;
+        justify-content: space-between;
+    }
+    
+    .logo {
+        font-size: 1.2rem;
+    }
+    
+    .admin-button {
+        font-size: 8px !important;
+        padding: 2px 4px !important;
+        margin-right: 4px;
+    }
+    
+    .get-started-btn {
+        font-size: 8px !important;
+        padding: 3px 6px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 8px !important;
+        padding: 3px 6px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 4px;
+    }
+    
+    .theme-switch-btn {
+        padding: 3px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 360px) {
+    .header-content {
+        padding: 0 6px;
+        justify-content: space-between;
+    }
+    
+    .logo {
+        font-size: 1.2rem;
+    }
+    
+    .admin-button {
+        font-size: 8px !important;
+        padding: 2px 4px !important;
+        margin-right: 4px;
+    }
+    
+    .get-started-btn {
+        font-size: 9px !important;
+        padding: 4px 8px !important;
+    }
+    
+    .mud-button.get-started-btn {
+        font-size: 9px !important;
+        padding: 4px 8px !important;
+    }
+    
+    .theme-switcher-container {
+        margin-right: 2px;
+    }
+    
+    .theme-switch-btn svg {
+        width: 12px;
+        height: 12px;
     }
 }

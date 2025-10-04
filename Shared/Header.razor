@@ -2,6 +2,13 @@
 
 @code {
     [Parameter] public EventCallback<string> OnThemeChanged { get; set; }
+    private bool _mobileMenuOpen = false;
+    
+    private void ToggleMobileMenu()
+    {
+        _mobileMenuOpen = !_mobileMenuOpen;
+        StateHasChanged(); // Force UI update
+    }
 }
 
 <MudAppBar Elevation="0" Class="header-bar">
@@ -65,8 +72,24 @@
         <MudButton Class="get-started-btn">Get Started</MudButton>
 
         <!-- Mobile Hamburger -->
-        <MudHidden Breakpoint="Breakpoint.Md" Invert="true">
-            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" />
-        </MudHidden>
+        <div class="mobile-hamburger-container">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="ToggleMobileMenu" Class="mobile-hamburger" />
+        </div>
     </div>
 </MudAppBar>
+
+<!-- Mobile Navigation Menu (Outside AppBar) -->
+<div class="mobile-menu-wrapper">
+    @if (_mobileMenuOpen)
+    {
+        <div class="mobile-nav-collapse">
+            <div class="mobile-nav-menu">
+                <MudNavLink Href="#home" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Home</MudNavLink>
+                <MudNavLink Href="#services" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Services</MudNavLink>
+                <MudNavLink Href="#about" Class="mobile-nav-link" OnClick="ToggleMobileMenu">About</MudNavLink>
+                <MudNavLink Href="#portfolio" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Portfolio</MudNavLink>
+                <MudNavLink Href="#contact" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Contact</MudNavLink>
+            </div>
+        </div>
+    }
+</div>
