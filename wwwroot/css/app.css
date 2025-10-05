@@ -22,8 +22,18 @@ body {
     padding: 0;
     min-height: 64px;
     backdrop-filter: blur(10px);
-    background: rgba(10, 10, 10, 0.95);
+    background: rgba(10, 10, 10, 0.7) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Override MudBlazor AppBar background */
+.mud-appbar.header-bar {
+    background: rgba(10, 10, 10, 0.7) !important;
+}
+
+/* Additional specificity for MudBlazor theme override */
+.mud-appbar.mud-elevation-0.header-bar {
+    background: rgba(10, 10, 10, 0.7) !important;
 }
 
 /* Header content container */
@@ -698,7 +708,7 @@ body.dark-theme .theme-option:hover {
     min-height: 100vh;
     background: #090F0E;
     color: var(--text-primary);
-    overflow: hidden;
+    overflow: visible;
     width: 100vw;
     margin-left: calc(-50vw + 50%);
     margin-right: calc(-50vw + 50%);
@@ -707,6 +717,7 @@ body.dark-theme .theme-option:hover {
 .hero-content {
     flex: 1;
     padding: 60px 40px;
+    padding-top: calc(20px + 64px); /* Reduced padding + header height */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -968,10 +979,12 @@ body.dark-theme .theme-option:hover {
     .hero-container {
         flex-direction: column;
         min-height: auto;
+        overflow: visible;
     }
     
     .hero-content {
         padding: 60px 40px;
+        padding-top: calc(20px + 64px); /* Reduced padding + header height */
     }
     
     .hero-image {
@@ -989,8 +1002,14 @@ body.dark-theme .theme-option:hover {
 }
 
 @media (max-width: 768px) {
+    .hero-container {
+        overflow: visible;
+        min-height: auto;
+    }
+    
     .hero-content {
         padding: 40px 24px;
+        padding-top: calc(16px + 64px); /* Reduced padding + header height */
     }
     
     .hero-title {
@@ -1007,12 +1026,23 @@ body.dark-theme .theme-option:hover {
     }
     
     .hero-stats {
-        flex-direction: column;
-        gap: 24px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding-top: 1.5rem;
     }
     
     .stat-number {
-        font-size: 2rem;
+        font-size: 1.75rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    .hero-image {
+        padding: 30px 20px;
+        min-height: 350px;
     }
     
     .hero-image-container {
@@ -1022,8 +1052,14 @@ body.dark-theme .theme-option:hover {
 }
 
 @media (max-width: 480px) {
+    .hero-container {
+        overflow: visible;
+        min-height: auto;
+    }
+    
     .hero-content {
         padding: 32px 16px;
+        padding-top: calc(12px + 64px); /* Reduced padding + header height */
     }
     
     .hero-title {
@@ -1040,8 +1076,99 @@ body.dark-theme .theme-option:hover {
         font-size: 14px !important;
     }
     
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding-top: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+    
+    .hero-image {
+        padding: 20px 16px;
+        min-height: 300px;
+    }
+    
     .hero-image-container {
         width: 300px;
         height: 300px;
+    }
+}
+
+/* Specific optimization for 375x667 screens (iPhone SE/8) */
+@media (max-width: 375px) and (min-height: 600px) {
+    .hero-container {
+        overflow: visible;
+        min-height: auto;
+        padding-top: 0;
+    }
+    
+    .hero-content {
+        padding: 24px 12px;
+        padding-top: calc(8px + 56px); /* Minimal padding + smaller header height */
+    }
+    
+    .hero-title {
+        font-size: 1.75rem;
+        line-height: 1.2;
+    }
+    
+    .hero-description {
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+    
+    .hero-buttons {
+        gap: 10px;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        padding: 10px 20px !important;
+        font-size: 13px !important;
+    }
+    
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding-top: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+    }
+    
+    .hero-image {
+        padding: 16px 12px;
+        min-height: 280px;
+    }
+    
+    .hero-image-container {
+        width: 280px;
+        height: 280px;
+    }
+    
+    .trusted-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .project-badge {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        top: 20px;
+        left: 20px;
     }
 }
