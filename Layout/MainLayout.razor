@@ -9,7 +9,7 @@
     <Header OnThemeChanged="OnThemeChanged" />
 
     <MudMainContent Style="@($"background-color:{(_isDarkMode ? _theme.PaletteDark.Background : _theme.PaletteLight.Background)}")">
-        <div class="p-4">
+        <div>
             @Body
         </div>
     </MudMainContent>
@@ -33,6 +33,8 @@
             
             // Update the theme icon after the page loads
             await JSRuntime.InvokeVoidAsync("updateThemeIcon", savedTheme ?? "dark");
+            // Update the body theme class
+            await JSRuntime.InvokeVoidAsync("updateBodyTheme", savedTheme ?? "dark");
         }
     }
 
@@ -40,6 +42,7 @@
     {
         _isDarkMode = theme == "dark";
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", theme);
+        await JSRuntime.InvokeVoidAsync("updateBodyTheme", theme);
         StateHasChanged();
     }
 }

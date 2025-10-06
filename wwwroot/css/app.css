@@ -1,7 +1,45 @@
+/* CSS Custom Properties for Theme Support */
+:root {
+    --bg-primary: #090F0E;
+    --bg-secondary: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: #292929;
+    --header-bg: rgba(10, 10, 10, 0.7);
+    --header-border: rgba(255, 255, 255, 0.1);
+    --dropdown-bg: rgba(10, 10, 10, 0.95);
+    --dropdown-border: rgba(255, 255, 255, 0.1);
+    --dropdown-text: #E5E7EB;
+    --dropdown-hover-bg: rgba(45, 212, 191, 0.1);
+    --dropdown-hover-text: #2DD4BF;
+    --mobile-menu-bg: rgba(10, 10, 10, 0.95);
+    --mobile-menu-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme overrides */
+body:not(.dark-theme) {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --header-bg: rgba(255, 255, 255, 0.9);
+    --header-border: rgba(0, 0, 0, 0.1);
+    --dropdown-bg: rgba(255, 255, 255, 0.95);
+    --dropdown-border: rgba(0, 0, 0, 0.1);
+    --dropdown-text: #374151;
+    --dropdown-hover-bg: rgba(45, 212, 191, 0.08);
+    --dropdown-hover-text: #0d9488;
+    --mobile-menu-bg: rgba(255, 255, 255, 0.95);
+    --mobile-menu-border: rgba(0, 0, 0, 0.1);
+}
+
 html, body {
     height: 100%;
     margin: 0;
     transition: background-color 0.3s ease, color 0.3s ease;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 body {
@@ -22,18 +60,18 @@ body {
     padding: 0;
     min-height: 64px;
     backdrop-filter: blur(10px);
-    background: rgba(10, 10, 10, 0.7) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--header-bg) !important;
+    border-bottom: 1px solid var(--header-border);
 }
 
 /* Override MudBlazor AppBar background */
 .mud-appbar.header-bar {
-    background: rgba(10, 10, 10, 0.7) !important;
+    background: var(--header-bg) !important;
 }
 
 /* Additional specificity for MudBlazor theme override */
 .mud-appbar.mud-elevation-0.header-bar {
-    background: rgba(10, 10, 10, 0.7) !important;
+    background: var(--header-bg) !important;
 }
 
 /* Header content container */
@@ -58,6 +96,7 @@ body {
     font-weight: 500;
     letter-spacing: -0.01em;
     transition: color 0.3s ease;
+    color: var(--text-primary);
 }
 
 .nav-links a {
@@ -66,6 +105,7 @@ body {
     transition: all 0.2s ease;
     text-decoration: none;
     position: relative;
+    color: var(--text-primary);
 }
 
 .nav-links a:hover {
@@ -98,11 +138,12 @@ body {
     box-shadow: none;
     padding: 8px 12px;
     transition: color 0.3s ease;
+    color: var(--text-secondary);
 }
 
 .mud-button.admin-button:hover {
     background: rgba(156, 156, 156, 0.1);
-    color: #9C9C9C;
+    color: var(--text-secondary);
 }
 
 /* Get Started button improvements - using more specific selectors */
@@ -154,9 +195,9 @@ body {
     position: absolute;
     top: 100%;
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--dropdown-bg);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--dropdown-border);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     min-width: 160px;
@@ -181,11 +222,11 @@ body {
     padding: 14px 18px;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: #374151;
+    color: var(--dropdown-text);
     font-size: 14px;
     font-weight: 500;
     gap: 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--dropdown-border);
 }
 
 .theme-option:last-child {
@@ -193,8 +234,8 @@ body {
 }
 
 .theme-option:hover {
-    background-color: rgba(45, 212, 191, 0.08);
-    color: #0d9488;
+    background-color: var(--dropdown-hover-bg);
+    color: var(--dropdown-hover-text);
     transform: translateX(4px);
 }
 
@@ -210,22 +251,7 @@ body {
     border-radius: 8px;
 }
 
-/* Dark theme styles */
-body.dark-theme .theme-dropdown {
-    background: rgba(10, 10, 10, 0.95);
-    backdrop-filter: blur(20px);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .theme-option {
-    color: #E5E7EB;
-    border-bottom-color: rgba(255, 255, 255, 0.05);
-}
-
-body.dark-theme .theme-option:hover {
-    background-color: rgba(45, 212, 191, 0.1);
-    color: #2DD4BF;
-}
+/* Theme styles are now handled by CSS variables above */
 
 /* Mobile hamburger button - ensure it's visible */
 .mobile-hamburger-container {
@@ -277,8 +303,8 @@ body.dark-theme .theme-option:hover {
     top: 64px; /* Position below the header */
     left: 0;
     right: 0;
-    background: rgba(10, 10, 10, 0.95);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--mobile-menu-bg);
+    border-top: 1px solid var(--mobile-menu-border);
     backdrop-filter: blur(10px);
     z-index: 1001;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -340,7 +366,7 @@ body.dark-theme .theme-option:hover {
     text-decoration: none;
     font-size: 16px;
     font-weight: 500;
-    color: #ffffff !important;
+    color: var(--text-primary) !important;
     background: transparent;
     border: none;
     width: 100%;
@@ -361,7 +387,7 @@ body.dark-theme .theme-option:hover {
 .mobile-get-started-container {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--mobile-menu-border);
 }
 
 .mobile-get-started-btn {
@@ -769,7 +795,7 @@ body.dark-theme .theme-option:hover {
 .hero-container {
     display: flex;
     min-height: 100vh;
-    background: #090F0E;
+    background: var(--bg-primary);
     color: var(--text-primary);
     overflow: visible;
     width: 100vw;
@@ -784,7 +810,7 @@ body.dark-theme .theme-option:hover {
     display: flex;
     flex-direction: column;
     justify-content: flex-start; /* Changed from center to flex-start */
-    background: #090F0E;
+    background: var(--bg-primary);
     position: relative;
     min-height: calc(100vh - 64px); /* Original desktop min-height */
 }
@@ -808,12 +834,12 @@ body.dark-theme .theme-option:hover {
     display: inline-flex;
     align-items: center;
     padding: 0.5rem 1rem; /* px-4 py-2 = 16px 8px */
-    background-color: #000; /* bg-background/60 */
+    background-color: var(--bg-secondary); /* bg-background/60 */
     backdrop-filter: blur(4px); /* backdrop-blur-sm */
     border-radius: 9999px; /* rounded-full */
-    border: 1px solid #292929;
+    border: 1px solid var(--border-color);
     font-size: 0.875rem; /* text-sm = 14px */
-    color: rgba(var(--text-primary), 0.8); /* text-foreground/80 */
+    color: var(--text-primary); /* text-foreground/80 */
     width: fit-content;
 }
 
@@ -862,7 +888,7 @@ body.dark-theme .theme-option:hover {
 .hero-description {
     font-size: 1.25rem; /* text-xl = 20px */
     line-height: 1.6;
-    color: rgba(var(--text-primary), 0.7); /* text-foreground/70 */
+    color: var(--text-secondary); /* text-foreground/70 */
     margin: 0;
     max-width: 32rem; /* max-w-lg = 512px */
 }
@@ -978,13 +1004,12 @@ body.dark-theme .theme-option:hover {
 
 .stat-label {
     font-size: 0.875rem; /* text-sm = 14px */
-    color: rgba(var(--text-primary), 0.6); /* text-foreground/60 */
+    color: var(--text-secondary); /* text-foreground/60 */
     font-weight: 500;
 }
 
 .hero-image {
     flex: 1;
-    background: var(--bg-secondary);
     position: relative;
     display: flex;
     align-items: center;
@@ -1000,14 +1025,14 @@ body.dark-theme .theme-option:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-secondary);
     padding: 8px 16px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     z-index: 10;
 }
 
