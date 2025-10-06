@@ -79,7 +79,7 @@
 </MudAppBar>
 
 <!-- Mobile Navigation Menu (Outside AppBar) -->
-<div class="mobile-menu-wrapper">
+<div class="mobile-menu-wrapper @(_mobileMenuOpen ? "show" : "")">
     @if (_mobileMenuOpen)
     {
         <div class="mobile-nav-collapse">
@@ -89,6 +89,13 @@
                 <MudNavLink Href="#about" Class="mobile-nav-link" OnClick="ToggleMobileMenu">About</MudNavLink>
                 <MudNavLink Href="#portfolio" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Portfolio</MudNavLink>
                 <MudNavLink Href="#contact" Class="mobile-nav-link" OnClick="ToggleMobileMenu">Contact</MudNavLink>
+                
+                <!-- Mobile Get Started Button -->
+                <div class="mobile-get-started-container">
+                    <MudButton Class="mobile-get-started-btn" Variant="Variant.Filled" Size="Size.Medium" OnClick="ToggleMobileMenu">
+                        Get Started
+                    </MudButton>
+                </div>
             </div>
         </div>
     }
