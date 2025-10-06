@@ -14,6 +14,9 @@ function setTheme(theme) {
     // Update the theme icon
     updateThemeIcon(theme);
     
+    // Update body class for CSS variables
+    updateBodyTheme(theme);
+    
     // Close dropdown
     const dropdown = document.getElementById('themeDropdown');
     if (dropdown) {
@@ -37,13 +40,24 @@ function updateThemeIcon(theme) {
     }
 }
 
-// Make the function globally accessible for Blazor
+function updateBodyTheme(theme) {
+    const body = document.body;
+    if (theme === 'light') {
+        body.classList.remove('dark-theme');
+    } else {
+        body.classList.add('dark-theme');
+    }
+}
+
+// Make the functions globally accessible for Blazor
 window.updateThemeIcon = updateThemeIcon;
+window.updateBodyTheme = updateBodyTheme;
 
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     updateThemeIcon(savedTheme);
+    updateBodyTheme(savedTheme);
 });
 
 // Close dropdown when clicking outside
