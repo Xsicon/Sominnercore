@@ -21,6 +21,9 @@
     --brand-teal-950: 13, 148, 136;
     --brand-orange-50: #fff7ed;
     --brand-orange-950: 249, 115, 22;
+    
+    /* Section Background Colors */
+    --section-bg-dark: #111;
 }
 
 /* Light theme overrides */
@@ -1467,7 +1470,7 @@ body.dark-theme .hero-blob {
 
 /* Services Component Styles */
 .services-container {
-    background-color: var(--bg-primary);
+    background-color: var(--section-bg-dark);
     color: var(--text-primary);
     padding: 40px 60px 80px 60px;
     width: 100%;
@@ -1734,5 +1737,307 @@ body.dark-theme .hero-blob {
     
     .cta-title {
         font-size: 1.6rem;
+    }
+}
+
+/* About Us Section Styles */
+.about-us-container {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 40px 0;
+}
+
+/* About Us Header */
+.about-us-header {
+    text-align: center;
+    margin-bottom: 60px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 24px;
+}
+
+.about-us-label {
+    display: inline-block;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.about-us-title {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 20px 0;
+    line-height: 1.2;
+}
+
+.about-main-section {
+/*    max-width: 1200px;*/
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.about-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+    margin-bottom: 80px;
+}
+
+.about-left-content {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.about-text-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.about-description {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.why-choose-section {
+    margin-top: 20px;
+}
+
+.why-choose-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 24px 0;
+    color: var(--text-primary);
+}
+
+.why-choose-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.why-choose-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.check-icon {
+    color: var(--accent-color);
+    font-size: 1.25rem;
+}
+
+.about-right-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.about-image-container {
+    width: 100%;
+    max-width: 700px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.about-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+}
+
+/* Statistics Section */
+.about-stats-section {
+    background-color: var(--bg-secondary);
+    padding: 60px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(249, 115, 22, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
+    font-size: 1.5rem;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.stat-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Core Values Section */
+.core-values-section {
+    background-color: var(--bg-primary);
+    padding: 80px 0;
+}
+
+.core-values-container {
+/*    max-width: 1200px;*/
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.core-values-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 60px 0;
+    color: var(--text-primary);
+}
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+}
+
+.value-card {
+    background-color: var(--bg-secondary);
+    padding: 32px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.value-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.value-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+}
+
+.value-description {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Responsive Design for About Us */
+@media (max-width: 1024px) {
+    .about-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+    
+    .about-us-title {
+        font-size: 2.5rem;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+    }
+    
+    .values-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .about-us-container {
+        padding: 60px 0;
+    }
+    
+    .about-us-header {
+        padding: 0 16px;
+        margin-bottom: 40px;
+    }
+    
+    .about-us-title {
+        font-size: 2rem;
+    }
+    
+    .about-main-section {
+        padding: 0 16px;
+    }
+    
+    .about-content {
+        gap: 32px;
+        margin-bottom: 60px;
+    }
+    
+    .about-description {
+        font-size: 1rem;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 0 16px;
+    }
+    
+    .core-values-container {
+        padding: 0 16px;
+    }
+    
+    .core-values-title {
+        font-size: 2rem;
+        margin-bottom: 40px;
+    }
+    
+    .value-card {
+        padding: 24px;
     }
 }
