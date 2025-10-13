@@ -1,0 +1,178 @@
+@using MudBlazor
+
+<div id="portfolio" class="portfolio-section">
+    <div class="portfolio-container">
+        <!-- Header Section -->
+        <div class="portfolio-header">
+            <MudChip T="string" Class="portfolio-badge" Color="Color.Dark" Variant="Variant.Outlined">
+                Our Work
+            </MudChip>
+            <MudText Typo="Typo.h2" Class="portfolio-title">
+                Featured <span class="portfolio-subtitle">Projects</span>
+            </MudText>
+            <MudText Typo="Typo.body1" Class="portfolio-description">
+                Explore our portfolio of successful projects that showcase our expertise and commitment to excellence.
+            </MudText>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="portfolio-filters">
+            <MudChip T="string" Class="@GetFilterClass("All")" 
+                     Color="@GetFilterColor("All")" 
+                     Variant="@GetFilterVariant("All")" 
+                     OnClick="@(() => SetActiveFilter("All"))">
+                All
+            </MudChip>
+            <MudChip T="string" Class="@GetFilterClass("Web Development")" 
+                     Color="@GetFilterColor("Web Development")" 
+                     Variant="@GetFilterVariant("Web Development")" 
+                     OnClick="@(() => SetActiveFilter("Web Development"))">
+                Web Development
+            </MudChip>
+            <MudChip T="string" Class="@GetFilterClass("Mobile Development")" 
+                     Color="@GetFilterColor("Mobile Development")" 
+                     Variant="@GetFilterVariant("Mobile Development")" 
+                     OnClick="@(() => SetActiveFilter("Mobile Development"))">
+                Mobile Development
+            </MudChip>
+            <MudChip T="string" Class="@GetFilterClass("Custom Software")" 
+                     Color="@GetFilterColor("Custom Software")" 
+                     Variant="@GetFilterVariant("Custom Software")" 
+                     OnClick="@(() => SetActiveFilter("Custom Software"))">
+                Custom Software
+            </MudChip>
+            <MudChip T="string" Class="@GetFilterClass("Data Analytics")" 
+                     Color="@GetFilterColor("Data Analytics")" 
+                     Variant="@GetFilterVariant("Data Analytics")" 
+                     OnClick="@(() => SetActiveFilter("Data Analytics"))">
+                Data Analytics
+            </MudChip>
+            <MudChip T="string" Class="@GetFilterClass("EdTech")" 
+                     Color="@GetFilterColor("EdTech")" 
+                     Variant="@GetFilterVariant("EdTech")" 
+                     OnClick="@(() => SetActiveFilter("EdTech"))">
+                EdTech
+            </MudChip>
+        </div>
+
+        <!-- Portfolio Grid -->
+        <div class="portfolio-grid">
+            @foreach (var project in FilteredProjects)
+            {
+                <div class="portfolio-card">
+                    <div class="portfolio-card-image">
+                        <img src="/images/portfolio.jpg" alt="@project.Title" />
+                    </div>
+                    <div class="portfolio-card-content">
+                        <MudChip T="string" Class="project-category" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small">
+                            @project.Category
+                        </MudChip>
+                        <MudText Typo="Typo.h6" Class="project-title">@project.Title</MudText>
+                        <MudText Typo="Typo.body2" Class="project-description">@project.Description</MudText>
+                        <div class="project-technologies">
+                            @foreach (var tech in project.Technologies)
+                            {
+                                <MudChip T="string" Class="tech-chip" Color="Color.Dark" Variant="Variant.Outlined" Size="Size.Small">
+                                    @tech
+                                </MudChip>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Call to Action Section -->
+        <div class="portfolio-cta">
+            <MudText Typo="Typo.h4" Class="cta-title">Have a Project in Mind?</MudText>
+            <MudText Typo="Typo.body1" Class="cta-description">
+                Let's bring your vision to life. Contact us to discuss your project requirements and get a personalized proposal.
+            </MudText>
+            <MudButton Class="cta-button" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large">
+                Start Your Project
+            </MudButton>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string activeFilter = "All";
+    
+    private List<Project> projects = new List<Project>
+    {
+        new Project
+        {
+            Title = "FinTech Payment Platform",
+            Category = "Web Development",
+            Description = "Secure payment processing platform with real-time transactions and comprehensive analytics dashboard.",
+            Technologies = new List<string> { "React", "Node.js", "PostgreSQL", "AWS" }
+        },
+        new Project
+        {
+            Title = "E-commerce Mobile App",
+            Category = "Mobile Development",
+            Description = "Cross-platform mobile application with seamless shopping experience and integrated payment gateway.",
+            Technologies = new List<string> { "React Native", "Firebase", "Stripe", "Redux" }
+        },
+        new Project
+        {
+            Title = "Healthcare Management System",
+            Category = "Custom Software",
+            Description = "Comprehensive healthcare management platform with patient records, appointment scheduling, and telemedicine.",
+            Technologies = new List<string> { "Vue.js", "Django", "MongoDB", "Docker" }
+        },
+        new Project
+        {
+            Title = "AI-Powered Analytics Dashboard",
+            Category = "Data Analytics",
+            Description = "Business intelligence platform with machine learning capabilities for predictive analytics and insights.",
+            Technologies = new List<string> { "Python", "TensorFlow", "D3.js", "FastAPI" }
+        },
+        new Project
+        {
+            Title = "Real Estate Platform",
+            Category = "Web Development",
+            Description = "Property listing and management platform with virtual tours and advanced search capabilities.",
+            Technologies = new List<string> { "Next.js", "GraphQL", "Prisma", "Stripe" }
+        },
+        new Project
+        {
+            Title = "EdTech Learning Platform",
+            Category = "EdTech",
+            Description = "Interactive learning management system with video streaming, progress tracking, and certification.",
+            Technologies = new List<string> { "Angular", "Express.js", "MySQL", "Socket.io" }
+        }
+    };
+
+    private IEnumerable<Project> FilteredProjects => 
+        activeFilter == "All" ? projects : projects.Where(p => p.Category == activeFilter);
+
+    private void SetActiveFilter(string filter)
+    {
+        activeFilter = filter;
+        StateHasChanged();
+    }
+
+    private string GetFilterClass(string filter)
+    {
+        return activeFilter == filter ? "filter-chip active" : "filter-chip";
+    }
+
+    private Color GetFilterColor(string filter)
+    {
+        return activeFilter == filter ? Color.Primary : Color.Dark;
+    }
+
+    private Variant GetFilterVariant(string filter)
+    {
+        return activeFilter == filter ? Variant.Filled : Variant.Outlined;
+    }
+
+    public class Project
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public List<string> Technologies { get; set; } = new List<string>();
+    }
+}
