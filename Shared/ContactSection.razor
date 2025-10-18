@@ -1,0 +1,265 @@
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JSRuntime
+
+<!-- Let's Start Building Section -->
+<div class="contact-hero-section">
+    <div class="container">
+        <div class="contact-hero-content">
+            <MudButton Class="get-in-touch-btn" Variant="Variant.Filled" Size="Size.Small">
+                Get In Touch
+            </MudButton>
+            <h1 class="contact-hero-title">Let's Start Building</h1>
+            <p class="contact-hero-subtitle">
+                Ready to transform your ideas into reality? Contact us today to discuss your project and get a free consultation.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Main Contact Section -->
+<div id="contact" class="contact-main-section">
+    <div class="container">
+        <MudGrid>
+            <!-- Left Column - Contact Info -->
+            <MudItem xs="12" md="6">
+                <div class="contact-info-section">
+                    <h2 class="contact-section-title">Get in Touch</h2>
+                    <p class="contact-intro-text">
+                        We'd love to hear from you. Whether you have a question about our services, need a custom solution, or just want to say hello, we're here to help.
+                    </p>
+
+                    <!-- Contact Methods Grid -->
+                    <MudGrid Class="contact-methods-grid">
+                        <!-- Email Us -->
+                        <MudItem xs="12" sm="6">
+                            <div class="contact-method-card">
+                                <div class="contact-icon email-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Medium" />
+                                </div>
+                                <h3 class="contact-method-title">Email Us</h3>
+                                <p class="contact-method-description">Send us an email and we'll respond within 24 hours</p>
+                                <p class="contact-method-value">hello@sominnercore.com</p>
+                            </div>
+                        </MudItem>
+
+                        <!-- Call Us -->
+                        <MudItem xs="12" sm="6">
+                            <div class="contact-method-card">
+                                <div class="contact-icon phone-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Medium" />
+                                </div>
+                                <h3 class="contact-method-title">Call Us</h3>
+                                <p class="contact-method-description">Speak directly with our team during business hours</p>
+                                <p class="contact-method-value">+1 (555) 123-4567</p>
+                            </div>
+                        </MudItem>
+
+                        <!-- Visit Us -->
+                        <MudItem xs="12" sm="6">
+                            <div class="contact-method-card">
+                                <div class="contact-icon location-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Medium" />
+                                </div>
+                                <h3 class="contact-method-title">Visit Us</h3>
+                                <p class="contact-method-description">Come visit our office</p>
+                                <p class="contact-method-value">123 Tech Street, Digital City, DC 12345</p>
+                            </div>
+                        </MudItem>
+
+                        <!-- Business Hours -->
+                        <MudItem xs="12" sm="6">
+                            <div class="contact-method-card">
+                                <div class="contact-icon hours-icon">
+                                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Size="Size.Medium" />
+                                </div>
+                                <h3 class="contact-method-title">Business Hours</h3>
+                                <p class="contact-method-description">We're available during these times</p>
+                                <p class="contact-method-value">Mon-Fri: 9AM-6PM EST</p>
+                            </div>
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Why Choose Us Section -->
+                    <div class="why-choose-us-section">
+                        <h3 class="why-choose-title">Why Choose Us?</h3>
+                        <ul class="why-choose-list">
+                            <li class="why-choose-item">
+                                <div class="why-choose-bullet"></div>
+                                Free initial consultation and project assessment
+                            </li>
+                            <li class="why-choose-item">
+                                <div class="why-choose-bullet"></div>
+                                Transparent pricing with no hidden costs
+                            </li>
+                            <li class="why-choose-item">
+                                <div class="why-choose-bullet"></div>
+                                Dedicated project manager for each client
+                            </li>
+                            <li class="why-choose-item">
+                                <div class="why-choose-bullet"></div>
+                                Post-launch support and maintenance
+                            </li>
+                            <li class="why-choose-item">
+                                <div class="why-choose-bullet"></div>
+                                Agile development with regular updates
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </MudItem>
+
+            <!-- Right Column - Contact Form -->
+            <MudItem xs="12" md="6">
+                <div class="contact-form-section">
+                    <h2 class="contact-section-title">Send us a Message</h2>
+                    
+                    <EditForm Model="@contactModel" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <MudTextField @bind-Value="contactModel.FullName"
+                                    Label="Full Name"
+                                    Required="true"
+                                    RequiredError="Full name is required"
+                                    Placeholder="John Doe"
+                                    Variant="Variant.Outlined"
+                                    Class="contact-form-field" />
+
+                        <MudTextField @bind-Value="contactModel.Email"
+                                    Label="Email Address"
+                                    Required="true"
+                                    RequiredError="Email address is required"
+                                    Placeholder="john@company.com"
+                                    Variant="Variant.Outlined"
+                                    Class="contact-form-field" />
+
+                        <MudTextField @bind-Value="contactModel.Company"
+                                    Label="Company"
+                                    Placeholder="Your Company"
+                                    Variant="Variant.Outlined"
+                                    Class="contact-form-field" />
+
+                        <MudTextField @bind-Value="contactModel.PhoneNumber"
+                                    Label="Phone Number"
+                                    Placeholder="+1 (555) 123-4567"
+                                    Variant="Variant.Outlined"
+                                    Class="contact-form-field" />
+
+                        <MudSelect @bind-Value="contactModel.ServiceInterestedIn"
+                                 Label="Service Interested In"
+                                 Placeholder="Select a service"
+                                 Variant="Variant.Outlined"
+                                 Class="contact-form-field">
+                            <MudSelectItem Value="@("Web Development")">Web Development</MudSelectItem>
+                            <MudSelectItem Value="@("Mobile App Development")">Mobile App Development</MudSelectItem>
+                            <MudSelectItem Value="@("UI/UX Design")">UI/UX Design</MudSelectItem>
+                            <MudSelectItem Value="@("Consulting")">Consulting</MudSelectItem>
+                            <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                        </MudSelect>
+
+                        <MudTextField @bind-Value="contactModel.ProjectDetails"
+                                    Label="Project Details"
+                                    Required="true"
+                                    RequiredError="Project details are required"
+                                    Placeholder="Tell us about your project, requirements, timeline, and budget..."
+                                    Variant="Variant.Outlined"
+                                    Lines="4"
+                                    Class="contact-form-field" />
+
+                        <MudButton Type="ButtonType.Submit"
+                                 Class="send-message-btn"
+                                 Variant="Variant.Filled"
+                                 Size="Size.Large"
+                                 StartIcon="@(isSubmitting ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.Send)"
+                                 Disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span>Sending...</span>
+                            }
+                            else
+                            {
+                                <span>Send Message</span>
+                            }
+                        </MudButton>
+                    </EditForm>
+
+                    @if (showSuccessMessage)
+                    {
+                        <div class="success-message">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="success-icon" />
+                            <div>
+                                <h4>Message Sent Successfully!</h4>
+                                <p>Thank you for contacting us. We'll get back to you within 24 hours.</p>
+                            </div>
+                        </div>
+                    }
+
+                    <p class="privacy-statement">
+                        We respect your privacy and will never share your information with third parties.
+                    </p>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </div>
+</div>
+
+@code {
+    private ContactModel contactModel = new ContactModel();
+    private bool isSubmitting = false;
+    private bool showSuccessMessage = false;
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        
+        try
+        {
+            // Simulate form submission delay
+            await Task.Delay(1000);
+            
+            // Here you would typically send the data to your backend API
+            // For now, we'll just show a success message
+            showSuccessMessage = true;
+            
+            // Reset form after successful submission
+            contactModel = new ContactModel();
+            
+            // Hide success message after 5 seconds
+            await Task.Delay(5000);
+            showSuccessMessage = false;
+        }
+        catch (Exception ex)
+        {
+            // Handle error - you could show an error message here
+            await JSRuntime.InvokeVoidAsync("console.error", "Form submission error:", ex.Message);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    public class ContactModel
+    {
+        [Required(ErrorMessage = "Full name is required")]
+        [StringLength(100, ErrorMessage = "Full name cannot exceed 100 characters")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email address is required")]
+        [EmailAddress(ErrorMessage = "Please enter a valid email address")]
+        public string Email { get; set; } = string.Empty;
+
+        [StringLength(100, ErrorMessage = "Company name cannot exceed 100 characters")]
+        public string Company { get; set; } = string.Empty;
+
+        [Phone(ErrorMessage = "Please enter a valid phone number")]
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        public string ServiceInterestedIn { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Project details are required")]
+        [StringLength(1000, ErrorMessage = "Project details cannot exceed 1000 characters")]
+        public string ProjectDetails { get; set; } = string.Empty;
+    }
+}

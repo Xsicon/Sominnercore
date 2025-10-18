@@ -4,6 +4,7 @@
 <MudThemeProvider Theme="_theme" IsDarkMode="_isDarkMode" />
 <MudDialogProvider />
 <MudSnackbarProvider />
+<MudPopoverProvider />
 
 <MudLayout Style="@($"background-color:{(_isDarkMode ? _theme.PaletteDark.Background : _theme.PaletteLight.Background)}")">
     <Header OnThemeChanged="OnThemeChanged" />
