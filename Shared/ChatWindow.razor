@@ -1,0 +1,160 @@
+@if (IsOpen)
+{
+    <div class="chat-window-container @(IsMinimized ? "minimized" : "")" @onclick:stopPropagation="true">
+        <div class="chat-window">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <div class="chat-avatar">
+                        <span class="avatar-letter">s</span>
+                    </div>
+                    <div class="chat-header-info">
+                        <h3 class="chat-support-title">Sominnercore Support</h3>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button class="chat-action-btn" @onclick="ToggleMinimize" title="@(IsMinimized ? "Maximize" : "Minimize")">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                             stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Top-left arrow pointing inward -->
+                            <path d="M8 8L10 10M10 10H6M10 10V6" />
+                            <!-- Bottom-right arrow pointing inward -->
+                            <path d="M16 16L14 14M14 14H18M14 14V18" />
+                        </svg>
+
+                    </button>
+                    <button class="chat-action-btn" @onclick="Close" title="Close">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            @if (!IsMinimized)
+            {
+                <!-- Chat Messages Area -->
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message-incoming">
+                        <div class="message-content">
+                            <p class="message-text">Hello! Welcome to Sominnercore. How can we help you today?</p>
+                            <div class="message-meta">
+                                <span class="message-sender">Sarah from Support</span>
+                                <span class="message-separator">•</span>
+                                <span class="message-time">10:55 AM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    @foreach (var message in Messages)
+                    {
+                        <div class="chat-message-outgoing">
+                            <div class="message-content">
+                                <p class="message-text">@message.Text</p>
+                                <div class="message-meta">
+                                    <span class="message-time">@message.Timestamp</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Chat Input Area -->
+                <div class="chat-input-area">
+                    <MudTextField @bind-Value="CurrentMessage"
+                                Placeholder="Type your message..."
+                                Variant="Variant.Filled"
+                                Class="chat-input"
+                                @onkeypress="@(async (e) => await HandleKeyPress(e))" />
+                    <button class="chat-send-button" @onclick="SendMessage" >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <!-- Backdrop to close when clicking outside -->
+    <div class="chat-backdrop" @onclick="Close"></div>
+}
+
+@code {
+    public bool IsOpen { get; set; } = false;
+    public bool IsMinimized { get; set; } = false;
+    
+    [Parameter] public EventCallback OnStateChanged { get; set; }
+
+    [Inject] IJSRuntime JSRuntime { get; set; } = default!;
+
+    private string CurrentMessage { get; set; } = string.Empty;
+    private List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
+
+    public class ChatMessage
+    {
+        public string Text { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
+    }
+
+    public async Task Open()
+    {
+        IsOpen = true;
+        IsMinimized = false;
+        StateHasChanged();
+        if (OnStateChanged.HasDelegate)
+        {
+            await OnStateChanged.InvokeAsync();
+        }
+    }
+
+    public async Task Close()
+    {
+        IsOpen = false;
+        IsMinimized = false;
+        StateHasChanged();
+        if (OnStateChanged.HasDelegate)
+        {
+            await OnStateChanged.InvokeAsync();
+        }
+    }
+
+    public async Task ToggleMinimize()
+    {
+        IsMinimized = !IsMinimized;
+        StateHasChanged();
+        if (OnStateChanged.HasDelegate)
+        {
+            await OnStateChanged.InvokeAsync();
+        }
+    }
+
+    public async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentMessage))
+        {
+            var now = DateTime.Now;
+            Messages.Add(new ChatMessage 
+            { 
+                Text = CurrentMessage,
+                Timestamp = now.ToString("hh:mm tt")
+            });
+
+            CurrentMessage = string.Empty;
+
+            // Auto-scroll to bottom
+            await Task.Delay(50);
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "chatMessages");
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+}

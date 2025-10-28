@@ -146,15 +146,35 @@
     </div>
 </div>
 
-<!-- Floating Chat Button -->
-<div class="floating-chat-button">
-    <MudIconButton Icon="@Icons.Material.Filled.Chat" 
-                   Class="chat-button"
-                   OnClick="OpenChat" />
-</div>
+    <!-- Floating Chat Button -->
+    <div class="floating-chat-button" style="@(chatWindow?.IsOpen == true ? "display:none;" : "")">
+        <button class="chat-button" @onclick="ShowChatDialog">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Chat Window -->
+    <ChatWindow @ref="chatWindow" OnStateChanged="HandleChatStateChanged" />
 
 @code {
+    private ChatWindow? chatWindow;
+
     private string newsletterEmail = string.Empty;
+
+    private async void ShowChatDialog()
+    {
+        if (chatWindow != null)
+        {
+            await chatWindow.Open();
+        }
+    }
+
+    private void HandleChatStateChanged()
+    {
+        StateHasChanged();
+    }
 
     private async Task SubscribeNewsletter()
     {
@@ -167,10 +187,4 @@
         }
     }
 
-    private void OpenChat()
-    {
-        // Here you would typically open a chat widget
-        // For now, just show an alert
-        JSRuntime.InvokeVoidAsync("alert", "Chat feature coming soon!");
-    }
 }
