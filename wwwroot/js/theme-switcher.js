@@ -53,11 +53,36 @@ function updateBodyTheme(theme) {
 window.updateThemeIcon = updateThemeIcon;
 window.updateBodyTheme = updateBodyTheme;
 
+// Scroll to bottom function for chat window
+window.scrollToBottom = function(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.scrollTop = element.scrollHeight;
+    }
+};
+
+// Function to open chat from JavaScript
+window.openChatFromJS = function() {
+    DotNet.invokeMethodAsync('Sominnercore', 'OpenChat');
+};
+
 // Load saved theme on page load
 document.addEventListener('DOMContentLoaded', function() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     updateThemeIcon(savedTheme);
     updateBodyTheme(savedTheme);
+
+    // Setup chat button click handler
+    const chatButton = document.querySelector('[data-chat-button]');
+    if (chatButton) {
+        chatButton.addEventListener('click', function() {
+            if (window.openChatGlobal) {
+                window.openChatGlobal();
+            } else {
+                console.log('OpenChat function not available yet');
+            }
+        });
+    }
 });
 
 // Close dropdown when clicking outside
