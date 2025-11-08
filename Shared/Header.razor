@@ -1,5 +1,7 @@
 @using MudBlazor
 
+@inject NavigationManager Navigation
+
 @code {
     [Parameter] public EventCallback<string> OnThemeChanged { get; set; }
     private bool _mobileMenuOpen = false;
@@ -8,6 +10,12 @@
     {
         _mobileMenuOpen = !_mobileMenuOpen;
         StateHasChanged(); // Force UI update
+    }
+
+    private void NavigateToAdmin()
+    {
+        _mobileMenuOpen = false;
+        Navigation.NavigateTo("/admin/login");
     }
 }
 
@@ -68,7 +76,7 @@
         </div>
         
 
-        <MudButton Class="admin-button">Admin</MudButton>
+        <MudButton Class="admin-button" Href="/admin/login">Admin</MudButton>
         <MudButton Class="get-started-btn" Href="#contact">Get Started</MudButton>
 
         <!-- Mobile Hamburger -->
@@ -92,7 +100,7 @@
                 
                 <!-- Mobile Admin Button -->
                 <div class="mobile-admin-container">
-                    <MudButton Class="mobile-admin-btn" Variant="Variant.Text" Size="Size.Medium" OnClick="ToggleMobileMenu">
+                    <MudButton Class="mobile-admin-btn" Variant="Variant.Text" Size="Size.Medium" OnClick="NavigateToAdmin">
                         Admin
                     </MudButton>
                 </div>

@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+
+<MudLayout Class="admin-layout-root">
+    <MudDrawer Variant="DrawerVariant.Mini" Open="true" Elevation="1" Class="admin-sidebar">
+        <MudDrawerHeader Class="admin-sidebar-header">
+            <div class="admin-logo">Sominnercore</div>
+        </MudDrawerHeader>
+        <MudNavMenu Class="admin-nav-menu">
+            <MudNavLink Href="/admin" Match="NavLinkMatch.All">
+                Dashboard
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent Class="admin-main">
+        <div class="admin-main-content">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+

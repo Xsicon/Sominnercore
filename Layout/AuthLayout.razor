@@ -1,0 +1,18 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<div class="auth-layout-root">
+    <div class="auth-layout-background"></div>
+    <div class="auth-layout-content">
+        @Body
+    </div>
+</div>
+
+@code {
+    private readonly MudTheme _theme = new CustomMudTheme();
+}
+
