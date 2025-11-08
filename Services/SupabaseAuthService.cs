@@ -64,6 +64,57 @@ public class SupabaseAuthService
 
         return result;
     }
+
+    public async Task<SupabaseUser?> GetUserAsync(string accessToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.Url) || string.IsNullOrWhiteSpace(_options.AnonKey))
+        {
+            return null;
+        }
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{_options.Url.TrimEnd('/')}/auth/v1/user");
+
+        request.Headers.Add("apikey", _options.AnonKey);
+        request.Headers.Add("Authorization", $"Bearer {accessToken}");
+
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        return JsonSerializer.Deserialize<SupabaseUser>(content, _serializerOptions);
+    }
+
+    public async Task SignOutAsync(string accessToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_options.Url) || string.IsNullOrWhiteSpace(_options.AnonKey))
+        {
+            return;
+        }
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{_options.Url.TrimEnd('/')}/auth/v1/logout");
+
+        request.Headers.Add("apikey", _options.AnonKey);
+        request.Headers.Add("Authorization", $"Bearer {accessToken}");
+
+        await _httpClient.SendAsync(request, cancellationToken);
+    }
 }
 
 public class SupabaseAuthException : Exception

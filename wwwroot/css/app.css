@@ -3166,7 +3166,7 @@ body.dark-theme .auth-layout-root {
     border: none;
     font-size: 1rem;
     font-weight: 600;
-    color: #0b1120;
+/*    color: #0b1120;*/
     background: linear-gradient(90deg, #0d9488, #f97316);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
@@ -3205,80 +3205,6 @@ body.dark-theme .auth-layout-root {
 /* ===========================================
    ADMIN LAYOUT PLACEHOLDER
    =========================================== */
-.admin-layout-root {
-    min-height: 100vh;
-    background: var(--bg-primary);
-}
-
-.admin-sidebar {
-    width: 220px;
-    background: rgba(17, 24, 39, 0.95);
-    color: #f9fafb;
-}
-
-.admin-sidebar-header {
-    padding: 20px;
-}
-
-.admin-logo {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #f97316;
-    letter-spacing: 0.02em;
-}
-
-.admin-nav-menu {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 12px;
-}
-
-.admin-nav-menu .mud-nav-link {
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: rgba(248, 250, 252, 0.85);
-    font-weight: 500;
-}
-
-.admin-nav-menu .mud-nav-link.mud-nav-link-active {
-    background: linear-gradient(90deg, rgba(13, 148, 136, 0.25), rgba(249, 115, 22, 0.35));
-    color: #ffffff;
-}
-
-.admin-main {
-    background: var(--bg-primary);
-}
-
-.admin-main-content {
-    padding: 32px;
-    min-height: 100vh;
-    color: var(--text-primary);
-}
-
-.admin-placeholder {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 48px;
-    background: rgba(17, 24, 39, 0.55);
-    border-radius: 24px;
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    max-width: 640px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.admin-placeholder h1 {
-    font-size: 2rem;
-    margin: 0;
-}
-
-.admin-placeholder p {
-    margin: 0;
-    color: var(--text-secondary);
-}
-
 @media (max-width: 480px) {
     .login-card {
         padding: 32px 24px 28px;

@@ -11,7 +11,7 @@
 @inject NavigationManager Navigation
 
 <div class="login-page">
-    <div class="login-card">
+        <div class="login-card">
         <div class="login-card-header">
             <div class="login-card-icon">
                 <i class="login-lock-icon" aria-hidden="true"></i>
@@ -22,31 +22,6 @@
         <EditForm Model="_loginModel" OnValidSubmit="HandleLoginAsync">
             <DataAnnotationsValidator />
             <ValidationSummary />
-
-            <div class="login-field">
-                <label for="role">Role</label>
-                <select id="role" class="login-input" @bind-Value="SelectedRole" @bind-Value:event="onchange">
-                    <option value="">Select your role</option>
-                    @foreach (var role in _demoCredentials.Keys)
-                    {
-                        <option value="@role">@role</option>
-                    }
-                </select>
-            </div>
-
-            @if (TryGetSelectedCredential(out var credentialPreview))
-            {
-                <div class="login-demo-preview">
-                    <div class="login-demo-row">
-                        <span class="login-demo-label">Email:</span>
-                        <span class="login-demo-value">@credentialPreview.Email</span>
-                    </div>
-                    <div class="login-demo-row">
-                        <span class="login-demo-label">Password:</span>
-                        <span class="login-demo-value">@credentialPreview.Password</span>
-                    </div>
-                </div>
-            }
 
             <div class="login-field">
                 <label for="email">Email</label>

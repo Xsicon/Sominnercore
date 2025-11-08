@@ -1,21 +1,146 @@
 @inherits LayoutComponentBase
+@using System.Linq
+@using Sominnercore.Services
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+<HeadContent>
+    <link rel="stylesheet" href="css/admin.css" />
+</HeadContent>
 
 <MudLayout Class="admin-layout-root">
-    <MudDrawer Variant="DrawerVariant.Mini" Open="true" Elevation="1" Class="admin-sidebar">
-        <MudDrawerHeader Class="admin-sidebar-header">
-            <div class="admin-logo">Sominnercore</div>
-        </MudDrawerHeader>
-        <MudNavMenu Class="admin-nav-menu">
-            <MudNavLink Href="/admin" Match="NavLinkMatch.All">
-                Dashboard
-            </MudNavLink>
-        </MudNavMenu>
-    </MudDrawer>
-
-    <MudMainContent Class="admin-main">
-        <div class="admin-main-content">
-            @Body
+    <div class="admin-topbar">
+        <div class="admin-topbar-left">
+            <MudText Typo="Typo.h6" Class="logo admin-topbar-logo">
+                Sominnercore Admin
+            </MudText>
+            <div class="admin-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="admin-search-icon" />
+                <input class="admin-search-input" placeholder="Search..." />
+            </div>
         </div>
-    </MudMainContent>
+
+        <div class="admin-topbar-right">
+            <MudButton Variant="Variant.Filled" Class="admin-back-button" OnClick="NavigateToWebsite">
+                Back to Website
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Class="admin-icon-button" />
+            <div class="admin-user">
+                <div class="admin-user-text">
+                    <span class="admin-user-name">@_displayName</span>
+                    <span class="admin-user-role">@_userRole</span>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Class="admin-icon-button" OnClick="LogoutAsync" />
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-body">
+        <aside class="admin-sidebar">
+            <nav class="admin-nav-menu">
+                @foreach (var item in _navItems)
+                {
+                    <button type="button"
+                            class="admin-nav-link @(_activeNav == item.Key ? "active" : string.Empty)"
+                            @onclick="() => OnNavItemSelected(item)">
+                        <MudIcon Icon="@item.Icon" Class="admin-nav-icon" />
+                        <span>@item.Label</span>
+                    </button>
+                }
+            </nav>
+        </aside>
+
+        <main class="admin-main-content">
+            @Body
+        </main>
+    </div>
 </MudLayout>
+
+@code {
+    private readonly IReadOnlyList<AdminNavItem> _navItems = new[]
+    {
+        new AdminNavItem("dashboard", "Dashboard", Icons.Material.Filled.Dashboard, "/admin"),
+        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions")
+    };
+
+    private string _activeNav = "dashboard";
+    private string _displayName = "Admin";
+    private string _userRole = "Admin";
+
+    private void NavigateToWebsite()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void OnNavItemSelected(AdminNavItem item)
+    {
+        _activeNav = item.Key;
+        if (!string.IsNullOrWhiteSpace(item.Route))
+        {
+            Navigation.NavigateTo(item.Route);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                var user = await AuthService.GetUserAsync(accessToken);
+                if (user?.Email is { Length: > 0 } email)
+                {
+                    var at = email.IndexOf('@');
+                    _displayName = at > 0 ? email[..at] : email;
+                }
+
+                if (user?.UserMetadata is { } metadata && metadata.TryGetValue("role", out var roleObj))
+                {
+                    var role = Convert.ToString(roleObj);
+                    if (!string.IsNullOrWhiteSpace(role))
+                    {
+                        _userRole = FormatRole(role!);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // fall back to defaults
+        }
+    }
+
+    private sealed record AdminNavItem(string Key, string Label, string Icon, string? Route);
+
+    private static string FormatRole(string role) =>
+        string.Join(' ', role.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
+
+    private async Task LogoutAsync()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                await AuthService.SignOutAsync(accessToken);
+            }
+
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "sb-access-token");
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "sb-refresh-token");
+        }
+        catch
+        {
+            // ignore and proceed
+        }
+        finally
+        {
+            _displayName = "Admin";
+            _userRole = "Admin";
+            Navigation.NavigateTo("/admin/login", true);
+        }
+    }
+}
 
