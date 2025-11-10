@@ -1,8 +1,87 @@
 @page "/admin"
+@using Microsoft.AspNetCore.Components
 @layout Sominnercore.Layout.AdminLayout
 
-<div class="admin-placeholder">
-    <h1>You are logged in.</h1>
-    <p>This is a temporary placeholder page.</p>
+<div class="dashboard-page">
+    <section class="dashboard-welcome">
+        <h1 class="dashboard-title">Welcome back, @_displayName!</h1>
+        <p class="dashboard-subtitle">Here’s what’s happening with your business today.</p>
+    </section>
+
+    <section class="dashboard-metrics">
+        <div class="metric-card">
+            <div class="metric-label">Active Projects</div>
+            <div class="metric-value">24</div>
+            <div class="metric-trend">+2 from last month</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Support Tickets</div>
+            <div class="metric-value">12</div>
+            <div class="metric-trend warning">3 urgent</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Team Members</div>
+            <div class="metric-value">8</div>
+            <div class="metric-trend">All active</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Revenue</div>
+            <div class="metric-value">$47k</div>
+            <div class="metric-trend">This month</div>
+        </div>
+    </section>
+
+    <section class="dashboard-activity">
+        <div class="activity-card">
+            <h2 class="activity-title">Recent Activity</h2>
+            <ul class="activity-list">
+                <li class="activity-item">
+                    <span class="activity-dot green"></span>
+                    <div class="activity-content">
+                        <p class="activity-message">New project started: E-commerce Platform</p>
+                        <span class="activity-time">2 hours ago</span>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <span class="activity-dot blue"></span>
+                    <div class="activity-content">
+                        <p class="activity-message">Support ticket resolved for client ABC Corp</p>
+                        <span class="activity-time">4 hours ago</span>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <span class="activity-dot orange"></span>
+                    <div class="activity-content">
+                        <p class="activity-message">New team member joined: Sarah Johnson</p>
+                        <span class="activity-time">1 day ago</span>
+                    </div>
+                </li>
+                <li class="activity-item">
+                    <span class="activity-dot purple"></span>
+                    <div class="activity-content">
+                        <p class="activity-message">Client meeting scheduled for tomorrow</p>
+                        <span class="activity-time">5 hours ago</span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="dashboard-quick-actions">
+        <div class="quick-actions-card">
+            <h2 class="quick-actions-title">Quick Actions</h2>
+            <div class="quick-actions-grid">
+                <button class="quick-action-button primary">New Project</button>
+                <button class="quick-action-button">Add Client</button>
+                <button class="quick-action-button">Create Task</button>
+                <button class="quick-action-button">View Reports</button>
+            </div>
+        </div>
+    </section>
 </div>
+
+@code {
+    [CascadingParameter] public string DisplayName { get; set; } = "Admin User";
+    private string _displayName => DisplayName;
+}
 

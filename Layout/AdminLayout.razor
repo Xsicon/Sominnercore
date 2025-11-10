@@ -12,8 +12,9 @@
 <MudLayout Class="admin-layout-root">
     <div class="admin-topbar">
         <div class="admin-topbar-left">
-            <MudText Typo="Typo.h6" Class="logo admin-topbar-logo">
-                Sominnercore Admin
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Class="admin-menu-button" OnClick="ToggleSidebar" />
+            <MudText Typo="Typo.h6" Class="admin-desktop-logo">
+                <span class="logo-gradient">Sominnercore Admin</span>
             </MudText>
             <div class="admin-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Class="admin-search-icon" />
@@ -22,22 +23,21 @@
         </div>
 
         <div class="admin-topbar-right">
-            <MudButton Variant="Variant.Filled" Class="admin-back-button" OnClick="NavigateToWebsite">
+            <MudButton Variant="Variant.Outlined" Class="admin-back-button" OnClick="NavigateToWebsite">
                 Back to Website
             </MudButton>
             <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Class="admin-icon-button" />
-            <div class="admin-user">
-                <div class="admin-user-text">
-                    <span class="admin-user-name">@_displayName</span>
-                    <span class="admin-user-role">@_userRole</span>
-                </div>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Class="admin-icon-button" OnClick="LogoutAsync" />
-            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Class="admin-icon-button" OnClick="LogoutAsync" />
         </div>
     </div>
 
+    @if (_sidebarOpen)
+    {
+        <div class="admin-sidebar-backdrop" @onclick="ToggleSidebar"></div>
+    }
+
     <div class="admin-body">
-        <aside class="admin-sidebar">
+        <aside class="@($"admin-sidebar {(_sidebarOpen ? "open" : "closed")}")">
             <nav class="admin-nav-menu">
                 @foreach (var item in _navItems)
                 {
@@ -49,11 +49,21 @@
                     </button>
                 }
             </nav>
+            <div class="admin-mobile-actions">
+                <MudButton Variant="Variant.Filled" Class="admin-mobile-action" OnClick="NavigateToWebsite">
+                    Back to Website
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="admin-mobile-action" StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                    Sign Out
+                </MudButton>
+            </div>
         </aside>
 
-        <main class="admin-main-content">
-            @Body
-        </main>
+        <CascadingValue Value="_displayName">
+            <main class="admin-main-content">
+                @Body
+            </main>
+        </CascadingValue>
     </div>
 </MudLayout>
 
@@ -67,6 +77,7 @@
     private string _activeNav = "dashboard";
     private string _displayName = "Admin";
     private string _userRole = "Admin";
+    private bool _sidebarOpen;
 
     private void NavigateToWebsite()
     {
@@ -76,6 +87,7 @@
     private void OnNavItemSelected(AdminNavItem item)
     {
         _activeNav = item.Key;
+        _sidebarOpen = false;
         if (!string.IsNullOrWhiteSpace(item.Route))
         {
             Navigation.NavigateTo(item.Route);
@@ -117,6 +129,11 @@
     private static string FormatRole(string role) =>
         string.Join(' ', role.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
             .Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
+
+    private void ToggleSidebar()
+    {
+        _sidebarOpen = !_sidebarOpen;
+    }
 
     private async Task LogoutAsync()
     {
