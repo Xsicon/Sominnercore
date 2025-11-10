@@ -1,4 +1,341 @@
 @page "/admin/submissions"
+@using System.Globalization
+@using System.Linq
+@using Sominnercore.Services
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JsRuntime
 @layout Sominnercore.Layout.AdminLayout
 
 <DashboardHeader Title="Customer Submissions" Subtitle="View and manage customer inquiries from the contact form." />
+
+<div class="submissions-page">
+    <section class="submissions-status">
+        <div class="status-card">
+            <div class="status-info">
+                <span class="status-label">Total</span>
+                <span class="status-value neutral">@_totalCount</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Class="status-icon neutral" />
+        </div>
+        <div class="status-card">
+            <div class="status-info">
+                <span class="status-label">New</span>
+                <span class="status-value info">@_newCount</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="status-icon info" />
+        </div>
+        <div class="status-card">
+            <div class="status-info">
+                <span class="status-label">In Progress</span>
+                <span class="status-value warning">@_inProgressCount</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.Chat" Class="status-icon warning" />
+        </div>
+        <div class="status-card">
+            <div class="status-info">
+                <span class="status-label">Resolved</span>
+                <span class="status-value success">@_resolvedCount</span>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="status-icon success" />
+        </div>
+    </section>
+
+    <section class="submissions-filters">
+        <div class="filters-card">
+            <div class="filters-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="filters-search-icon" />
+                <input class="filters-search-input" placeholder="Search by name, email, company..." />
+            </div>
+            <div class="filters-actions">
+                <div class="filters-select-wrapper">
+                    <select class="filters-select" @bind="_selectedStatus">
+                        @foreach (var status in _statusFilterOptions)
+                        {
+                            <option value="@status">@status</option>
+                        }
+                    </select>
+                </div>
+                <MudButton Variant="Variant.Outlined" Class="filters-export" StartIcon="@Icons.Material.Filled.Download">
+                    Export
+                </MudButton>
+            </div>
+        </div>
+    </section>
+
+    <section class="submissions-list-section">
+        <div class="submissions-list-card">
+            <div class="submissions-list-header">
+                <div>
+                    <h2 class="submissions-list-title">All Submissions</h2>
+                    <span class="submissions-count">@_totalCount</span>
+                </div>
+            </div>
+            <div class="submissions-list">
+                @if (!string.IsNullOrWhiteSpace(_statusError))
+                {
+                    <div class="submissions-error">@_statusError</div>
+                }
+
+                @if (_isLoading)
+                {
+                    <div class="submissions-placeholder">Loading submissions...</div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_loadError))
+                {
+                    <div class="submissions-error">@_loadError</div>
+                }
+                else if (_submissions.Count == 0)
+                {
+                    <div class="submissions-empty">No submissions available yet.</div>
+                }
+                else
+                {
+                    @foreach (var submission in _submissions)
+                    {
+                        <article class="submission-item">
+                            <div class="submission-main">
+                                <div class="submission-header">
+                                    <h3 class="submission-name">@submission.Name</h3>
+                                    <span class="submission-status-pill @submission.StatusCssClass">@submission.Status</span>
+                                </div>
+                                <div class="submission-meta">
+                                    <div class="meta-block">
+                                        <MudIcon Icon="@Icons.Material.Filled.Email" />
+                                        <span>@submission.Email</span>
+                                    </div>
+                                    <div class="meta-block">
+                                        <MudIcon Icon="@Icons.Material.Filled.Business" />
+                                        <span>@submission.Company</span>
+                                    </div>
+                                    <div class="meta-block">
+                                        <MudIcon Icon="@Icons.Material.Filled.Phone" />
+                                        <span>@submission.Phone</span>
+                                    </div>
+                                    <div class="meta-block">
+                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" />
+                                        <span>@submission.SubmittedAtDisplay</span>
+                                    </div>
+                                </div>
+                                <div class="submission-tags">
+                                    @foreach (var tag in submission.Tags)
+                                    {
+                                        <span class="submission-tag">@tag</span>
+                                    }
+                                </div>
+                                <p class="submission-description">@submission.Description</p>
+                            </div>
+                            <div class="submission-actions">
+                                <button type="button" class="submission-action-button" disabled="@_pendingStatusUpdates.Contains(submission.Id)">
+                                    <MudIcon Icon="@Icons.Material.Filled.Visibility" />
+                                </button>
+                                <div class="submission-status-select-wrapper @submission.StatusCssClass">
+                                    <select class="submission-status-select @submission.StatusCssClass"
+                                            value="@submission.Status"
+                                            disabled="@_pendingStatusUpdates.Contains(submission.Id)"
+                                            @onchange="args => OnStatusChangedAsync(submission, args.Value?.ToString())">
+                                        @foreach (var statusOption in _submissionStatusOptions)
+                                        {
+                                            <option value="@statusOption" selected="@(statusOption == submission.Status)">@statusOption</option>
+                                        }
+                                    </select>
+                                </div>
+                                <button type="button" class="submission-action-button danger" disabled="@_pendingStatusUpdates.Contains(submission.Id)">
+                                    <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" />
+                                </button>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private static readonly IReadOnlyDictionary<string, (string Display, string Slug, string CssClass)> StatusMappings =
+        new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["new"] = ("New", "new", "status-new"),
+            ["in_progress"] = ("In Progress", "in_progress", "status-inprogress"),
+            ["resolved"] = ("Resolved", "resolved", "status-resolved")
+        };
+
+    private static (string Display, string Slug, string CssClass) NormalizeStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return ("New", "new", "status-new");
+        }
+
+        var key = status.Trim().ToLowerInvariant().Replace(' ', '_');
+        if (StatusMappings.TryGetValue(key, out var mapping))
+        {
+            return mapping;
+        }
+
+        return (status, key, string.Empty);
+    }
+
+    private readonly string[] _statusFilterOptions = { "All Status", "New", "In Progress", "Resolved" };
+    private readonly string[] _submissionStatusOptions = { "New", "In Progress", "Resolved" };
+
+    private readonly List<SubmissionViewModel> _submissions = new();
+    private readonly HashSet<Guid> _pendingStatusUpdates = new();
+
+    private string _selectedStatus = "All Status";
+    private bool _isLoading = true;
+    private string? _loadError;
+    private string? _statusError;
+
+    private int _totalCount;
+    private int _newCount;
+    private int _inProgressCount;
+    private int _resolvedCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSubmissionsAsync();
+    }
+
+    private async Task LoadSubmissionsAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        _statusError = null;
+        _submissions.Clear();
+
+        try
+        {
+            var accessToken = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            var records = await AuthService.GetCustomerSubmissionsAsync(accessToken);
+
+            foreach (var record in records)
+            {
+                var viewModel = MapSubmission(record);
+                _submissions.Add(viewModel);
+            }
+
+            RecalculateStatusCounts();
+        }
+        catch (SupabaseAuthException ex)
+        {
+            _loadError = $"Failed to load submissions ({(int)ex.StatusCode}).";
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Unexpected error while loading submissions: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnStatusChangedAsync(SubmissionViewModel submission, string? newStatus)
+    {
+        if (string.IsNullOrWhiteSpace(newStatus))
+        {
+            return;
+        }
+
+        var previousStatus = submission.Status;
+        var mapping = NormalizeStatus(newStatus);
+
+        submission.ApplyStatus(mapping.Display);
+        _pendingStatusUpdates.Add(submission.Id);
+        _statusError = null;
+        RecalculateStatusCounts();
+
+        try
+        {
+            var accessToken = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                throw new InvalidOperationException("Missing Supabase access token. Please sign in again.");
+            }
+
+            await AuthService.UpdateSubmissionStatusAsync(submission.Id, mapping.Slug, accessToken);
+        }
+        catch (SupabaseAuthException ex)
+        {
+            submission.ApplyStatus(previousStatus);
+            _statusError = $"Failed to update status ({(int)ex.StatusCode}).";
+            RecalculateStatusCounts();
+        }
+        catch (Exception ex)
+        {
+            submission.ApplyStatus(previousStatus);
+            _statusError = $"Unexpected error updating status: {ex.Message}";
+            RecalculateStatusCounts();
+        }
+        finally
+        {
+            _pendingStatusUpdates.Remove(submission.Id);
+            StateHasChanged();
+        }
+    }
+
+    private void RecalculateStatusCounts()
+    {
+        _totalCount = _submissions.Count;
+        _newCount = _submissions.Count(s => s.StatusSlug == "new");
+        _inProgressCount = _submissions.Count(s => s.StatusSlug == "in_progress");
+        _resolvedCount = _submissions.Count(s => s.StatusSlug == "resolved");
+    }
+
+    private static SubmissionViewModel MapSubmission(SupabaseAuthService.CustomerSubmissionDto dto)
+    {
+        var tags = dto.Tags is { Length: > 0 }
+            ? dto.Tags
+            : dto.Category is not null ? new[] { dto.Category } : Array.Empty<string>();
+
+        var submission = new SubmissionViewModel
+        {
+            Id = dto.Id,
+            Name = dto.FullName,
+            Email = dto.Email,
+            Phone = string.IsNullOrWhiteSpace(dto.Phone) ? "—" : dto.Phone,
+            Company = string.IsNullOrWhiteSpace(dto.Company) ? "—" : dto.Company,
+            Description = dto.Description ?? string.Empty,
+            Tags = tags,
+            SubmittedAtUtc = dto.SubmittedAt
+        };
+
+        submission.ApplyStatus(dto.Status);
+        return submission;
+    }
+
+    private class SubmissionViewModel
+    {
+        private string _status = "New";
+        private string _statusSlug = "new";
+        private string _statusCssClass = "status-new";
+
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Email { get; init; } = string.Empty;
+        public string Phone { get; init; } = string.Empty;
+        public string Company { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public IEnumerable<string> Tags { get; init; } = Array.Empty<string>();
+        public DateTime SubmittedAtUtc { get; init; }
+
+        public string Status
+        {
+            get => _status;
+            set => ApplyStatus(value);
+        }
+
+        public string StatusSlug => _statusSlug;
+        public string StatusCssClass => _statusCssClass;
+        public string SubmittedAtDisplay => SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy, hh:mm tt", CultureInfo.InvariantCulture);
+
+        public void ApplyStatus(string status)
+        {
+            var normalized = NormalizeStatus(status);
+            _status = normalized.Display;
+            _statusSlug = normalized.Slug;
+            _statusCssClass = normalized.CssClass;
+        }
+    }
+}
