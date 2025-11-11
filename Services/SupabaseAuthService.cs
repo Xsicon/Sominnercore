@@ -98,7 +98,9 @@ public class SupabaseAuthService
         [property: JsonPropertyName("description")] string? Description,
         [property: JsonPropertyName("status")] string Status,
         [property: JsonPropertyName("submitted_at")] DateTime SubmittedAt,
-        [property: JsonPropertyName("tags")] string[]? Tags
+        [property: JsonPropertyName("tags")] string[]? Tags,
+        [property: JsonPropertyName("status_updated_by")] string? StatusUpdatedBy,
+        [property: JsonPropertyName("status_updated_at")] DateTime? StatusUpdatedAt
     );
 
     public async Task<CustomerSubmissionDto[]> GetCustomerSubmissionsAsync(string? accessToken, CancellationToken cancellationToken = default)
@@ -125,7 +127,13 @@ public class SupabaseAuthService
         return data ?? Array.Empty<CustomerSubmissionDto>();
     }
 
-    public async Task UpdateSubmissionStatusAsync(Guid submissionId, string status, string accessToken, CancellationToken cancellationToken = default)
+    public async Task UpdateSubmissionStatusAsync(
+        Guid submissionId,
+        string status,
+        string accessToken,
+        string? updatedBy,
+        DateTime? updatedAtUtc = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(accessToken))
         {
@@ -139,7 +147,12 @@ public class SupabaseAuthService
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         request.Headers.Add("Prefer", "return=minimal");
 
-        var payload = JsonSerializer.Serialize(new { status });
+        var payload = JsonSerializer.Serialize(new
+        {
+            status,
+            status_updated_by = updatedBy,
+            status_updated_at = updatedAtUtc?.ToUniversalTime()
+        });
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.SendAsync(request, cancellationToken);

@@ -89,6 +89,11 @@
                 await JsRuntime.InvokeVoidAsync("localStorage.setItem", "sb-refresh-token", result.RefreshToken);
             }
 
+            if (!string.IsNullOrWhiteSpace(result.User?.Email))
+            {
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "sb-user-email", result.User!.Email);
+            }
+
             _successMessage = $"Welcome back{(result.User?.Email is not null ? $", {result.User.Email}" : string.Empty)}!";
             Navigation.NavigateTo("/admin", forceLoad: false);
         }

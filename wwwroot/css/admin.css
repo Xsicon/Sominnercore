@@ -848,6 +848,12 @@
     justify-content: space-between;
 }
 
+.submissions-list-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .submissions-list-title {
     margin: 0;
     font-size: 1.25rem;
@@ -865,13 +871,194 @@
     padding: 4px 10px;
     font-size: 0.9rem;
     color: rgba(226, 232, 240, 0.85);
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .submissions-list {
     display: flex;
     flex-direction: column;
     gap: 18px;
+}
+
+.submission-detail-overlay {
+    position: fixed;
+    inset: 0;
+/*    background: rgba(15, 23, 42, 0.65);*/
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 2000;
+    backdrop-filter: blur(6px);
+}
+
+.submission-detail-modal {
+    position: relative;
+    width: min(640px, 100%);
+    background: rgba(11, 11, 13, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 24px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+/*    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.65);*/
+}
+
+.submission-detail-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(30, 41, 59, 0.65);
+    color: rgba(226, 232, 240, 0.85);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.submission-detail-close:hover {
+    background: rgba(148, 163, 184, 0.35);
+}
+
+.submission-detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.submission-detail-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.submission-detail-title h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: rgba(226, 232, 240, 0.95);
+}
+
+.submission-detail-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.submission-detail-meta .label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(148, 163, 184, 0.7);
+    margin-bottom: 4px;
+}
+
+.submission-detail-meta .value {
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.92);
+    word-break: break-word;
+}
+
+.submission-detail-message h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: rgba(148, 163, 184, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.submission-detail-message p {
+    margin: 0;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: #0e0e0e;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    color: rgba(226, 232, 240, 0.9);
+    line-height: 1.55;
+}
+
+.submission-detail-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.submission-detail-timestamps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.timestamp-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.timestamp-block .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.timestamp-block .value {
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.timestamp-block .sub-label {
+    font-size: 0.8rem;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.submitted-at .label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.submitted-at .value {
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.submission-detail-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.detail-action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(50, 50, 50, 0.35);
+    color: #fff;
+    text-decoration: none;
+    background: #101010;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.detail-action-button:hover {
+    background: #181818;
+    transform: translateY(-1px);
+    color: #eee;
+}
+
+.detail-action-button span {
+    font-size: 0.92rem;
 }
 
 .submissions-placeholder,

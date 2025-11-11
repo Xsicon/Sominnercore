@@ -1,10 +1,14 @@
 @page "/admin/submissions"
 @using System.Globalization
 @using System.Linq
+@using System.Net
+@using System.Text
+@using Microsoft.JSInterop
 @using Sominnercore.Services
 @inject SupabaseAuthService AuthService
 @inject IJSRuntime JsRuntime
 @layout Sominnercore.Layout.AdminLayout
+@implements IAsyncDisposable
 
 <DashboardHeader Title="Customer Submissions" Subtitle="View and manage customer inquiries from the contact form." />
 
@@ -44,19 +48,26 @@
         <div class="filters-card">
             <div class="filters-search">
                 <MudIcon Icon="@Icons.Material.Filled.Search" Class="filters-search-icon" />
-                <input class="filters-search-input" placeholder="Search by name, email, company..." />
+                <input class="filters-search-input"
+                       placeholder="Search by name, email, company..."
+                       @bind="SearchTerm"
+                       @bind:event="oninput" />
             </div>
             <div class="filters-actions">
                 <div class="filters-select-wrapper">
-                    <select class="filters-select" @bind="_selectedStatus">
+                    <select class="filters-select" @bind="SelectedStatus">
                         @foreach (var status in _statusFilterOptions)
                         {
                             <option value="@status">@status</option>
                         }
                     </select>
                 </div>
-                <MudButton Variant="Variant.Outlined" Class="filters-export" StartIcon="@Icons.Material.Filled.Download">
-                    Export
+                <MudButton Variant="Variant.Outlined"
+                           Class="filters-export"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           Disabled="@(_isExporting || _visibleSubmissions.Count == 0)"
+                           OnClick="ExportToExcelAsync">
+                    Export Excel
                 </MudButton>
             </div>
         </div>
@@ -65,9 +76,9 @@
     <section class="submissions-list-section">
         <div class="submissions-list-card">
             <div class="submissions-list-header">
-                <div>
+                <div class="submissions-list-title-row">
                     <h2 class="submissions-list-title">All Submissions</h2>
-                    <span class="submissions-count">@_totalCount</span>
+                    <span class="submissions-count">@_visibleSubmissions.Count</span>
                 </div>
             </div>
             <div class="submissions-list">
@@ -84,13 +95,13 @@
                 {
                     <div class="submissions-error">@_loadError</div>
                 }
-                else if (_submissions.Count == 0)
+                else if (_visibleSubmissions.Count == 0)
                 {
-                    <div class="submissions-empty">No submissions available yet.</div>
+                    <div class="submissions-empty">@GetEmptyStateMessage()</div>
                 }
                 else
                 {
-                    @foreach (var submission in _submissions)
+                    @foreach (var submission in _visibleSubmissions)
                     {
                         <article class="submission-item">
                             <div class="submission-main">
@@ -125,7 +136,10 @@
                                 <p class="submission-description">@submission.Description</p>
                             </div>
                             <div class="submission-actions">
-                                <button type="button" class="submission-action-button" disabled="@_pendingStatusUpdates.Contains(submission.Id)">
+                                <button type="button"
+                                        class="submission-action-button"
+                                        disabled="@_pendingStatusUpdates.Contains(submission.Id)"
+                                        @onclick="() => OpenSubmissionDetails(submission)">
                                     <MudIcon Icon="@Icons.Material.Filled.Visibility" />
                                 </button>
                                 <div class="submission-status-select-wrapper @submission.StatusCssClass">
@@ -150,6 +164,75 @@
         </div>
     </section>
 </div>
+
+@if (_isDetailOpen && _selectedSubmission is not null)
+{
+    <div class="submission-detail-overlay" @onclick="CloseSubmissionDetails">
+        <div class="submission-detail-modal" @onclick:stopPropagation="true">
+            <button class="submission-detail-close" type="button" @onclick="CloseSubmissionDetails">
+                <MudIcon Icon="@Icons.Material.Filled.Close" />
+            </button>
+
+            <header class="submission-detail-header">
+                <div class="submission-detail-title">
+                    <h3>@_selectedSubmission.Name</h3>
+                    <span class="submission-status-pill @_selectedSubmission.StatusCssClass">@_selectedSubmission.Status</span>
+                </div>
+                <div class="submission-detail-meta-grid">
+                    <div class="submission-detail-meta">
+                        <span class="label">Email</span>
+                        <span class="value">@_selectedSubmission.Email</span>
+                    </div>
+                    <div class="submission-detail-meta">
+                        <span class="label">Phone</span>
+                        <span class="value">@_selectedSubmission.Phone</span>
+                    </div>
+                    <div class="submission-detail-meta">
+                        <span class="label">Company</span>
+                        <span class="value">@_selectedSubmission.Company</span>
+                    </div>
+                    <div class="submission-detail-meta">
+                        <span class="label">Service Interested In</span>
+                        <span class="value">@_selectedSubmission.PrimaryTag</span>
+                    </div>
+                    <div class="submission-detail-meta">
+                        <span class="label">Last Updated By</span>
+                        <span class="value">@_selectedSubmission.StatusUpdatedByDisplay</span>
+                    </div>
+                </div>
+            </header>
+
+            <section class="submission-detail-message">
+                <h4>Message</h4>
+                <p>@_selectedSubmission.Description</p>
+            </section>
+
+            <section class="submission-detail-footer">
+                <div class="submission-detail-timestamps">
+                    <div class="timestamp-block">
+                        <span class="label">Submitted At</span>
+                        <span class="value">@_selectedSubmission.SubmittedAtDisplay</span>
+                    </div>
+                    <div class="timestamp-block">
+                        <span class="label">Last Updated</span>
+                        <span class="value">@_selectedSubmission.StatusUpdatedAtDisplay</span>
+                        <span class="sub-label">by @_selectedSubmission.StatusUpdatedByDisplay</span>
+                    </div>
+                </div>
+                <div class="submission-detail-actions">
+                    <a class="detail-action-button" href="@GetMailToLink(_selectedSubmission)" target="_blank" rel="noopener noreferrer">
+                        <MudIcon Icon="@Icons.Material.Filled.Email" />
+                        <span>Send Email</span>
+                    </a>
+                    <a class="detail-action-button" href="@GetTelLink(_selectedSubmission)">
+                        <MudIcon Icon="@Icons.Material.Filled.Call" />
+                        <span>Call</span>
+                    </a>
+                </div>
+            </section>
+        </div>
+    </div>
+}
 
 @code {
     private static readonly IReadOnlyDictionary<string, (string Display, string Slug, string CssClass)> StatusMappings =
@@ -179,13 +262,21 @@
     private readonly string[] _statusFilterOptions = { "All Status", "New", "In Progress", "Resolved" };
     private readonly string[] _submissionStatusOptions = { "New", "In Progress", "Resolved" };
 
-    private readonly List<SubmissionViewModel> _submissions = new();
+    private readonly List<SubmissionViewModel> _allSubmissions = new();
+    private List<SubmissionViewModel> _visibleSubmissions = new();
     private readonly HashSet<Guid> _pendingStatusUpdates = new();
 
     private string _selectedStatus = "All Status";
+    private string _searchTerm = string.Empty;
+    private bool _isExporting;
+    private IJSObjectReference? _fileUtilsModule;
     private bool _isLoading = true;
     private string? _loadError;
     private string? _statusError;
+    private SubmissionViewModel? _selectedSubmission;
+    private bool _isDetailOpen;
+    private string? _currentUserEmail;
+    private string? _currentUserDisplayName;
 
     private int _totalCount;
     private int _newCount;
@@ -194,7 +285,62 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await EnsureCurrentUserAsync();
         await LoadSubmissionsAsync();
+    }
+
+    private async Task EnsureCurrentUserAsync()
+    {
+        try
+        {
+            _currentUserEmail = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-user-email");
+            if (!string.IsNullOrWhiteSpace(_currentUserEmail))
+            {
+                _currentUserDisplayName = ExtractDisplayName(_currentUserEmail);
+                return;
+            }
+
+            var accessToken = await JsRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return;
+            }
+
+            var user = await AuthService.GetUserAsync(accessToken);
+            _currentUserEmail = user?.Email;
+            _currentUserDisplayName = ExtractDisplayName(_currentUserEmail);
+
+            if (!string.IsNullOrWhiteSpace(_currentUserEmail))
+            {
+                await JsRuntime.InvokeVoidAsync("localStorage.setItem", "sb-user-email", _currentUserEmail);
+            }
+        }
+        catch
+        {
+            // ignore auth retrieval errors
+        }
+    }
+
+    private async Task<string?> GetCurrentUserEmailAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentUserEmail))
+        {
+            return _currentUserEmail;
+        }
+
+        await EnsureCurrentUserAsync();
+        return _currentUserEmail;
+    }
+
+    private static string? ExtractDisplayName(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var atIndex = email.IndexOf('@');
+        return atIndex > 0 ? email[..atIndex] : email;
     }
 
     private async Task LoadSubmissionsAsync()
@@ -202,7 +348,8 @@
         _isLoading = true;
         _loadError = null;
         _statusError = null;
-        _submissions.Clear();
+        _allSubmissions.Clear();
+        _visibleSubmissions = new List<SubmissionViewModel>();
 
         try
         {
@@ -212,10 +359,11 @@
             foreach (var record in records)
             {
                 var viewModel = MapSubmission(record);
-                _submissions.Add(viewModel);
+                _allSubmissions.Add(viewModel);
             }
 
             RecalculateStatusCounts();
+            ApplyFilters();
         }
         catch (SupabaseAuthException ex)
         {
@@ -238,13 +386,25 @@
             return;
         }
 
-        var previousStatus = submission.Status;
         var mapping = NormalizeStatus(newStatus);
+        var previousStatus = submission.Status;
+        var previousUpdatedBy = submission.StatusUpdatedBy;
+        var previousUpdatedAt = submission.StatusUpdatedAtUtc;
 
-        submission.ApplyStatus(mapping.Display);
+        var updatedBy = await GetCurrentUserEmailAsync();
+        if (string.IsNullOrWhiteSpace(updatedBy))
+        {
+            _statusError = "Unable to determine the current user. Please sign in again.";
+            return;
+        }
+
+        var updatedAt = DateTime.UtcNow;
+
+        submission.ApplyStatusUpdate(mapping, updatedBy, updatedAt);
         _pendingStatusUpdates.Add(submission.Id);
         _statusError = null;
         RecalculateStatusCounts();
+        ApplyFilters();
 
         try
         {
@@ -254,19 +414,21 @@
                 throw new InvalidOperationException("Missing Supabase access token. Please sign in again.");
             }
 
-            await AuthService.UpdateSubmissionStatusAsync(submission.Id, mapping.Slug, accessToken);
+            await AuthService.UpdateSubmissionStatusAsync(submission.Id, mapping.Slug, accessToken, updatedBy, updatedAt);
         }
         catch (SupabaseAuthException ex)
         {
-            submission.ApplyStatus(previousStatus);
+            submission.ApplyStatusUpdate(NormalizeStatus(previousStatus), previousUpdatedBy, previousUpdatedAt);
             _statusError = $"Failed to update status ({(int)ex.StatusCode}).";
             RecalculateStatusCounts();
+            ApplyFilters();
         }
         catch (Exception ex)
         {
-            submission.ApplyStatus(previousStatus);
+            submission.ApplyStatusUpdate(NormalizeStatus(previousStatus), previousUpdatedBy, previousUpdatedAt);
             _statusError = $"Unexpected error updating status: {ex.Message}";
             RecalculateStatusCounts();
+            ApplyFilters();
         }
         finally
         {
@@ -277,10 +439,217 @@
 
     private void RecalculateStatusCounts()
     {
-        _totalCount = _submissions.Count;
-        _newCount = _submissions.Count(s => s.StatusSlug == "new");
-        _inProgressCount = _submissions.Count(s => s.StatusSlug == "in_progress");
-        _resolvedCount = _submissions.Count(s => s.StatusSlug == "resolved");
+        _totalCount = _allSubmissions.Count;
+        _newCount = _allSubmissions.Count(s => s.StatusSlug == "new");
+        _inProgressCount = _allSubmissions.Count(s => s.StatusSlug == "in_progress");
+        _resolvedCount = _allSubmissions.Count(s => s.StatusSlug == "resolved");
+    }
+
+    private string SelectedStatus
+    {
+        get => _selectedStatus;
+        set
+        {
+            if (_selectedStatus == value)
+            {
+                return;
+            }
+
+            _selectedStatus = value;
+            ApplyFilters();
+        }
+    }
+
+    private string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            if (_searchTerm == value)
+            {
+                return;
+            }
+
+            _searchTerm = value;
+            ApplyFilters();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<SubmissionViewModel> filtered = _allSubmissions;
+
+        if (!string.IsNullOrWhiteSpace(_selectedStatus) &&
+            !string.Equals(_selectedStatus, "All Status", StringComparison.OrdinalIgnoreCase))
+        {
+            var statusSlug = NormalizeStatus(_selectedStatus).Slug;
+            filtered = filtered.Where(s => string.Equals(s.StatusSlug, statusSlug, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            var term = _searchTerm.Trim();
+            filtered = filtered.Where(submission => MatchesSearch(submission, term));
+        }
+
+        _visibleSubmissions = filtered.ToList();
+        StateHasChanged();
+    }
+
+    private static bool MatchesSearch(SubmissionViewModel submission, string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            return true;
+        }
+
+        term = term.Trim();
+
+        return submission.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.Email.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.Company.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.Phone.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.Description.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.StatusUpdatedByDisplay.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               (submission.StatusUpdatedBy is not null && submission.StatusUpdatedBy.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+               submission.StatusUpdatedAtDisplay.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+               submission.Tags.Any(tag => tag.Contains(term, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task ExportToExcelAsync()
+    {
+        if (_visibleSubmissions.Count == 0 || _isExporting)
+        {
+            return;
+        }
+
+        _isExporting = true;
+        StateHasChanged();
+
+        try
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine("<html><head><meta charset=\"UTF-8\"></head><body>");
+            builder.AppendLine("<table border=\"1\" cellspacing=\"0\" cellpadding=\"4\">");
+            builder.AppendLine("<thead>");
+            builder.AppendLine("<tr>");
+            builder.AppendLine("<th>Full Name</th>");
+            builder.AppendLine("<th>Email</th>");
+            builder.AppendLine("<th>Phone</th>");
+            builder.AppendLine("<th>Company</th>");
+            builder.AppendLine("<th>Status</th>");
+            builder.AppendLine("<th>Last Updated By</th>");
+            builder.AppendLine("<th>Last Updated By (Email)</th>");
+            builder.AppendLine("<th>Last Updated At</th>");
+            builder.AppendLine("<th>Submitted At</th>");
+            builder.AppendLine("<th>Description</th>");
+            builder.AppendLine("<th>Tags</th>");
+            builder.AppendLine("</tr>");
+            builder.AppendLine("</thead>");
+            builder.AppendLine("<tbody>");
+
+            foreach (var submission in _visibleSubmissions)
+            {
+                builder.AppendLine("<tr>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Name)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Email)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Phone)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Company)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Status)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.StatusUpdatedByDisplay)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.StatusUpdatedBy ?? string.Empty)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.StatusUpdatedAtDisplay)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.SubmittedAtDisplay)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(submission.Description)}</td>");
+                builder.AppendLine($"<td>{EncodeForHtml(string.Join("; ", submission.Tags))}</td>");
+                builder.AppendLine("</tr>");
+            }
+
+            builder.AppendLine("</tbody>");
+            builder.AppendLine("</table>");
+            builder.AppendLine("</body></html>");
+
+            var bytes = Encoding.UTF8.GetBytes(builder.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+            var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            var fileName = $"customer-submissions-{timestamp}.xls";
+
+            var module = await GetFileUtilsModuleAsync();
+            await module.InvokeVoidAsync("downloadFileFromBytes", fileName, "application/vnd.ms-excel", base64);
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<IJSObjectReference> GetFileUtilsModuleAsync()
+    {
+        if (_fileUtilsModule is null)
+        {
+            _fileUtilsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/file-utils.js");
+        }
+
+        return _fileUtilsModule;
+    }
+
+    private static string EncodeForHtml(string? value)
+    {
+        return WebUtility.HtmlEncode(value ?? string.Empty);
+    }
+
+    private string GetEmptyStateMessage()
+    {
+        if (_allSubmissions.Count == 0)
+        {
+            return "No submissions available yet.";
+        }
+
+        if (!string.Equals(_selectedStatus, "All Status", StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            return "No submissions match your current filters.";
+        }
+
+        return "No submissions available yet.";
+    }
+
+    private void OpenSubmissionDetails(SubmissionViewModel submission)
+    {
+        _selectedSubmission = submission;
+        _isDetailOpen = true;
+    }
+
+    private void CloseSubmissionDetails()
+    {
+        _isDetailOpen = false;
+        _selectedSubmission = null;
+    }
+
+    private string GetMailToLink(SubmissionViewModel submission)
+    {
+        var subject = WebUtility.UrlEncode("Regarding your submission to Sominnercore");
+        return $"mailto:{submission.Email}?subject={subject}";
+    }
+
+    private string GetTelLink(SubmissionViewModel submission)
+    {
+        var digitsOnly = new string(submission.Phone.Where(char.IsDigit).ToArray());
+        if (string.IsNullOrEmpty(digitsOnly))
+        {
+            return "#";
+        }
+
+        return $"tel:{digitsOnly}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_fileUtilsModule is not null)
+        {
+            await _fileUtilsModule.DisposeAsync();
+        }
     }
 
     private static SubmissionViewModel MapSubmission(SupabaseAuthService.CustomerSubmissionDto dto)
@@ -301,7 +670,7 @@
             SubmittedAtUtc = dto.SubmittedAt
         };
 
-        submission.ApplyStatus(dto.Status);
+        submission.InitializeStatus(dto.Status, dto.StatusUpdatedBy, dto.StatusUpdatedAt);
         return submission;
     }
 
@@ -310,6 +679,8 @@
         private string _status = "New";
         private string _statusSlug = "new";
         private string _statusCssClass = "status-new";
+        private string? _statusUpdatedBy;
+        private DateTime? _statusUpdatedAtUtc;
 
         public Guid Id { get; init; }
         public string Name { get; init; } = string.Empty;
@@ -329,13 +700,35 @@
         public string StatusSlug => _statusSlug;
         public string StatusCssClass => _statusCssClass;
         public string SubmittedAtDisplay => SubmittedAtUtc.ToLocalTime().ToString("MMM d, yyyy, hh:mm tt", CultureInfo.InvariantCulture);
+        public string PrimaryTag => Tags.FirstOrDefault() ?? "—";
+        public string? StatusUpdatedBy => _statusUpdatedBy;
+        public string StatusUpdatedByDisplay => string.IsNullOrWhiteSpace(_statusUpdatedBy)
+            ? "—"
+            : ExtractDisplayName(_statusUpdatedBy) ?? _statusUpdatedBy;
+        public DateTime? StatusUpdatedAtUtc => _statusUpdatedAtUtc;
+        public string StatusUpdatedAtDisplay => _statusUpdatedAtUtc.HasValue
+            ? _statusUpdatedAtUtc.Value.ToLocalTime().ToString("MMM d, yyyy, hh:mm tt", CultureInfo.InvariantCulture)
+            : "—";
 
         public void ApplyStatus(string status)
         {
             var normalized = NormalizeStatus(status);
-            _status = normalized.Display;
-            _statusSlug = normalized.Slug;
-            _statusCssClass = normalized.CssClass;
+            ApplyStatusUpdate(normalized, _statusUpdatedBy, _statusUpdatedAtUtc);
+        }
+
+        public void InitializeStatus(string status, string? updatedBy, DateTime? updatedAtUtc)
+        {
+            var mapping = NormalizeStatus(status);
+            ApplyStatusUpdate(mapping, updatedBy, updatedAtUtc);
+        }
+
+        public void ApplyStatusUpdate((string Display, string Slug, string CssClass) mapping, string? updatedBy, DateTime? updatedAtUtc)
+        {
+            _status = mapping.Display;
+            _statusSlug = mapping.Slug;
+            _statusCssClass = mapping.CssClass;
+            _statusUpdatedBy = string.IsNullOrWhiteSpace(updatedBy) ? null : updatedBy;
+            _statusUpdatedAtUtc = updatedAtUtc?.ToUniversalTime();
         }
     }
 }
