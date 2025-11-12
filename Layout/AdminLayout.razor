@@ -71,7 +71,9 @@
     private readonly IReadOnlyList<AdminNavItem> _navItems = new[]
     {
         new AdminNavItem("dashboard", "Dashboard", Icons.Material.Filled.Dashboard, "/admin"),
-        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions")
+        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions"),
+        new AdminNavItem("backend-chat", "Backend Chat", Icons.Material.Filled.Chat, "/admin/backend-chat")
+
     };
 
     private string _activeNav = "dashboard";
