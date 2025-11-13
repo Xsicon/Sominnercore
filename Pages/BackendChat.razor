@@ -57,7 +57,7 @@
                         @foreach (var conversation in visibleConversations)
                         {
                             var isSelected = conversation.Id == _selectedSessionId;
-                            var statusInfo = GetStatusInfo(conversation.Status);
+                            var statusInfo = GetStatusInfo(conversation.Status, conversation.HasUnread);
 
                             <article class="chat-conversation-item @(isSelected ? "selected" : string.Empty)"
                                      @onclick="async () => await SelectConversationAsync(conversation.Id)">
@@ -76,8 +76,8 @@
                                     </header>
                                     <p class="chat-preview">@conversation.LastMessagePreview</p>
                                     <div class="chat-status">
-                                        <span class="chat-status-dot @statusInfo.CssClass"></span>
-                                        <span class="chat-status-label">@statusInfo.Label</span>
+                                        <span class="chat-status-dot @statusInfo.DotCssClass"></span>
+                                        <span class="chat-status-label @statusInfo.LabelCssClass">@statusInfo.Label</span>
                                     </div>
                                 </div>
                             </article>
@@ -205,14 +205,19 @@
     private CancellationTokenSource? _messagesCts;
     private bool _isSendingResponse;
     private string? _sendError;
-    private PeriodicTimer? _refreshTimer;
-    private CancellationTokenSource? _refreshTimerCts;
-    private Task? _pollingTask;
+    private PeriodicTimer? _messageRefreshTimer;
+    private CancellationTokenSource? _messageRefreshTimerCts;
+    private Task? _messagePollingTask;
+    private PeriodicTimer? _sessionRefreshTimer;
+    private CancellationTokenSource? _sessionRefreshTimerCts;
+    private Task? _sessionPollingTask;
     private readonly Dictionary<Guid, HashSet<long>> _sessionMessageIds = new();
+    private readonly HashSet<Guid> _unreadSessionIds = new();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSessionsAsync();
+        StartSessionPolling();
     }
 
     private async Task LoadSessionsAsync()
@@ -224,28 +229,24 @@
         try
         {
             var sessions = await ChatService.GetChatSessionsAsync();
-            _sessions.Clear();
-            _sessions.AddRange(sessions.Select(ToViewModel));
+            var (_, currentSelection) = UpdateSessions(sessions, preserveSelection: false);
 
-            var initialSession = _sessions.FirstOrDefault();
-            _selectedSessionId = initialSession?.Id;
-
-            if (initialSession is not null)
+            if (currentSelection is Guid sessionId)
             {
-                await LoadMessagesAsync(initialSession.Id);
-                StartPolling(initialSession.Id);
+                await LoadMessagesAsync(sessionId);
+                StartMessagePolling(sessionId);
             }
             else
             {
                 _messages.Clear();
-                StopPolling();
+                StopMessagePolling();
             }
         }
         catch (Exception ex)
         {
             _sessionsError = "Unable to load conversations.";
             Console.Error.WriteLine(ex);
-            StopPolling();
+            StopMessagePolling();
         }
         finally
         {
@@ -254,10 +255,98 @@
         }
     }
 
+    private (Guid? PreviousSelection, Guid? CurrentSelection) UpdateSessions(IEnumerable<SupabaseChatService.ChatSessionSummary> sessions, bool preserveSelection)
+    {
+        var previousSelection = _selectedSessionId;
+        var existingSessions = _sessions.ToDictionary(session => session.Id);
+        var orderedSessions = new List<ChatSessionViewModel>();
+
+        foreach (var summary in sessions)
+        {
+            var displayDate = (summary.LastMessageCreatedAt ?? summary.StartedAt).ToLocalTime();
+            var preview = string.IsNullOrWhiteSpace(summary.LastMessagePreview) ? "No messages yet." : summary.LastMessagePreview;
+
+            var hasUnread = _unreadSessionIds.Contains(summary.Id);
+            if (!existingSessions.TryGetValue(summary.Id, out var existing))
+            {
+                hasUnread = true;
+                _unreadSessionIds.Add(summary.Id);
+            }
+            else
+            {
+                if (previousSelection == summary.Id)
+                {
+                    hasUnread = false;
+                    _unreadSessionIds.Remove(summary.Id);
+                }
+                else if (displayDate > existing.DisplayDate)
+                {
+                    hasUnread = true;
+                    _unreadSessionIds.Add(summary.Id);
+                }
+                else
+                {
+                    hasUnread = _unreadSessionIds.Contains(summary.Id);
+                }
+            }
+
+            var viewModel = new ChatSessionViewModel(
+                summary.Id,
+                string.IsNullOrWhiteSpace(summary.CustomerName) ? "Guest" : summary.CustomerName,
+                summary.CustomerEmail,
+                summary.Status,
+                displayDate,
+                preview,
+                DefaultAvatarGradient,
+                hasUnread);
+
+            orderedSessions.Add(viewModel);
+        }
+
+        _sessions.Clear();
+        _sessions.AddRange(orderedSessions);
+
+        var activeSessionIds = new HashSet<Guid>(_sessions.Select(session => session.Id));
+        _unreadSessionIds.RemoveWhere(id => !activeSessionIds.Contains(id));
+        var removedSessionIds = _sessionMessageIds.Keys.Where(id => !activeSessionIds.Contains(id)).ToList();
+        foreach (var removedId in removedSessionIds)
+        {
+            _sessionMessageIds.Remove(removedId);
+        }
+
+        Guid? nextSelection = null;
+        if (_sessions.Count > 0)
+        {
+            if (preserveSelection && previousSelection.HasValue && activeSessionIds.Contains(previousSelection.Value))
+            {
+                nextSelection = previousSelection;
+            }
+            else
+            {
+                nextSelection = _sessions[0].Id;
+            }
+        }
+
+        _selectedSessionId = nextSelection;
+        if (nextSelection.HasValue)
+        {
+            _unreadSessionIds.Remove(nextSelection.Value);
+            var index = _sessions.FindIndex(session => session.Id == nextSelection.Value);
+            if (index >= 0)
+            {
+                var session = _sessions[index];
+                _sessions[index] = session with { HasUnread = false };
+            }
+        }
+
+        return (previousSelection, nextSelection);
+    }
+
     private async Task LoadMessagesAsync(Guid sessionId, bool showLoadingIndicator = true)
     {
         _messagesError = null;
         _selectedSessionId = sessionId;
+        MarkSessionAsRead(sessionId);
 
         if (showLoadingIndicator)
         {
@@ -309,7 +398,8 @@
                         _sessions[sessionIndex] = session with
                         {
                             LastMessagePreview = detail.Message,
-                            DisplayDate = detail.CreatedAt.ToLocalTime()
+                            DisplayDate = detail.CreatedAt.ToLocalTime(),
+                            HasUnread = false
                         };
                     }
                 }
@@ -333,6 +423,7 @@
                 {
                     _isLoadingMessages = false;
                 }
+                MarkSessionAsRead(sessionId);
                 StateHasChanged();
             }
         }
@@ -346,7 +437,7 @@
                 (!string.IsNullOrWhiteSpace(conversation.DisplayEmail) && conversation.DisplayEmail.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrWhiteSpace(conversation.LastMessagePreview) && conversation.LastMessagePreview.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)));
 
-    private int TotalUnreadCount => 0;
+    private int TotalUnreadCount => _unreadSessionIds.Count;
 
     private ChatSessionViewModel? CurrentConversation =>
         _selectedSessionId is Guid id ? _sessions.FirstOrDefault(c => c.Id == id) : null;
@@ -361,8 +452,21 @@
         }
 
         await LoadMessagesAsync(conversationId);
-        StartPolling(conversationId);
+        StartMessagePolling(conversationId);
     }
+    private void MarkSessionAsRead(Guid sessionId)
+    {
+        if (_unreadSessionIds.Remove(sessionId))
+        {
+            var sessionIndex = _sessions.FindIndex(session => session.Id == sessionId);
+            if (sessionIndex >= 0)
+            {
+                var session = _sessions[sessionIndex];
+                _sessions[sessionIndex] = session with { HasUnread = false };
+            }
+        }
+    }
+
 
     private async Task SendDraftAsync()
     {
@@ -431,18 +535,91 @@
         }
     }
 
-    private void StartPolling(Guid sessionId)
+    private async Task RefreshSessionsAsync()
     {
-        StopPolling();
+        try
+        {
+            var sessions = await ChatService.GetChatSessionsAsync();
+            var (previousSelection, currentSelection) = UpdateSessions(sessions, preserveSelection: true);
+            _sessionsError = null;
 
-        _refreshTimerCts = new CancellationTokenSource();
-        _refreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
-        var token = _refreshTimerCts.Token;
-        _pollingTask = Task.Run(async () =>
+            if (currentSelection is null)
+            {
+                if (_messages.Count > 0)
+                {
+                    _messages.Clear();
+                }
+
+                StopMessagePolling();
+            }
+            else if (currentSelection != previousSelection)
+            {
+                await LoadMessagesAsync(currentSelection.Value, false);
+                StartMessagePolling(currentSelection.Value);
+            }
+
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when polling is cancelled.
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            if (string.IsNullOrEmpty(_sessionsError))
+            {
+                _sessionsError = "Unable to refresh conversations.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void StartSessionPolling()
+    {
+        StopSessionPolling();
+
+        _sessionRefreshTimerCts = new CancellationTokenSource();
+        _sessionRefreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var token = _sessionRefreshTimerCts.Token;
+        _sessionPollingTask = Task.Run(async () =>
         {
             try
             {
-                while (await _refreshTimer.WaitForNextTickAsync(token))
+                while (await _sessionRefreshTimer.WaitForNextTickAsync(token))
+                {
+                    await InvokeAsync(RefreshSessionsAsync);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when polling stops.
+            }
+        }, token);
+    }
+
+    private void StopSessionPolling()
+    {
+        _sessionRefreshTimerCts?.Cancel();
+        _sessionRefreshTimer?.Dispose();
+        _sessionPollingTask = null;
+        _sessionRefreshTimer = null;
+        _sessionRefreshTimerCts?.Dispose();
+        _sessionRefreshTimerCts = null;
+    }
+
+    private void StartMessagePolling(Guid sessionId)
+    {
+        StopMessagePolling();
+
+        _messageRefreshTimerCts = new CancellationTokenSource();
+        _messageRefreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var token = _messageRefreshTimerCts.Token;
+        _messagePollingTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (await _messageRefreshTimer.WaitForNextTickAsync(token))
                 {
                     await InvokeAsync(() => LoadMessagesAsync(sessionId, false));
                 }
@@ -454,40 +631,31 @@
         }, token);
     }
 
-    private void StopPolling()
+    private void StopMessagePolling()
     {
-        _refreshTimerCts?.Cancel();
-        _refreshTimer?.Dispose();
-        _pollingTask = null;
-        _refreshTimer = null;
-        _refreshTimerCts?.Dispose();
-        _refreshTimerCts = null;
+        _messageRefreshTimerCts?.Cancel();
+        _messageRefreshTimer?.Dispose();
+        _messagePollingTask = null;
+        _messageRefreshTimer = null;
+        _messageRefreshTimerCts?.Dispose();
+        _messageRefreshTimerCts = null;
     }
 
-    private static (string Label, string CssClass) GetStatusInfo(string status) =>
-        status.ToLowerInvariant() switch
-        {
-            "active" => ("Active", "status-active"),
-            "waiting" => ("Waiting", "status-waiting"),
-            "resolved" => ("Resolved", "status-resolved"),
-            "closed" => ("Closed", "status-resolved"),
-            _ => ("New", "status-active")
-        };
-
-    private static ChatSessionViewModel ToViewModel(SupabaseChatService.ChatSessionSummary session)
+    private static (string Label, string DotCssClass, string LabelCssClass) GetStatusInfo(string status, bool hasUnread)
     {
-        var name = string.IsNullOrWhiteSpace(session.CustomerName) ? "Guest" : session.CustomerName;
-        var preview = string.IsNullOrWhiteSpace(session.LastMessagePreview) ? "No messages yet." : session.LastMessagePreview;
-        var displayDate = (session.LastMessageCreatedAt ?? session.StartedAt).ToLocalTime();
+        if (hasUnread)
+        {
+            return ("Unread", "status-unread", "status-unread");
+        }
 
-        return new ChatSessionViewModel(
-            session.Id,
-            name,
-            session.CustomerEmail,
-            session.Status,
-            displayDate,
-            preview,
-            DefaultAvatarGradient);
+        return status.ToLowerInvariant() switch
+        {
+            "active" => ("Active", "status-active", string.Empty),
+            "waiting" => ("Waiting", "status-waiting", string.Empty),
+            "resolved" => ("Resolved", "status-resolved", string.Empty),
+            "closed" => ("Closed", "status-resolved", string.Empty),
+            _ => ("New", "status-active", string.Empty)
+        };
     }
 
     private static ChatMessageViewModel CreateMessageViewModel(SupabaseChatService.ChatMessageDetail message, bool isNew)
@@ -514,7 +682,8 @@
     {
         _messagesCts?.Cancel();
         _messagesCts?.Dispose();
-        StopPolling();
+        StopMessagePolling();
+        StopSessionPolling();
     }
 
     private void ScheduleMessageSeen(ChatMessageViewModel message)
@@ -548,7 +717,8 @@
         string Status,
         DateTime DisplayDate,
         string LastMessagePreview,
-        string AvatarGradient)
+        string AvatarGradient,
+        bool HasUnread)
     {
         public string DisplayEmail => string.IsNullOrWhiteSpace(Email) ? "—" : Email;
 

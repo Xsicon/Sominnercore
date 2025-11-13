@@ -1093,8 +1093,18 @@
     box-shadow: 0 0 8px rgba(56, 189, 248, 0.55);
 }
 
+.chat-status-dot.status-unread {
+    background: #f43f5e;
+    box-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+}
+
 .chat-status-label {
     color: rgba(148, 163, 184, 0.8);
+}
+
+.chat-status-label.status-unread {
+    color: #f43f5e;
+    font-weight: 600;
 }
 
 .chat-preview-placeholder {

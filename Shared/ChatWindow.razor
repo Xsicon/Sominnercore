@@ -1,7 +1,7 @@
 @using System.Linq
 @using System.Threading
 @using System.Threading.Tasks
-@using System.Threading.Tasks
+@using System.Net
 @implements IDisposable
 @if (IsOpen)
 {
@@ -339,6 +339,19 @@
         }
     }
 
+    private static bool ShouldResetSession(SupabaseChatException exception) =>
+        exception.StatusCode == HttpStatusCode.Conflict || exception.StatusCode == HttpStatusCode.BadRequest;
+
+    private async Task ResetSessionAsync()
+    {
+        StopMessagePolling();
+        _sessionId = null;
+        _sessionCreationTask = null;
+        _loadedMessageIds.Clear();
+        _hasInitializedMessages = false;
+        await PersistSessionStateAsync();
+    }
+
     private async Task AddAndSendUserMessageAsync(string messageText, ChatMessage? existingMessage = null)
     {
         var chatMessage = existingMessage ?? AddUserMessage(messageText);
@@ -346,36 +359,55 @@
         chatMessage.Timestamp = DateTime.Now.ToString("hh:mm tt");
         var shouldShowFollowUpNote = existingMessage is null && !_awaitingName && !_awaitingEmail;
         _isSendingMessage = true;
-        try
+
+        var attempt = 0;
+        var messageSent = false;
+
+        while (!messageSent && attempt < 2)
         {
-            await EnsureSessionAsync();
-            if (!_sessionId.HasValue)
+            try
             {
-                throw new InvalidOperationException("Unable to create a chat session.");
+                await EnsureSessionAsync();
+                if (!_sessionId.HasValue)
+                {
+                    throw new InvalidOperationException("Unable to create a chat session.");
+                }
+
+                var storedMessage = await ChatService.AddCustomerMessageAsync(_sessionId.Value, messageText);
+                chatMessage.Timestamp = storedMessage.CreatedAt.ToLocalTime().ToString("hh:mm tt");
+                chatMessage.DeliveryStatus = MessageDeliveryStatus.Sent;
+                chatMessage.MessageId = storedMessage.Id;
+                _loadedMessageIds.Add(storedMessage.Id);
+
+                if (shouldShowFollowUpNote && !_hasShownFollowUpNote)
+                {
+                    AddSystemMessage("A customer service team member will reach you soon.");
+                    _hasShownFollowUpNote = true;
+                }
+
+                messageSent = true;
             }
-
-            var storedMessage = await ChatService.AddCustomerMessageAsync(_sessionId.Value, messageText);
-            chatMessage.Timestamp = storedMessage.CreatedAt.ToLocalTime().ToString("hh:mm tt");
-            chatMessage.DeliveryStatus = MessageDeliveryStatus.Sent;
-            chatMessage.MessageId = storedMessage.Id;
-            _loadedMessageIds.Add(storedMessage.Id);
-
-            if (shouldShowFollowUpNote && !_hasShownFollowUpNote)
+            catch (SupabaseChatException ex) when (attempt == 0 && ShouldResetSession(ex))
             {
-                AddSystemMessage("A customer service team member will reach you soon.");
-                _hasShownFollowUpNote = true;
+                attempt++;
+                await ResetSessionAsync();
+            }
+            catch (Exception)
+            {
+                chatMessage.DeliveryStatus = MessageDeliveryStatus.Failed;
+                AddSystemMessage("We couldn't send your message. Please try again.");
+                break;
             }
         }
-        catch (Exception)
+
+        if (!messageSent && chatMessage.DeliveryStatus == MessageDeliveryStatus.Pending)
         {
             chatMessage.DeliveryStatus = MessageDeliveryStatus.Failed;
             AddSystemMessage("We couldn't send your message. Please try again.");
         }
-        finally
-        {
-            _isSendingMessage = false;
-            await ScrollToBottomAsync();
-        }
+
+        _isSendingMessage = false;
+        await ScrollToBottomAsync();
     }
 
     private async Task EnsureSessionAsync()
