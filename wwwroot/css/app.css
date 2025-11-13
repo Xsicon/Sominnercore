@@ -3402,6 +3402,33 @@ body.dark-theme .auth-layout-root {
     line-height: 1.5;
 }
 
+.chat-message-incoming.new-message .message-text,
+.chat-message-system.new-message .message-text {
+    animation: chatMessagePulse 2.5s ease-out forwards;
+    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.45);
+    background-color: rgba(13, 148, 136, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-message-incoming.new-message .message-text,
+    .chat-message-system.new-message .message-text {
+        animation: none;
+        box-shadow: none;
+        background-color: #2a2a2a;
+    }
+}
+
+@keyframes chatMessagePulse {
+    0% {
+        box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.55);
+        background-color: rgba(13, 148, 136, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+        background-color: #2a2a2a;
+    }
+}
+
 .message-meta {
     display: flex;
     align-items: center;
