@@ -138,7 +138,8 @@
     private string? _pendingMessageText;
     private ChatMessage? _pendingUserMessage;
     private Guid? _sessionId;
-    private Task<Guid>? _sessionCreationTask;
+    private Task<SupabaseChatService.ChatSessionCreationResult>? _sessionCreationTask;
+    private bool _isReturningCustomer;
     private bool _awaitingName = true;
     private bool _awaitingEmail;
     private bool _hasPromptedForName;
@@ -305,11 +306,28 @@
             _customerEmail = trimmedMessage;
             _awaitingEmail = false;
             await PersistSessionStateAsync();
-            AddSystemMessage($"Perfect, {_customerName}! We'll reach out at {_customerEmail} if needed. How can we assist you today?");
 
             try
             {
-                await EnsureSessionAsync();
+                var sessionResult = await EnsureSessionAsync();
+                
+                // Show customized message based on whether customer is returning
+                if (sessionResult is not null)
+                {
+                    if (sessionResult.IsReturningCustomer)
+                    {
+                        // Returning customer - show welcome back message
+                        AddSystemMessage($"Welcome back, {_customerName}! How can we assist you today?");
+                    }
+                    else
+                    {
+                        // New customer
+                        AddSystemMessage($"Perfect, {_customerName}! We'll reach out at {_customerEmail} if needed. How can we assist you today?");
+                    }
+                    StateHasChanged();
+                    await ScrollToBottomAsync();
+                }
+
                 if (!string.IsNullOrWhiteSpace(_pendingMessageText))
                 {
                     var cached = _pendingMessageText;
@@ -407,25 +425,53 @@
         }
 
         _isSendingMessage = false;
+        StateHasChanged();
         await ScrollToBottomAsync();
     }
 
-    private async Task EnsureSessionAsync()
+    private async Task<SupabaseChatService.ChatSessionCreationResult?> EnsureSessionAsync()
     {
         if (_sessionId.HasValue || string.IsNullOrWhiteSpace(_customerName))
         {
-            return;
+            return null;
         }
 
         _sessionCreationTask ??= ChatService.CreateChatSessionAsync(_customerName!, _customerEmail);
 
         try
         {
-            _sessionId = await _sessionCreationTask;
+            var result = await _sessionCreationTask;
+            _sessionId = result.SessionId;
+            _isReturningCustomer = result.IsReturningCustomer;
             await PersistSessionStateAsync();
             _hasInitializedMessages = false;
-            await RefreshMessagesAsync();
+            
+            // Skip loading previous messages for returning customers reusing a session
+            if (!result.IsReusingSession)
+            {
+                await RefreshMessagesAsync();
+            }
+            else
+            {
+                // For returning customers reusing session, fetch messages once to mark IDs as loaded
+                // but don't display them - this prevents polling from adding old messages
+                try
+                {
+                    var existingMessages = await ChatService.GetChatMessagesAsync(result.SessionId);
+                    foreach (var msg in existingMessages)
+                    {
+                        _loadedMessageIds.Add(msg.Id);
+                    }
+                }
+                catch
+                {
+                    // Ignore errors when fetching existing messages
+                }
+                _hasInitializedMessages = true;
+            }
+            
             StartMessagePolling();
+            return result;
         }
         finally
         {
@@ -563,6 +609,21 @@
                 _ => MessageSender.User
             };
 
+            // Set sender label: agent name for agents, "Sominnercore Support" for system messages
+            string? senderLabel = null;
+            if (sender == MessageSender.Support && remote.SenderType == SupabaseChatService.ChatSenderType.Agent)
+            {
+                // Use agent name if available, otherwise fallback to "Sominnercore Support"
+                senderLabel = !string.IsNullOrWhiteSpace(remote.AgentName) 
+                    ? remote.AgentName 
+                    : "Sominnercore Support";
+            }
+            else if (sender == MessageSender.System)
+            {
+                // System messages (automatic questions) show "Sominnercore Support"
+                senderLabel = "Sominnercore Support";
+            }
+
             var message = new ChatMessage
             {
                 Text = remote.Message,
@@ -570,7 +631,7 @@
                 Sender = sender,
                 DeliveryStatus = MessageDeliveryStatus.Sent,
                 MessageId = remote.Id,
-                SenderLabel = sender is MessageSender.Support or MessageSender.System ? "Sominnercore Support" : null
+                SenderLabel = senderLabel
             };
 
             var isSupportMessage = sender == MessageSender.Support;

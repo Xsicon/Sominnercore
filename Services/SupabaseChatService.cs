@@ -21,12 +21,35 @@ public class SupabaseChatService
         _options = options.Value;
     }
 
-    public async Task<Guid> CreateChatSessionAsync(string customerName, string? customerEmail, CancellationToken cancellationToken = default)
+    public async Task<ChatSessionCreationResult> CreateChatSessionAsync(string customerName, string? customerEmail, CancellationToken cancellationToken = default)
     {
         EnsureConfigured();
 
-        var contact = await CreateCustomerContactAsync(customerName, customerEmail, cancellationToken);
-        return await CreateSessionAsync(contact.Id, customerName, customerEmail, cancellationToken);
+        // If email is provided, check for existing customer and active session
+        if (!string.IsNullOrWhiteSpace(customerEmail))
+        {
+            var trimmedEmail = customerEmail.Trim();
+            var existingContact = await FindCustomerContactByEmailAsync(trimmedEmail, cancellationToken);
+            
+            if (existingContact is not null)
+            {
+                // Check for existing active chat session
+                var activeSession = await FindActiveChatSessionAsync(existingContact.Id, cancellationToken);
+                if (activeSession.HasValue)
+                {
+                    return new ChatSessionCreationResult(activeSession.Value, true, true);
+                }
+
+                // Use existing contact but create new session
+                var sessionId = await CreateSessionAsync(existingContact.Id, customerName, customerEmail, cancellationToken);
+                return new ChatSessionCreationResult(sessionId, true, false);
+            }
+        }
+
+        // Create new contact and session
+        var contact = await CreateOrGetCustomerContactAsync(customerName, customerEmail, cancellationToken);
+        var newSessionId = await CreateSessionAsync(contact.Id, customerName, customerEmail, cancellationToken);
+        return new ChatSessionCreationResult(newSessionId, false, false);
     }
 
     public async Task<ChatMessageResponse> AddCustomerMessageAsync(Guid sessionId, string message, CancellationToken cancellationToken = default)
@@ -108,11 +131,48 @@ public class SupabaseChatService
     {
         EnsureConfigured();
 
+        // First, get all messages
         var query =
             $"chat_messages?select=id,session_id,message,sender_type,sender_id,created_at&session_id=eq.{sessionId}&order=created_at.asc";
         var request = CreateRequest(HttpMethod.Get, query);
 
         var messages = await SendAsync<ChatMessageRow>(request, cancellationToken);
+        
+        // Get unique agent IDs from messages
+        var agentIds = messages
+            .Where(m => m.SenderId.HasValue && m.SenderType?.ToLowerInvariant() == "agent")
+            .Select(m => m.SenderId!.Value)
+            .Distinct()
+            .ToList();
+
+        // Fetch agent names if there are any agent messages
+        var agentNames = new Dictionary<Guid, string>();
+        if (agentIds.Any())
+        {
+            try
+            {
+                // Build query with proper PostgREST syntax for 'in' operator
+                var agentIdsList = string.Join(",", agentIds.Select(id => id.ToString()));
+                var agentQuery = $"team_members?select=id,display_name&id=in.({agentIdsList})";
+                var agentRequest = CreateRequest(HttpMethod.Get, agentQuery);
+                var agents = await SendAsync<TeamMemberRow>(agentRequest, cancellationToken);
+                
+                foreach (var agent in agents)
+                {
+                    if (agent.Id.HasValue && !string.IsNullOrWhiteSpace(agent.DisplayName))
+                    {
+                        agentNames[agent.Id.Value] = agent.DisplayName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // If fetching agent names fails, continue without them
+                // Log error for debugging but don't fail the entire request
+                Console.Error.WriteLine($"Failed to fetch agent names: {ex.Message}");
+            }
+        }
+
         return messages
             .Select(row => new ChatMessageDetail(
                 row.Id,
@@ -120,11 +180,31 @@ public class SupabaseChatService
                 row.Message,
                 ParseSenderType(row.SenderType),
                 row.SenderId,
-                row.CreatedAt))
+                row.CreatedAt,
+                row.SenderId.HasValue && agentNames.TryGetValue(row.SenderId.Value, out var name) ? name : null))
             .ToList();
     }
 
-    private async Task<CustomerContactResponse> CreateCustomerContactAsync(string customerName, string? customerEmail, CancellationToken cancellationToken)
+    private async Task<CustomerContactResponse?> FindCustomerContactByEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        var query = $"customer_contacts?select=id&email=eq.{Uri.EscapeDataString(email)}&limit=1";
+        var request = CreateRequest(HttpMethod.Get, query);
+
+        var contacts = await SendAsync<CustomerContactResponse>(request, cancellationToken);
+        return contacts.FirstOrDefault();
+    }
+
+    private async Task<Guid?> FindActiveChatSessionAsync(Guid customerId, CancellationToken cancellationToken)
+    {
+        // Check for active or waiting sessions (returning customers should continue their existing chat)
+        var query = $"chat_sessions?select=id&customer_id=eq.{customerId}&or=(status.eq.active,status.eq.waiting)&order=started_at.desc&limit=1";
+        var request = CreateRequest(HttpMethod.Get, query);
+
+        var sessions = await SendAsync<ChatSessionResponse>(request, cancellationToken);
+        return sessions.FirstOrDefault()?.Id;
+    }
+
+    private async Task<CustomerContactResponse> CreateOrGetCustomerContactAsync(string customerName, string? customerEmail, CancellationToken cancellationToken)
     {
         var email = string.IsNullOrWhiteSpace(customerEmail)
             ? CreatePlaceholderEmail(customerName)
@@ -251,7 +331,13 @@ public class SupabaseChatService
         string Message,
         ChatSenderType SenderType,
         Guid? SenderId,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        string? AgentName = null);
+
+    public sealed record ChatSessionCreationResult(
+        Guid SessionId,
+        bool IsReturningCustomer,
+        bool IsReusingSession);
 
     public enum ChatSenderType
     {
@@ -282,6 +368,10 @@ public class SupabaseChatService
         [property: JsonPropertyName("sender_type")] string SenderType,
         [property: JsonPropertyName("sender_id")] Guid? SenderId,
         [property: JsonPropertyName("created_at")] DateTime CreatedAt);
+
+    private sealed record TeamMemberRow(
+        [property: JsonPropertyName("id")] Guid? Id,
+        [property: JsonPropertyName("display_name")] string? DisplayName);
 
     private static ChatSenderType ParseSenderType(string value) =>
         value.ToLowerInvariant() switch

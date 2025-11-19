@@ -6,6 +6,7 @@
 @using System.Threading.Tasks
 @implements IDisposable
 @inject SupabaseChatService ChatService
+@inject IJSRuntime JSRuntime
 
 <DashboardHeader Title="Customer Support Chat"
                  Subtitle="Respond to customer inquiries in real-time" />
@@ -115,7 +116,7 @@
                     </div>
                 </header>
 
-                <div class="chat-thread-body">
+                <div class="chat-thread-body" id="backendChatMessages">
                     @if (_isLoadingMessages)
                     {
                         <div class="chat-thread-loading">
@@ -425,6 +426,7 @@
                 }
                 MarkSessionAsRead(sessionId);
                 StateHasChanged();
+                await ScrollToBottomAsync();
             }
         }
     }
@@ -514,6 +516,7 @@
             }
 
             await LoadMessagesAsync(response.SessionId, false);
+            await ScrollToBottomAsync();
         }
         catch (Exception ex)
         {
@@ -525,6 +528,12 @@
             _isSendingResponse = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await Task.Delay(50);
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", "backendChatMessages");
     }
 
     private async Task HandleDraftKeyDown(KeyboardEventArgs e)
