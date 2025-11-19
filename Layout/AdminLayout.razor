@@ -1,0 +1,165 @@
+@inherits LayoutComponentBase
+@using System.Linq
+@using Sominnercore.Services
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+<HeadContent>
+    <link rel="stylesheet" href="css/admin.css" />
+</HeadContent>
+
+<MudLayout Class="admin-layout-root">
+    <div class="admin-topbar">
+        <div class="admin-topbar-left">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Class="admin-menu-button" OnClick="ToggleSidebar" />
+            <MudText Typo="Typo.h6" Class="admin-desktop-logo">
+                <span class="logo-gradient">Sominnercore Admin</span>
+            </MudText>
+            <div class="admin-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="admin-search-icon" />
+                <input class="admin-search-input" placeholder="Search..." />
+            </div>
+        </div>
+
+        <div class="admin-topbar-right">
+            <MudButton Variant="Variant.Outlined" Class="admin-back-button" OnClick="NavigateToWebsite">
+                Back to Website
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Class="admin-icon-button" />
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Class="admin-icon-button" OnClick="LogoutAsync" />
+        </div>
+    </div>
+
+    @if (_sidebarOpen)
+    {
+        <div class="admin-sidebar-backdrop" @onclick="ToggleSidebar"></div>
+    }
+
+    <div class="admin-body">
+        <aside class="@($"admin-sidebar {(_sidebarOpen ? "open" : "closed")}")">
+            <nav class="admin-nav-menu">
+                @foreach (var item in _navItems)
+                {
+                    <button type="button"
+                            class="admin-nav-link @(_activeNav == item.Key ? "active" : string.Empty)"
+                            @onclick="() => OnNavItemSelected(item)">
+                        <MudIcon Icon="@item.Icon" Class="admin-nav-icon" />
+                        <span>@item.Label</span>
+                    </button>
+                }
+            </nav>
+            <div class="admin-mobile-actions">
+                <MudButton Variant="Variant.Filled" Class="admin-mobile-action" OnClick="NavigateToWebsite">
+                    Back to Website
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Class="admin-mobile-action" StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                    Sign Out
+                </MudButton>
+            </div>
+        </aside>
+
+        <CascadingValue Value="_displayName">
+            <main class="admin-main-content">
+                @Body
+            </main>
+        </CascadingValue>
+    </div>
+</MudLayout>
+
+@code {
+    private readonly IReadOnlyList<AdminNavItem> _navItems = new[]
+    {
+        new AdminNavItem("dashboard", "Dashboard", Icons.Material.Filled.Dashboard, "/admin"),
+        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions"),
+        new AdminNavItem("backend-chat", "Backend Chat", Icons.Material.Filled.Chat, "/admin/backend-chat")
+
+    };
+
+    private string _activeNav = "dashboard";
+    private string _displayName = "Admin";
+    private string _userRole = "Admin";
+    private bool _sidebarOpen;
+
+    private void NavigateToWebsite()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void OnNavItemSelected(AdminNavItem item)
+    {
+        _activeNav = item.Key;
+        _sidebarOpen = false;
+        if (!string.IsNullOrWhiteSpace(item.Route))
+        {
+            Navigation.NavigateTo(item.Route);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                var user = await AuthService.GetUserAsync(accessToken);
+                if (user?.Email is { Length: > 0 } email)
+                {
+                    var at = email.IndexOf('@');
+                    _displayName = at > 0 ? email[..at] : email;
+                }
+
+                if (user?.UserMetadata is { } metadata && metadata.TryGetValue("role", out var roleObj))
+                {
+                    var role = Convert.ToString(roleObj);
+                    if (!string.IsNullOrWhiteSpace(role))
+                    {
+                        _userRole = FormatRole(role!);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // fall back to defaults
+        }
+    }
+
+    private sealed record AdminNavItem(string Key, string Label, string Icon, string? Route);
+
+    private static string FormatRole(string role) =>
+        string.Join(' ', role.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
+
+    private void ToggleSidebar()
+    {
+        _sidebarOpen = !_sidebarOpen;
+    }
+
+    private async Task LogoutAsync()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (!string.IsNullOrWhiteSpace(accessToken))
+            {
+                await AuthService.SignOutAsync(accessToken);
+            }
+
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "sb-access-token");
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "sb-refresh-token");
+        }
+        catch
+        {
+            // ignore and proceed
+        }
+        finally
+        {
+            _displayName = "Admin";
+            _userRole = "Admin";
+            Navigation.NavigateTo("/admin/login", true);
+        }
+    }
+}
+

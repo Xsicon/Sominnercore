@@ -2999,6 +2999,223 @@ body:not(.dark-theme) .portfolio-cta {
     text-decoration: none;
 }
 
+/* ===========================================
+   AUTH LAYOUT & LOGIN PAGE
+   =========================================== */
+.auth-layout-root {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #f0fdfa 0%, var(--bg-primary) 50%, #fff7ed 100%);
+}
+
+body.dark-theme .auth-layout-root {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.2) 0%, var(--bg-primary) 50%, rgba(249, 115, 22, 0.2) 100%);
+}
+
+.auth-layout-background {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.auth-layout-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 920px;
+    display: flex;
+    justify-content: center;
+}
+
+.login-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(12, 12, 12, 0.9);
+    border-radius: 28px;
+    border: 1px solid rgba(77, 77, 77, 0.45);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+    padding: 38px 36px 32px;
+    backdrop-filter: blur(18px);
+    color: #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.login-card-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.login-card-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(90deg, #0d9488, #f97316);
+    box-shadow: 0 12px 30px rgba(13, 148, 136, 0.35);
+}
+
+.login-lock-icon {
+    width: 28px;
+    height: 28px;
+    display: inline-block;
+    background: url("data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M17 9H7V7C7 4.79 8.79 3 11 3C13.21 3 15 4.79 15 7V9H17V7C17 4.24 14.76 2 12 2C9.24 2 7 4.24 7 7V9C5.9 9 5 9.9 5 11V19C5 20.1 5.9 21 7 21H17C18.1 21 19 20.1 19 19V11C19 9.9 18.1 9 17 9ZM12 17C10.9 17 10 16.1 10 15C10 13.9 10.9 13 12 13C13.1 13 14 13.9 14 15C14 16.1 13.1 17 12 17Z' fill='%23ffffff'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.login-title {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: transparent;
+    background: linear-gradient(90deg, #0d9488, #f97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.login-field label {
+    font-size: 0.875rem;
+    color: #d1d5db;
+    font-weight: 500;
+}
+
+.login-demo-preview {
+    margin-top: -4px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    background: rgba(13, 148, 136, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.login-demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.login-demo-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(15, 194, 178, 0.8);
+    font-weight: 600;
+}
+
+.login-demo-value {
+    font-size: 0.9rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #f9fafb;
+    word-break: break-all;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(75, 85, 99, 0.6);
+    background: rgba(17, 24, 39, 0.6);
+    color: #f3f4f6;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: rgba(45, 212, 191, 0.8);
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
+}
+
+.login-input::placeholder {
+    color: rgba(209, 213, 219, 0.55);
+}
+
+.login-submit-button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 16px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+/*    color: #0b1120;*/
+    background: linear-gradient(90deg, #0d9488, #f97316);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.login-submit-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: linear-gradient(90deg, #0f766e, #ea580c);
+    box-shadow: 0 18px 35px rgba(17, 94, 89, 0.35);
+}
+
+.login-submit-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.login-alert {
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.login-alert.error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fecaca;
+}
+
+.login-alert.success {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #a7f3d0;
+}
+
+/* ===========================================
+   ADMIN LAYOUT PLACEHOLDER
+   =========================================== */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 32px 24px 28px;
+        border-radius: 22px;
+    }
+
+    .login-title {
+        font-size: 1rem;
+    }
+}
+
 /* Floating Chat Button */
 .floating-chat-button {
     position: fixed;
@@ -3183,6 +3400,33 @@ body:not(.dark-theme) .portfolio-cta {
     margin: 0 0 6px 0;
     font-size: 0.875rem;
     line-height: 1.5;
+}
+
+.chat-message-incoming.new-message .message-text,
+.chat-message-system.new-message .message-text {
+    animation: chatMessagePulse 2.5s ease-out forwards;
+    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.45);
+    background-color: rgba(13, 148, 136, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-message-incoming.new-message .message-text,
+    .chat-message-system.new-message .message-text {
+        animation: none;
+        box-shadow: none;
+        background-color: #2a2a2a;
+    }
+}
+
+@keyframes chatMessagePulse {
+    0% {
+        box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.55);
+        background-color: rgba(13, 148, 136, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+        background-color: #2a2a2a;
+    }
 }
 
 .message-meta {

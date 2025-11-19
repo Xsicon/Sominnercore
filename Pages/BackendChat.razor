@@ -1,0 +1,763 @@
+@page "/admin/backend-chat"
+@layout Sominnercore.Layout.AdminLayout
+@using System.Globalization
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@implements IDisposable
+@inject SupabaseChatService ChatService
+@inject IJSRuntime JSRuntime
+
+<DashboardHeader Title="Customer Support Chat"
+                 Subtitle="Respond to customer inquiries in real-time" />
+
+<div class="backend-chat-page">
+    <div class="backend-chat-layout">
+        <aside class="chat-conversations-panel">
+            <div class="chat-panel-header">
+                <h2>Conversations</h2>
+                <span class="chat-unread-pill">@TotalUnreadCount Unread</span>
+            </div>
+
+            <div class="chat-search">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="chat-search-icon" />
+                <input class="chat-search-input"
+                       placeholder="Search conversations..."
+                       @bind="_searchTerm"
+                       @bind:event="oninput" />
+            </div>
+
+            <div class="chat-conversation-list">
+                @if (_isLoadingSessions)
+                {
+                    <div class="chat-conversation-empty">
+                        <MudProgressCircular Indeterminate="true" Class="chat-loading-spinner" />
+                        <p>Loading conversations...</p>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(_sessionsError))
+                {
+                    <div class="chat-conversation-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
+                        <p>@_sessionsError</p>
+                    </div>
+                }
+                else
+                {
+                    var visibleConversations = FilteredConversations.ToList();
+
+                    if (visibleConversations.Count == 0)
+                    {
+                        <div class="chat-conversation-empty">
+                            <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" />
+                            <p>No conversations found.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var conversation in visibleConversations)
+                        {
+                            var isSelected = conversation.Id == _selectedSessionId;
+                            var statusInfo = GetStatusInfo(conversation.Status, conversation.HasUnread);
+
+                            <article class="chat-conversation-item @(isSelected ? "selected" : string.Empty)"
+                                     @onclick="async () => await SelectConversationAsync(conversation.Id)">
+                                <div class="chat-avatar" style="background: @conversation.AvatarGradient">
+                                    @conversation.Initials
+                                </div>
+                                <div class="chat-conversation-body">
+                                    <header>
+                                        <div>
+                                            <h3>@conversation.DisplayName</h3>
+                                            <span class="chat-email">@conversation.DisplayEmail</span>
+                                        </div>
+                                        <div class="chat-conversation-meta">
+                                            <span class="chat-conversation-date">@conversation.DisplayDate.ToString("MMM d", CultureInfo.InvariantCulture)</span>
+                                        </div>
+                                    </header>
+                                    <p class="chat-preview">@conversation.LastMessagePreview</p>
+                                    <div class="chat-status">
+                                        <span class="chat-status-dot @statusInfo.DotCssClass"></span>
+                                        <span class="chat-status-label @statusInfo.LabelCssClass">@statusInfo.Label</span>
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    }
+                }
+            </div>
+        </aside>
+
+        <section class="chat-thread-panel">
+            @if (CurrentConversation is null)
+            {
+                <div class="chat-preview-empty">
+                    <MudIcon Icon="@Icons.Material.Filled.Forum" />
+                    <h3>Select a conversation to view messages</h3>
+                    <p>The message thread will appear here once a conversation is selected.</p>
+                </div>
+            }
+            else
+            {
+                <header class="chat-thread-header">
+                    <div class="chat-thread-meta">
+                        <div class="chat-avatar large" style="background: @CurrentConversation.AvatarGradient">
+                            @CurrentConversation.Initials
+                        </div>
+                        <div class="chat-thread-contact">
+                            <h2>@CurrentConversation.DisplayName</h2>
+                            <span>@CurrentConversation.DisplayEmail</span>
+                        </div>
+                    </div>
+                    <div class="chat-thread-actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Call" Class="chat-thread-action" Disabled="true" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Videocam" Class="chat-thread-action" Disabled="true" />
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Class="chat-thread-action" Disabled="true" />
+                    </div>
+                </header>
+
+                <div class="chat-thread-body" id="backendChatMessages">
+                    @if (_isLoadingMessages)
+                    {
+                        <div class="chat-thread-loading">
+                            <MudProgressCircular Indeterminate="true" Class="chat-loading-spinner" />
+                            <p>Loading messages...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_messagesError))
+                    {
+                        <div class="chat-thread-error">
+                            <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" />
+                            <p>@_messagesError</p>
+                        </div>
+                    }
+                    else if (!CurrentMessages.Any())
+                    {
+                        <div class="chat-thread-empty">
+                            <MudIcon Icon="@Icons.Material.Filled.Chat" />
+                            <p>No messages yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var message in CurrentMessages)
+                        {
+                            var bubbleClass = message.Direction == MessageDirection.Outgoing
+                                ? "chat-message outgoing"
+                                : message.IsSystem
+                                    ? "chat-message system"
+                                    : "chat-message incoming";
+
+                            if (message.IsNew)
+                            {
+                                bubbleClass += " new-message";
+                            }
+
+                            <div class="@bubbleClass">
+                                <div class="chat-message-content">@message.Content</div>
+                                <span class="chat-message-time">@message.SentAt.ToString("hh:mm tt", CultureInfo.InvariantCulture)</span>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <footer class="chat-thread-composer">
+                    <div class="chat-composer-input">
+                        <MudIcon Icon="@Icons.Material.Filled.AttachFile" Class="chat-composer-icon" />
+                        <MudIcon Icon="@Icons.Material.Filled.TagFaces" Class="chat-composer-icon" />
+                        <input @bind="_draftMessage"
+                               @bind:event="oninput"
+                               placeholder="Type your message..."
+                               @onkeydown="HandleDraftKeyDown"
+                               disabled="@_isSendingResponse" />
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Send"
+                                   Class="chat-send-button"
+                                   Disabled="@(!_selectedSessionId.HasValue || string.IsNullOrWhiteSpace(_draftMessage) || _isSendingResponse)"
+                                   OnClick="SendDraftAsync" />
+                </footer>
+
+                <div class="chat-thread-footer-note">
+                    Responding as <strong>@_currentAgentName</strong>
+                    @if (!string.IsNullOrWhiteSpace(_sendError))
+                    {
+                        <div class="chat-thread-send-error">@_sendError</div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    private const string DefaultAvatarGradient = "linear-gradient(135deg, #22d3ee, #f97316)";
+
+    private readonly List<ChatSessionViewModel> _sessions = new();
+    private readonly List<ChatMessageViewModel> _messages = new();
+
+    private Guid? _selectedSessionId;
+    private string _searchTerm = string.Empty;
+    private string _draftMessage = string.Empty;
+    private string _currentAgentName = "Admin User (Admin)";
+    private bool _isLoadingSessions;
+    private bool _isLoadingMessages;
+    private string? _sessionsError;
+    private string? _messagesError;
+    private CancellationTokenSource? _messagesCts;
+    private bool _isSendingResponse;
+    private string? _sendError;
+    private PeriodicTimer? _messageRefreshTimer;
+    private CancellationTokenSource? _messageRefreshTimerCts;
+    private Task? _messagePollingTask;
+    private PeriodicTimer? _sessionRefreshTimer;
+    private CancellationTokenSource? _sessionRefreshTimerCts;
+    private Task? _sessionPollingTask;
+    private readonly Dictionary<Guid, HashSet<long>> _sessionMessageIds = new();
+    private readonly HashSet<Guid> _unreadSessionIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSessionsAsync();
+        StartSessionPolling();
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        _isLoadingSessions = true;
+        _sessionsError = null;
+        StateHasChanged();
+
+        try
+        {
+            var sessions = await ChatService.GetChatSessionsAsync();
+            var (_, currentSelection) = UpdateSessions(sessions, preserveSelection: false);
+
+            if (currentSelection is Guid sessionId)
+            {
+                await LoadMessagesAsync(sessionId);
+                StartMessagePolling(sessionId);
+            }
+            else
+            {
+                _messages.Clear();
+                StopMessagePolling();
+            }
+        }
+        catch (Exception ex)
+        {
+            _sessionsError = "Unable to load conversations.";
+            Console.Error.WriteLine(ex);
+            StopMessagePolling();
+        }
+        finally
+        {
+            _isLoadingSessions = false;
+            StateHasChanged();
+        }
+    }
+
+    private (Guid? PreviousSelection, Guid? CurrentSelection) UpdateSessions(IEnumerable<SupabaseChatService.ChatSessionSummary> sessions, bool preserveSelection)
+    {
+        var previousSelection = _selectedSessionId;
+        var existingSessions = _sessions.ToDictionary(session => session.Id);
+        var orderedSessions = new List<ChatSessionViewModel>();
+
+        foreach (var summary in sessions)
+        {
+            var displayDate = (summary.LastMessageCreatedAt ?? summary.StartedAt).ToLocalTime();
+            var preview = string.IsNullOrWhiteSpace(summary.LastMessagePreview) ? "No messages yet." : summary.LastMessagePreview;
+
+            var hasUnread = _unreadSessionIds.Contains(summary.Id);
+            if (!existingSessions.TryGetValue(summary.Id, out var existing))
+            {
+                hasUnread = true;
+                _unreadSessionIds.Add(summary.Id);
+            }
+            else
+            {
+                if (previousSelection == summary.Id)
+                {
+                    hasUnread = false;
+                    _unreadSessionIds.Remove(summary.Id);
+                }
+                else if (displayDate > existing.DisplayDate)
+                {
+                    hasUnread = true;
+                    _unreadSessionIds.Add(summary.Id);
+                }
+                else
+                {
+                    hasUnread = _unreadSessionIds.Contains(summary.Id);
+                }
+            }
+
+            var viewModel = new ChatSessionViewModel(
+                summary.Id,
+                string.IsNullOrWhiteSpace(summary.CustomerName) ? "Guest" : summary.CustomerName,
+                summary.CustomerEmail,
+                summary.Status,
+                displayDate,
+                preview,
+                DefaultAvatarGradient,
+                hasUnread);
+
+            orderedSessions.Add(viewModel);
+        }
+
+        _sessions.Clear();
+        _sessions.AddRange(orderedSessions);
+
+        var activeSessionIds = new HashSet<Guid>(_sessions.Select(session => session.Id));
+        _unreadSessionIds.RemoveWhere(id => !activeSessionIds.Contains(id));
+        var removedSessionIds = _sessionMessageIds.Keys.Where(id => !activeSessionIds.Contains(id)).ToList();
+        foreach (var removedId in removedSessionIds)
+        {
+            _sessionMessageIds.Remove(removedId);
+        }
+
+        Guid? nextSelection = null;
+        if (_sessions.Count > 0)
+        {
+            if (preserveSelection && previousSelection.HasValue && activeSessionIds.Contains(previousSelection.Value))
+            {
+                nextSelection = previousSelection;
+            }
+            else
+            {
+                nextSelection = _sessions[0].Id;
+            }
+        }
+
+        _selectedSessionId = nextSelection;
+        if (nextSelection.HasValue)
+        {
+            _unreadSessionIds.Remove(nextSelection.Value);
+            var index = _sessions.FindIndex(session => session.Id == nextSelection.Value);
+            if (index >= 0)
+            {
+                var session = _sessions[index];
+                _sessions[index] = session with { HasUnread = false };
+            }
+        }
+
+        return (previousSelection, nextSelection);
+    }
+
+    private async Task LoadMessagesAsync(Guid sessionId, bool showLoadingIndicator = true)
+    {
+        _messagesError = null;
+        _selectedSessionId = sessionId;
+        MarkSessionAsRead(sessionId);
+
+        if (showLoadingIndicator)
+        {
+            _isLoadingMessages = true;
+            StateHasChanged();
+        }
+
+        _messagesCts?.Cancel();
+        _messagesCts?.Dispose();
+        _messagesCts = new CancellationTokenSource();
+        var token = _messagesCts.Token;
+
+        var isFirstLoadForSession = !_sessionMessageIds.TryGetValue(sessionId, out var knownIds);
+        if (isFirstLoadForSession)
+        {
+            knownIds = new HashSet<long>();
+            _sessionMessageIds[sessionId] = knownIds;
+        }
+
+        try
+        {
+            var messages = await ChatService.GetChatMessagesAsync(sessionId, token);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _messages.Clear();
+
+            foreach (var detail in messages.OrderBy(m => m.CreatedAt))
+            {
+                var isNew = !knownIds.Contains(detail.Id) && !isFirstLoadForSession;
+                knownIds.Add(detail.Id);
+
+                var viewModel = CreateMessageViewModel(detail, isNew);
+                _messages.Add(viewModel);
+
+                if (isNew && (viewModel.Direction == MessageDirection.Incoming || viewModel.IsSystem))
+                {
+                    ScheduleMessageSeen(viewModel);
+                }
+
+                if (isNew)
+                {
+                    var sessionIndex = _sessions.FindIndex(s => s.Id == sessionId);
+                    if (sessionIndex >= 0)
+                    {
+                        var session = _sessions[sessionIndex];
+                        _sessions[sessionIndex] = session with
+                        {
+                            LastMessagePreview = detail.Message,
+                            DisplayDate = detail.CreatedAt.ToLocalTime(),
+                            HasUnread = false
+                        };
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Swallow cancellations triggered by rapid navigation or polling overlap.
+        }
+        catch (Exception ex)
+        {
+            _messagesError = "Unable to load messages.";
+            Console.Error.WriteLine(ex);
+            _messages.Clear();
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                if (showLoadingIndicator)
+                {
+                    _isLoadingMessages = false;
+                }
+                MarkSessionAsRead(sessionId);
+                StateHasChanged();
+                await ScrollToBottomAsync();
+            }
+        }
+    }
+
+    private IEnumerable<ChatSessionViewModel> FilteredConversations =>
+        string.IsNullOrWhiteSpace(_searchTerm)
+            ? _sessions
+            : _sessions.Where(conversation =>
+                conversation.DisplayName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                (!string.IsNullOrWhiteSpace(conversation.DisplayEmail) && conversation.DisplayEmail.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(conversation.LastMessagePreview) && conversation.LastMessagePreview.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)));
+
+    private int TotalUnreadCount => _unreadSessionIds.Count;
+
+    private ChatSessionViewModel? CurrentConversation =>
+        _selectedSessionId is Guid id ? _sessions.FirstOrDefault(c => c.Id == id) : null;
+
+    private IEnumerable<ChatMessageViewModel> CurrentMessages => _messages;
+
+    private async Task SelectConversationAsync(Guid conversationId)
+    {
+        if (_selectedSessionId == conversationId && !_isLoadingMessages)
+        {
+            return;
+        }
+
+        await LoadMessagesAsync(conversationId);
+        StartMessagePolling(conversationId);
+    }
+    private void MarkSessionAsRead(Guid sessionId)
+    {
+        if (_unreadSessionIds.Remove(sessionId))
+        {
+            var sessionIndex = _sessions.FindIndex(session => session.Id == sessionId);
+            if (sessionIndex >= 0)
+            {
+                var session = _sessions[sessionIndex];
+                _sessions[sessionIndex] = session with { HasUnread = false };
+            }
+        }
+    }
+
+
+    private async Task SendDraftAsync()
+    {
+        var message = (_draftMessage ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(message) || !_selectedSessionId.HasValue || _isSendingResponse)
+        {
+            return;
+        }
+
+        _isSendingResponse = true;
+        _sendError = null;
+        StateHasChanged();
+
+        try
+        {
+            var response = await ChatService.AddAgentMessageAsync(_selectedSessionId.Value, message);
+            _draftMessage = string.Empty;
+
+            if (!_sessionMessageIds.TryGetValue(response.SessionId, out var knownIds))
+            {
+                knownIds = new HashSet<long>();
+                _sessionMessageIds[response.SessionId] = knownIds;
+            }
+            knownIds.Add(response.Id);
+
+            var viewModel = CreateMessageViewModel(new SupabaseChatService.ChatMessageDetail(
+                response.Id,
+                response.SessionId,
+                response.Message,
+                SupabaseChatService.ChatSenderType.Agent,
+                null,
+                response.CreatedAt), isNew: false);
+
+            _messages.Add(viewModel);
+
+            var sessionIndex = _sessions.FindIndex(s => s.Id == response.SessionId);
+            if (sessionIndex >= 0)
+            {
+                var session = _sessions[sessionIndex];
+                _sessions[sessionIndex] = session with
+                {
+                    LastMessagePreview = response.Message,
+                    DisplayDate = response.CreatedAt.ToLocalTime()
+                };
+            }
+
+            await LoadMessagesAsync(response.SessionId, false);
+            await ScrollToBottomAsync();
+        }
+        catch (Exception ex)
+        {
+            _sendError = "Failed to send message.";
+            Console.Error.WriteLine(ex);
+        }
+        finally
+        {
+            _isSendingResponse = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await Task.Delay(50);
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", "backendChatMessages");
+    }
+
+    private async Task HandleDraftKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendDraftAsync();
+        }
+    }
+
+    private async Task RefreshSessionsAsync()
+    {
+        try
+        {
+            var sessions = await ChatService.GetChatSessionsAsync();
+            var (previousSelection, currentSelection) = UpdateSessions(sessions, preserveSelection: true);
+            _sessionsError = null;
+
+            if (currentSelection is null)
+            {
+                if (_messages.Count > 0)
+                {
+                    _messages.Clear();
+                }
+
+                StopMessagePolling();
+            }
+            else if (currentSelection != previousSelection)
+            {
+                await LoadMessagesAsync(currentSelection.Value, false);
+                StartMessagePolling(currentSelection.Value);
+            }
+
+            StateHasChanged();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when polling is cancelled.
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            if (string.IsNullOrEmpty(_sessionsError))
+            {
+                _sessionsError = "Unable to refresh conversations.";
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void StartSessionPolling()
+    {
+        StopSessionPolling();
+
+        _sessionRefreshTimerCts = new CancellationTokenSource();
+        _sessionRefreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var token = _sessionRefreshTimerCts.Token;
+        _sessionPollingTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (await _sessionRefreshTimer.WaitForNextTickAsync(token))
+                {
+                    await InvokeAsync(RefreshSessionsAsync);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when polling stops.
+            }
+        }, token);
+    }
+
+    private void StopSessionPolling()
+    {
+        _sessionRefreshTimerCts?.Cancel();
+        _sessionRefreshTimer?.Dispose();
+        _sessionPollingTask = null;
+        _sessionRefreshTimer = null;
+        _sessionRefreshTimerCts?.Dispose();
+        _sessionRefreshTimerCts = null;
+    }
+
+    private void StartMessagePolling(Guid sessionId)
+    {
+        StopMessagePolling();
+
+        _messageRefreshTimerCts = new CancellationTokenSource();
+        _messageRefreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        var token = _messageRefreshTimerCts.Token;
+        _messagePollingTask = Task.Run(async () =>
+        {
+            try
+            {
+                while (await _messageRefreshTimer.WaitForNextTickAsync(token))
+                {
+                    await InvokeAsync(() => LoadMessagesAsync(sessionId, false));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when polling stops.
+            }
+        }, token);
+    }
+
+    private void StopMessagePolling()
+    {
+        _messageRefreshTimerCts?.Cancel();
+        _messageRefreshTimer?.Dispose();
+        _messagePollingTask = null;
+        _messageRefreshTimer = null;
+        _messageRefreshTimerCts?.Dispose();
+        _messageRefreshTimerCts = null;
+    }
+
+    private static (string Label, string DotCssClass, string LabelCssClass) GetStatusInfo(string status, bool hasUnread)
+    {
+        if (hasUnread)
+        {
+            return ("Unread", "status-unread", "status-unread");
+        }
+
+        return status.ToLowerInvariant() switch
+        {
+            "active" => ("Active", "status-active", string.Empty),
+            "waiting" => ("Waiting", "status-waiting", string.Empty),
+            "resolved" => ("Resolved", "status-resolved", string.Empty),
+            "closed" => ("Closed", "status-resolved", string.Empty),
+            _ => ("New", "status-active", string.Empty)
+        };
+    }
+
+    private static ChatMessageViewModel CreateMessageViewModel(SupabaseChatService.ChatMessageDetail message, bool isNew)
+    {
+        var direction = message.SenderType switch
+        {
+            SupabaseChatService.ChatSenderType.Agent => MessageDirection.Outgoing,
+            _ => MessageDirection.Incoming
+        };
+
+        var isSystem = message.SenderType == SupabaseChatService.ChatSenderType.System;
+
+        return new ChatMessageViewModel(
+            direction,
+            message.Message,
+            message.CreatedAt.ToLocalTime(),
+            isSystem)
+        {
+            IsNew = isNew
+        };
+    }
+
+    void IDisposable.Dispose()
+    {
+        _messagesCts?.Cancel();
+        _messagesCts?.Dispose();
+        StopMessagePolling();
+        StopSessionPolling();
+    }
+
+    private void ScheduleMessageSeen(ChatMessageViewModel message)
+    {
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            try
+            {
+                await InvokeAsync(() =>
+                {
+                    message.IsNew = false;
+                    StateHasChanged();
+                });
+            }
+            catch (ObjectDisposedException)
+            {
+                // Component disposed; ignore.
+            }
+            catch (InvalidOperationException)
+            {
+                // Render handle disposed; safe to ignore.
+            }
+        });
+    }
+
+    private record ChatSessionViewModel(
+        Guid Id,
+        string DisplayName,
+        string? Email,
+        string Status,
+        DateTime DisplayDate,
+        string LastMessagePreview,
+        string AvatarGradient,
+        bool HasUnread)
+    {
+        public string DisplayEmail => string.IsNullOrWhiteSpace(Email) ? "—" : Email;
+
+        public string Initials
+        {
+            get
+            {
+                var parts = DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0)
+                {
+                    return "G";
+                }
+
+                return string.Join(string.Empty, parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+            }
+        }
+    }
+
+    private record class ChatMessageViewModel(
+        MessageDirection Direction,
+        string Content,
+        DateTime SentAt,
+        bool IsSystem)
+    {
+        public bool IsNew { get; set; }
+    }
+
+    private enum MessageDirection
+    {
+        Incoming,
+        Outgoing
+    }
+}

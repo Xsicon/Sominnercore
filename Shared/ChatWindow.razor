@@ -1,3 +1,8 @@
+@using System.Linq
+@using System.Threading
+@using System.Threading.Tasks
+@using System.Net
+@implements IDisposable
 @if (IsOpen)
 {
     <div class="chat-window-container @(IsMinimized ? "minimized" : "")" @onclick:stopPropagation="true">
@@ -36,25 +41,61 @@
             {
                 <!-- Chat Messages Area -->
                 <div class="chat-messages" id="chatMessages">
-                    <div class="chat-message-incoming">
-                        <div class="message-content">
-                            <p class="message-text">Hello! Welcome to Sominnercore. How can we help you today?</p>
-                            <div class="message-meta">
-                                <span class="message-sender">Sarah from Support</span>
-                                <span class="message-separator">•</span>
-                                <span class="message-time">10:55 AM</span>
-                            </div>
-                        </div>
-                    </div>
-
                     @foreach (var message in Messages)
                     {
-                        <div class="chat-message-outgoing">
+                        var bubbleClass = message.Sender switch
+                        {
+                            MessageSender.User => "chat-message-outgoing",
+                            MessageSender.System => "chat-message-system",
+                            _ => "chat-message-incoming"
+                        };
+
+                        if (message.IsNew)
+                        {
+                            bubbleClass += " new-message";
+                        }
+
+                        if (message.DeliveryStatus == MessageDeliveryStatus.Pending)
+                        {
+                            bubbleClass += " pending";
+                        }
+                        else if (message.DeliveryStatus == MessageDeliveryStatus.Failed)
+                        {
+                            bubbleClass += " failed";
+                        }
+
+                        <div class="@bubbleClass">
                             <div class="message-content">
                                 <p class="message-text">@message.Text</p>
-                                <div class="message-meta">
-                                    <span class="message-time">@message.Timestamp</span>
-                                </div>
+                                @if (!string.IsNullOrWhiteSpace(message.SenderLabel) || !string.IsNullOrWhiteSpace(message.Timestamp) || message.DeliveryStatus != MessageDeliveryStatus.Sent)
+                                {
+                                    <div class="message-meta">
+                                        @if (!string.IsNullOrWhiteSpace(message.SenderLabel))
+                                        {
+                                            <span class="message-sender">@message.SenderLabel</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(message.SenderLabel) && (!string.IsNullOrWhiteSpace(message.Timestamp) || message.DeliveryStatus != MessageDeliveryStatus.Sent))
+                                        {
+                                            <span class="message-separator">•</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(message.Timestamp))
+                                        {
+                                            <span class="message-time">@message.Timestamp</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(message.Timestamp) && message.DeliveryStatus != MessageDeliveryStatus.Sent)
+                                        {
+                                            <span class="message-separator">•</span>
+                                        }
+                                        @if (message.DeliveryStatus == MessageDeliveryStatus.Pending)
+                                        {
+                                            <span class="message-status">Sending...</span>
+                                        }
+                                        else if (message.DeliveryStatus == MessageDeliveryStatus.Failed)
+                                        {
+                                            <span class="message-status error">Failed to send</span>
+                                        }
+                                    </div>
+                                }
                             </div>
                         </div>
                     }
@@ -66,8 +107,8 @@
                                 Placeholder="Type your message..."
                                 Variant="Variant.Filled"
                                 Class="chat-input"
-                                @onkeypress="@(async (e) => await HandleKeyPress(e))" />
-                    <button class="chat-send-button" @onclick="SendMessage" >
+                                OnKeyDown="HandleKeyDown" />
+                    <button class="chat-send-button" @onclick="SendMessage" disabled="@_isSendingMessage">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13"/>
                             <polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -89,14 +130,94 @@
     [Parameter] public EventCallback OnStateChanged { get; set; }
 
     [Inject] IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] SupabaseChatService ChatService { get; set; } = default!;
 
     private string CurrentMessage { get; set; } = string.Empty;
-    private List<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
+    private readonly List<ChatMessage> Messages = new();
+    private string? _customerName;
+    private string? _pendingMessageText;
+    private ChatMessage? _pendingUserMessage;
+    private Guid? _sessionId;
+    private Task<SupabaseChatService.ChatSessionCreationResult>? _sessionCreationTask;
+    private bool _isReturningCustomer;
+    private bool _awaitingName = true;
+    private bool _awaitingEmail;
+    private bool _hasPromptedForName;
+    private readonly HashSet<long> _loadedMessageIds = new();
+    private PeriodicTimer? _refreshTimer;
+    private CancellationTokenSource? _refreshCts;
+    private Task? _pollingTask;
+    private bool _isSendingMessage;
+    private string? _customerEmail;
+    private bool _hasShownFollowUpNote;
+    private bool _attemptedRestore;
+    private bool _hasInitializedMessages;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        AddSupportMessage("Hello! Welcome to Sominnercore. How can we help you today?");
+    }
+
+    private void AddSupportMessage(string text)
+    {
+        Messages.Add(new ChatMessage
+        {
+            Text = text,
+            Timestamp = DateTime.Now.ToString("hh:mm tt"),
+            Sender = MessageSender.Support,
+            SenderLabel = "Sominnercore Support"
+        });
+    }
+
+    private void AddSystemMessage(string text)
+    {
+        Messages.Add(new ChatMessage
+        {
+            Text = text,
+            Timestamp = DateTime.Now.ToString("hh:mm tt"),
+            Sender = MessageSender.System,
+            SenderLabel = "Sominnercore Support"
+        });
+    }
+
+    private ChatMessage AddUserMessage(string text, MessageDeliveryStatus status = MessageDeliveryStatus.Pending)
+    {
+        var message = new ChatMessage
+        {
+            Text = text,
+            Timestamp = DateTime.Now.ToString("hh:mm tt"),
+            Sender = MessageSender.User,
+            DeliveryStatus = status
+        };
+
+        Messages.Add(message);
+        return message;
+    }
 
     public class ChatMessage
     {
         public string Text { get; set; } = string.Empty;
         public string Timestamp { get; set; } = string.Empty;
+        public string? SenderLabel { get; set; }
+        public MessageSender Sender { get; set; } = MessageSender.Support;
+        public MessageDeliveryStatus DeliveryStatus { get; set; } = MessageDeliveryStatus.Sent;
+        public long? MessageId { get; set; }
+        public bool IsNew { get; set; }
+    }
+
+    public enum MessageSender
+    {
+        Support,
+        User,
+        System
+    }
+
+    public enum MessageDeliveryStatus
+    {
+        Pending,
+        Sent,
+        Failed
     }
 
     public async Task Open()
@@ -104,6 +225,7 @@
         IsOpen = true;
         IsMinimized = false;
         StateHasChanged();
+        await TryRestoreSessionAsync();
         if (OnStateChanged.HasDelegate)
         {
             await OnStateChanged.InvokeAsync();
@@ -115,6 +237,8 @@
         IsOpen = false;
         IsMinimized = false;
         StateHasChanged();
+        StopMessagePolling();
+        await PersistSessionStateAsync();
         if (OnStateChanged.HasDelegate)
         {
             await OnStateChanged.InvokeAsync();
@@ -133,28 +257,495 @@
 
     public async Task SendMessage()
     {
-        if (!string.IsNullOrWhiteSpace(CurrentMessage))
+        if (_isSendingMessage && !_awaitingName)
         {
-            var now = DateTime.Now;
-            Messages.Add(new ChatMessage 
-            { 
-                Text = CurrentMessage,
-                Timestamp = now.ToString("hh:mm tt")
-            });
-
-            CurrentMessage = string.Empty;
-
-            // Auto-scroll to bottom
-            await Task.Delay(50);
-            await JSRuntime.InvokeVoidAsync("scrollToBottom", "chatMessages");
+            return;
         }
+
+        var trimmedMessage = (CurrentMessage ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmedMessage))
+        {
+            return;
+        }
+
+        CurrentMessage = string.Empty;
+
+        if (_awaitingName && !_hasPromptedForName)
+        {
+            _pendingMessageText = trimmedMessage;
+            _pendingUserMessage = AddUserMessage(trimmedMessage);
+            _hasPromptedForName = true;
+            AddSystemMessage("Before we get started, could you share your name?");
+            await ScrollToBottomAsync();
+            return;
+        }
+
+        if (_awaitingName)
+        {
+            AddUserMessage(trimmedMessage, MessageDeliveryStatus.Sent);
+            _customerName = trimmedMessage;
+            _awaitingName = false;
+            _awaitingEmail = true;
+            _hasPromptedForName = true;
+            await PersistSessionStateAsync();
+            AddSystemMessage($"Thanks, {_customerName}! What's the best email to reach you at?");
+            await ScrollToBottomAsync();
+            return;
+        }
+
+        if (_awaitingEmail)
+        {
+            AddUserMessage(trimmedMessage, MessageDeliveryStatus.Sent);
+            if (!IsValidEmail(trimmedMessage))
+            {
+                AddSystemMessage("That doesn't look like a valid email. Could you double-check and try again?");
+                await ScrollToBottomAsync();
+                return;
+            }
+
+            _customerEmail = trimmedMessage;
+            _awaitingEmail = false;
+            await PersistSessionStateAsync();
+
+            try
+            {
+                var sessionResult = await EnsureSessionAsync();
+                
+                // Show customized message based on whether customer is returning
+                if (sessionResult is not null)
+                {
+                    if (sessionResult.IsReturningCustomer)
+                    {
+                        // Returning customer - show welcome back message
+                        AddSystemMessage($"Welcome back, {_customerName}! How can we assist you today?");
+                    }
+                    else
+                    {
+                        // New customer
+                        AddSystemMessage($"Perfect, {_customerName}! We'll reach out at {_customerEmail} if needed. How can we assist you today?");
+                    }
+                    StateHasChanged();
+                    await ScrollToBottomAsync();
+                }
+
+                if (!string.IsNullOrWhiteSpace(_pendingMessageText))
+                {
+                    var cached = _pendingMessageText;
+                    _pendingMessageText = null;
+                    var pendingMessage = _pendingUserMessage;
+                    _pendingUserMessage = null;
+                    await AddAndSendUserMessageAsync(cached, pendingMessage);
+                }
+            }
+            catch (Exception)
+            {
+                AddSystemMessage("We ran into a problem starting the chat. Please try again in a moment.");
+            }
+
+            await ScrollToBottomAsync();
+            return;
+        }
+
+        await AddAndSendUserMessageAsync(trimmedMessage);
     }
 
-    private async Task HandleKeyPress(KeyboardEventArgs e)
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey)
         {
             await SendMessage();
         }
     }
+
+    private static bool ShouldResetSession(SupabaseChatException exception) =>
+        exception.StatusCode == HttpStatusCode.Conflict || exception.StatusCode == HttpStatusCode.BadRequest;
+
+    private async Task ResetSessionAsync()
+    {
+        StopMessagePolling();
+        _sessionId = null;
+        _sessionCreationTask = null;
+        _loadedMessageIds.Clear();
+        _hasInitializedMessages = false;
+        await PersistSessionStateAsync();
+    }
+
+    private async Task AddAndSendUserMessageAsync(string messageText, ChatMessage? existingMessage = null)
+    {
+        var chatMessage = existingMessage ?? AddUserMessage(messageText);
+        chatMessage.DeliveryStatus = MessageDeliveryStatus.Pending;
+        chatMessage.Timestamp = DateTime.Now.ToString("hh:mm tt");
+        var shouldShowFollowUpNote = existingMessage is null && !_awaitingName && !_awaitingEmail;
+        _isSendingMessage = true;
+
+        var attempt = 0;
+        var messageSent = false;
+
+        while (!messageSent && attempt < 2)
+        {
+            try
+            {
+                await EnsureSessionAsync();
+                if (!_sessionId.HasValue)
+                {
+                    throw new InvalidOperationException("Unable to create a chat session.");
+                }
+
+                var storedMessage = await ChatService.AddCustomerMessageAsync(_sessionId.Value, messageText);
+                chatMessage.Timestamp = storedMessage.CreatedAt.ToLocalTime().ToString("hh:mm tt");
+                chatMessage.DeliveryStatus = MessageDeliveryStatus.Sent;
+                chatMessage.MessageId = storedMessage.Id;
+                _loadedMessageIds.Add(storedMessage.Id);
+
+                if (shouldShowFollowUpNote && !_hasShownFollowUpNote)
+                {
+                    AddSystemMessage("A customer service team member will reach you soon.");
+                    _hasShownFollowUpNote = true;
+                }
+
+                messageSent = true;
+            }
+            catch (SupabaseChatException ex) when (attempt == 0 && ShouldResetSession(ex))
+            {
+                attempt++;
+                await ResetSessionAsync();
+            }
+            catch (Exception)
+            {
+                chatMessage.DeliveryStatus = MessageDeliveryStatus.Failed;
+                AddSystemMessage("We couldn't send your message. Please try again.");
+                break;
+            }
+        }
+
+        if (!messageSent && chatMessage.DeliveryStatus == MessageDeliveryStatus.Pending)
+        {
+            chatMessage.DeliveryStatus = MessageDeliveryStatus.Failed;
+            AddSystemMessage("We couldn't send your message. Please try again.");
+        }
+
+        _isSendingMessage = false;
+        StateHasChanged();
+        await ScrollToBottomAsync();
+    }
+
+    private async Task<SupabaseChatService.ChatSessionCreationResult?> EnsureSessionAsync()
+    {
+        if (_sessionId.HasValue || string.IsNullOrWhiteSpace(_customerName))
+        {
+            return null;
+        }
+
+        _sessionCreationTask ??= ChatService.CreateChatSessionAsync(_customerName!, _customerEmail);
+
+        try
+        {
+            var result = await _sessionCreationTask;
+            _sessionId = result.SessionId;
+            _isReturningCustomer = result.IsReturningCustomer;
+            await PersistSessionStateAsync();
+            _hasInitializedMessages = false;
+            
+            // Skip loading previous messages for returning customers reusing a session
+            if (!result.IsReusingSession)
+            {
+                await RefreshMessagesAsync();
+            }
+            else
+            {
+                // For returning customers reusing session, fetch messages once to mark IDs as loaded
+                // but don't display them - this prevents polling from adding old messages
+                try
+                {
+                    var existingMessages = await ChatService.GetChatMessagesAsync(result.SessionId);
+                    foreach (var msg in existingMessages)
+                    {
+                        _loadedMessageIds.Add(msg.Id);
+                    }
+                }
+                catch
+                {
+                    // Ignore errors when fetching existing messages
+                }
+                _hasInitializedMessages = true;
+            }
+            
+            StartMessagePolling();
+            return result;
+        }
+        finally
+        {
+            _sessionCreationTask = null;
+        }
+    }
+
+    private async Task TryRestoreSessionAsync()
+    {
+        if (_attemptedRestore)
+        {
+            return;
+        }
+
+        _attemptedRestore = true;
+
+        ChatSessionStorage? stored = null;
+        try
+        {
+            stored = await JSRuntime.InvokeAsync<ChatSessionStorage?>("SominnercoreChat.loadSession");
+        }
+        catch (JSException)
+        {
+            return;
+        }
+
+        if (stored is null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(stored.Name))
+        {
+            _customerName = stored.Name;
+            _awaitingName = false;
+            _hasPromptedForName = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(stored.Email))
+        {
+            _customerEmail = stored.Email;
+            _awaitingEmail = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(stored.SessionId) && Guid.TryParse(stored.SessionId, out var restoredId))
+        {
+            _sessionId = restoredId;
+            _hasInitializedMessages = false;
+            await RefreshMessagesAsync();
+            StartMessagePolling();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await Task.Delay(50);
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", "chatMessages");
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@') || email.StartsWith('@') || email.EndsWith('@'))
+        {
+            return false;
+        }
+
+        var parts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2 || !parts[1].Contains('.'))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task RefreshMessagesAsync()
+    {
+        if (!_sessionId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            var remoteMessages = await ChatService.GetChatMessagesAsync(_sessionId.Value);
+            await InvokeAsync(async () =>
+            {
+                var mergeResult = MergeRemoteMessages(remoteMessages);
+                if (mergeResult.Added)
+                {
+                    StateHasChanged();
+                    await ScrollToBottomAsync();
+                }
+                if (mergeResult.ShouldNotify)
+                {
+                    await PlayNotificationSoundAsync();
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+        }
+    }
+
+    private (bool Added, bool ShouldNotify) MergeRemoteMessages(IReadOnlyList<SupabaseChatService.ChatMessageDetail> remoteMessages)
+    {
+        var added = false;
+        var shouldNotify = false;
+        var isInitialSync = !_hasInitializedMessages;
+
+        foreach (var remote in remoteMessages.OrderBy(m => m.CreatedAt))
+        {
+            if (_loadedMessageIds.Contains(remote.Id))
+            {
+                continue;
+            }
+
+            var existing = Messages.FirstOrDefault(m => m.MessageId == remote.Id);
+            if (existing is not null)
+            {
+                existing.Timestamp = remote.CreatedAt.ToLocalTime().ToString("hh:mm tt");
+                existing.DeliveryStatus = MessageDeliveryStatus.Sent;
+                existing.MessageId = remote.Id;
+                _loadedMessageIds.Add(remote.Id);
+                continue;
+            }
+
+            var sender = remote.SenderType switch
+            {
+                SupabaseChatService.ChatSenderType.Agent => MessageSender.Support,
+                SupabaseChatService.ChatSenderType.System => MessageSender.System,
+                _ => MessageSender.User
+            };
+
+            // Set sender label: agent name for agents, "Sominnercore Support" for system messages
+            string? senderLabel = null;
+            if (sender == MessageSender.Support && remote.SenderType == SupabaseChatService.ChatSenderType.Agent)
+            {
+                // Use agent name if available, otherwise fallback to "Sominnercore Support"
+                senderLabel = !string.IsNullOrWhiteSpace(remote.AgentName) 
+                    ? remote.AgentName 
+                    : "Sominnercore Support";
+            }
+            else if (sender == MessageSender.System)
+            {
+                // System messages (automatic questions) show "Sominnercore Support"
+                senderLabel = "Sominnercore Support";
+            }
+
+            var message = new ChatMessage
+            {
+                Text = remote.Message,
+                Timestamp = remote.CreatedAt.ToLocalTime().ToString("hh:mm tt"),
+                Sender = sender,
+                DeliveryStatus = MessageDeliveryStatus.Sent,
+                MessageId = remote.Id,
+                SenderLabel = senderLabel
+            };
+
+            var isSupportMessage = sender == MessageSender.Support;
+            if (!isInitialSync && isSupportMessage)
+            {
+                message.IsNew = true;
+                ScheduleMessageSeen(message);
+                shouldNotify = true;
+            }
+
+            Messages.Add(message);
+            _loadedMessageIds.Add(remote.Id);
+            added = true;
+        }
+
+        _hasInitializedMessages = true;
+
+        return (added, shouldNotify);
+    }
+
+    private void StartMessagePolling()
+    {
+        if (_refreshTimer is not null)
+        {
+            return;
+        }
+
+        _refreshCts = new CancellationTokenSource();
+        _refreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        _pollingTask = PollMessagesAsync(_refreshTimer, _refreshCts.Token);
+    }
+
+    private async Task PollMessagesAsync(PeriodicTimer timer, CancellationToken token)
+    {
+        try
+        {
+            while (await timer.WaitForNextTickAsync(token))
+            {
+                await RefreshMessagesAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when stopping the timer.
+        }
+    }
+
+    private void StopMessagePolling()
+    {
+        _refreshCts?.Cancel();
+        _refreshTimer?.Dispose();
+        _refreshCts?.Dispose();
+        _refreshTimer = null;
+        _refreshCts = null;
+        _pollingTask = null;
+    }
+
+    void IDisposable.Dispose()
+    {
+        StopMessagePolling();
+    }
+
+    private async Task PersistSessionStateAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("SominnercoreChat.saveSession", new
+            {
+                sessionId = _sessionId?.ToString(),
+                name = _customerName,
+                email = _customerEmail
+            });
+        }
+        catch (JSException)
+        {
+            // Ignore storage failures (private mode, etc.).
+        }
+    }
+
+    private void ScheduleMessageSeen(ChatMessage message)
+    {
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            try
+            {
+                await InvokeAsync(() =>
+                {
+                    message.IsNew = false;
+                    StateHasChanged();
+                });
+            }
+            catch (ObjectDisposedException)
+            {
+                // Component disposed before animation completed.
+            }
+            catch (InvalidOperationException)
+            {
+                // Render handle no longer valid; safe to ignore.
+            }
+        });
+    }
+
+    private async Task PlayNotificationSoundAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("SominnercoreChat.playNotification");
+        }
+        catch (JSException)
+        {
+            // Ignore audio failures (e.g., user interaction not yet granted).
+        }
+    }
+
+    private sealed record ChatSessionStorage(string? SessionId, string? Name, string? Email);
 }

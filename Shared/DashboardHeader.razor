@@ -1,0 +1,16 @@
+@using Microsoft.AspNetCore.Components
+
+<section class="dashboard-welcome">
+    <h1 class="dashboard-title">@Title</h1>
+    @if (!string.IsNullOrWhiteSpace(Subtitle))
+    {
+        <p class="dashboard-subtitle">@Subtitle</p>
+    }
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public bool HighlightTitle { get; set; }
+}
+
