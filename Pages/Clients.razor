@@ -1,0 +1,39 @@
+@page "/admin/clients"
+@layout Sominnercore.Layout.AdminLayout
+@using System.Linq
+
+<DashboardHeader Title="Client Management" 
+                 Subtitle="Manage your client relationships" />
+
+<div class="clients-page">
+    <section class="clients-content">
+        <div class="clients-header-actions">
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Add"
+                      Class="clients-new-button">
+                New Client
+            </MudButton>
+        </div>
+
+        <div class="clients-container">
+            <div class="clients-placeholder">
+                <MudIcon Icon="@Icons.Material.Filled.People" 
+                        Class="clients-placeholder-icon" />
+                <h3>No clients yet</h3>
+                <p>Get started by adding your first client</p>
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Add"
+                          Class="clients-placeholder-button">
+                    Add Client
+                </MudButton>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    // Client management logic will be added here
+}
+

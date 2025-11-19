@@ -1,0 +1,39 @@
+@page "/admin/projects"
+@layout Sominnercore.Layout.AdminLayout
+@using System.Linq
+
+<DashboardHeader Title="Project Management" 
+                 Subtitle="Manage and track all your projects" />
+
+<div class="projects-page">
+    <section class="projects-content">
+        <div class="projects-header-actions">
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Add"
+                      Class="projects-new-button">
+                New Project
+            </MudButton>
+        </div>
+
+        <div class="projects-container">
+            <div class="projects-placeholder">
+                <MudIcon Icon="@Icons.Material.Filled.Folder" 
+                        Class="projects-placeholder-icon" />
+                <h3>No projects yet</h3>
+                <p>Get started by creating your first project</p>
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Add"
+                          Class="projects-placeholder-button">
+                    Create Project
+                </MudButton>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    // Project management logic will be added here
+}
+
