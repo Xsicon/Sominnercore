@@ -1,0 +1,382 @@
+@page "/admin/users/edit/{UserId}"
+@layout Sominnercore.Layout.AdminLayout
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+<div class="create-user-page">
+    <div class="create-user-back-link">
+        <MudButton Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.ArrowBack" 
+                   OnClick="NavigateBack"
+                   Class="back-link-button">
+            Back to Users
+        </MudButton>
+    </div>
+
+    @if (_isLoadingUser)
+    {
+        <div class="users-loading">
+            <MudProgressCircular Indeterminate="true" />
+            <p>Loading user data...</p>
+        </div>
+    }
+    else
+    {
+        <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
+            <div class="create-user-form-container">
+                <!-- Personal Information Section -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <div class="form-section-title-wrapper">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Class="form-section-icon" />
+                            <h3 class="form-section-title">Personal Information</h3>
+                        </div>
+                        <p class="form-section-description">Update the user's basic information</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-row form-row-split">
+                            <div class="form-field-wrapper">
+                                <MudTextField @bind-Value="_firstName"
+                                          Label="First Name *"
+                                          Required="true"
+                                          RequiredError="First name is required"
+                                          Variant="Variant.Outlined"
+                                          Class="form-field"
+                                          ClassLabel="form-label"
+                                          Adornment="Adornment.End"
+                                          AdornmentIcon="@Icons.Material.Filled.MoreVert"
+                                          AdornmentAriaLabel="More options" />
+                            </div>
+                            <div class="form-field-wrapper">
+                                <MudTextField @bind-Value="_lastName"
+                                          Label="Last Name *"
+                                          Required="true"
+                                          RequiredError="Last name is required"
+                                          Variant="Variant.Outlined"
+                                          Class="form-field"
+                                          ClassLabel="form-label"
+                                          Adornment="Adornment.None" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <MudTextField @bind-Value="_email"
+                                      Label="Email Address *"
+                                      Required="true"
+                                      RequiredError="Email is required"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Email"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role & Permissions Section -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <div class="form-section-title-wrapper">
+                            <MudIcon Icon="@Icons.Material.Filled.Work" Class="form-section-icon" />
+                            <h3 class="form-section-title">Role & Permissions</h3>
+                        </div>
+                        <p class="form-section-description">Assign a role to determine user permissions</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-row">
+                            <MudSelect T="string" 
+                                       @bind-Value="_selectedRole"
+                                       Label="Select Role *"
+                                       Required="true"
+                                       RequiredError="Please select a role"
+                                       Variant="Variant.Outlined"
+                                       Class="form-field"
+                                       ClassLabel="form-label"
+                                       Disabled="@_isLoadingRoles"
+                                       AnchorOrigin="Origin.BottomCenter"
+                                       TransformOrigin="Origin.TopCenter">
+                                @if (_isLoadingRoles)
+                                {
+                                    <MudSelectItem Value="@("loading")" Disabled="true">Loading roles...</MudSelectItem>
+                                }
+                                else
+                                {
+                                    @foreach (var role in _availableRoles)
+                                    {
+                                        <MudSelectItem Value="@role.DatabaseName">@role.DisplayName</MudSelectItem>
+                                    }
+                                }
+                            </MudSelect>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Settings Section -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <div class="form-section-title-wrapper">
+                            <MudIcon Icon="@Icons.Material.Filled.Shield" Class="form-section-icon" />
+                            <h3 class="form-section-title">Additional Settings</h3>
+                        </div>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-setting-row">
+                            <div class="form-setting-info">
+                                <div class="form-setting-label">Account Status</div>
+                                <div class="form-setting-description">Set the status of the user account</div>
+                            </div>
+                            <div class="form-setting-control">
+                                <div class="toggle-labels">
+                                    <span class="toggle-label @(_isActive ? "" : "active")">Inactive</span>
+                                    <MudSwitch T="bool" @bind-Checked="_isActive" Color="Color.Success" Class="status-toggle" />
+                                    <span class="toggle-label @(_isActive ? "active" : "")">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Messages -->
+                @if (_errors != null && _errors.Length > 0)
+                {
+                    <MudAlert Severity="Severity.Error" Class="form-error-alert">
+                        @foreach (var error in _errors)
+                        {
+                            <div>@error</div>
+                        }
+                    </MudAlert>
+                }
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               OnClick="HandleCancel"
+                               Class="cancel-button">
+                        Cancel
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               OnClick="HandleUpdateUser"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               Disabled="@(!_isFormValid || _isSubmitting)"
+                               Class="create-button">
+                        Update User
+                    </MudButton>
+                </div>
+            </div>
+        </MudForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = string.Empty;
+
+    private MudForm? _form;
+    private bool _isFormValid;
+    private string[] _errors = Array.Empty<string>();
+    private bool _isSubmitting;
+    private bool _isLoadingUser = true;
+
+    // Form fields
+    private string _firstName = string.Empty;
+    private string _lastName = string.Empty;
+    private string _email = string.Empty;
+    private string? _selectedRole;
+    private bool _isActive = true;
+
+    // Available roles
+    private List<RoleOption> _availableRoles = new();
+    private bool _isLoadingRoles = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadRolesAsync(), LoadUserDataAsync());
+    }
+
+    private async Task LoadUserDataAsync()
+    {
+        _isLoadingUser = true;
+        _errors = Array.Empty<string>();
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errors = new[] { "You must be logged in to edit users." };
+                return;
+            }
+
+            // Try to get team member first (has more complete data)
+            var teamMember = await AuthService.GetTeamMemberByAuthUserIdAsync(UserId, accessToken);
+            
+            if (teamMember != null)
+            {
+                // User has team member record - use that data
+                _firstName = ExtractFirstName(teamMember.DisplayName);
+                _lastName = ExtractLastName(teamMember.DisplayName);
+                _email = teamMember.Email;
+                _selectedRole = teamMember.Role?.Name;
+                _isActive = teamMember.Status == "active";
+            }
+            else
+            {
+                // Fall back to auth user data
+                var authUser = await AuthService.GetAuthUserByIdAsync(UserId, accessToken);
+                if (authUser == null)
+                {
+                    _errors = new[] { "User not found." };
+                    return;
+                }
+
+                _email = authUser.Email ?? string.Empty;
+                _firstName = authUser.UserMetadata?.TryGetValue("first_name", out var fn) == true ? fn?.ToString() ?? string.Empty : string.Empty;
+                _lastName = authUser.UserMetadata?.TryGetValue("last_name", out var ln) == true ? ln?.ToString() ?? string.Empty : string.Empty;
+                _selectedRole = authUser.UserMetadata?.TryGetValue("role", out var r) == true ? r?.ToString() : null;
+                _isActive = true; // Default to active if no team member record
+            }
+        }
+        catch (Exception ex)
+        {
+            _errors = new[] { $"Error loading user data: {ex.Message}" };
+            Console.WriteLine($"Error loading user data: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingUser = false;
+        }
+    }
+
+    private static string ExtractFirstName(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return string.Empty;
+
+        var parts = displayName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    private static string ExtractLastName(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+            return string.Empty;
+
+        var parts = displayName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1 ? string.Join(" ", parts.Skip(1)) : string.Empty;
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            var roles = await AuthService.GetRolesAsync(accessToken);
+            
+            _availableRoles = roles.Select(r => new RoleOption
+            {
+                DisplayName = FormatRoleName(r.Name),
+                DatabaseName = r.Name,
+                Description = r.Description
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errors = new[] { $"Error loading roles: {ex.Message}" };
+        }
+        finally
+        {
+            _isLoadingRoles = false;
+        }
+    }
+
+    private static string FormatRoleName(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "Admin",
+            "marketing_manager" => "Marketing Manager",
+            "customer_relations_specialist" => "CRS (Customer Relations Specialist)",
+            "support_specialist" => "Support Specialist",
+            "developer" => "Developer",
+            _ => string.Join(' ', roleName.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]))
+        };
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    private void HandleCancel()
+    {
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    private async Task HandleUpdateUser()
+    {
+        if (_isSubmitting)
+            return;
+
+        // Validate form
+        _form?.Validate();
+        if (!_isFormValid)
+            return;
+
+        _isSubmitting = true;
+        _errors = Array.Empty<string>();
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errors = new[] { "You must be logged in to update users." };
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_selectedRole))
+            {
+                _errors = new[] { "Please select a role." };
+                return;
+            }
+
+            await AuthService.UpdateUserAsync(
+                userId: UserId,
+                email: _email,
+                firstName: _firstName,
+                lastName: _lastName,
+                roleName: _selectedRole,
+                isActive: _isActive,
+                accessToken: accessToken
+            );
+
+            Navigation.NavigateTo("/admin/users");
+        }
+        catch (SupabaseAuthException ex)
+        {
+            _errors = new[] { $"Error updating user: {ex.Message}" };
+        }
+        catch (Exception ex)
+        {
+            _errors = new[] { $"Error updating user: {ex.Message}" };
+            Console.WriteLine($"Error updating user: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class RoleOption
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string DatabaseName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+}
+

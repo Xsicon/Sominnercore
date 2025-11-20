@@ -2,6 +2,10 @@
 @layout Sominnercore.Layout.AdminLayout
 @using System.Linq
 @using Microsoft.AspNetCore.Components.Web
+@using Sominnercore.Services
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
 
 <DashboardHeader Title="User Management" 
                  Subtitle="Manage team members and permissions" />
@@ -64,11 +68,35 @@
         <div class="users-table-container">
             <div class="users-table-card">
                 <div class="users-table-header">
-                    <h2 class="users-table-title">All Users</h2>
-                    <span class="users-count">@FilteredUsers.Count</span>
+                    <div>
+                        <h2 class="users-table-title">All Users</h2>
+                        <span class="users-count">@FilteredUsers.Count</span>
+                    </div>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.PersonAdd"
+                               OnClick="NavigateToCreateUser"
+                               Class="users-create-button">
+                        Create User
+                    </MudButton>
                 </div>
-                <div class="users-table-wrapper">
-                    <table class="users-table">
+                @if (_isLoading)
+                {
+                    <div class="users-loading">
+                        <MudProgressCircular Indeterminate="true" />
+                        <p>Loading users...</p>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="users-error">
+                        @_errorMessage
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="users-table-wrapper">
+                        <table class="users-table">
                         <thead>
                             <tr>
                                 <th>User</th>
@@ -114,25 +142,42 @@
                                         <span class="date-text">@user.LastLogin</span>
                                     </td>
                                     <td>
-                                        <button class="users-action-btn">
-                                            <MudIcon Icon="@Icons.Material.Filled.MoreVert" Class="action-icon" />
-                                        </button>
+                                        <MudMenu>
+                                            <ActivatorContent>
+                                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" 
+                                                               Class="users-action-btn" 
+                                                               Color="Color.Default" 
+                                                               Size="Size.Small" 
+                                                               Variant="Variant.Text" />
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <MudMenuItem OnClick="() => NavigateToEditUser(user)">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3" />
+                                                    Edit User
+                                                </MudMenuItem>
+                                            </ChildContent>
+                                        </MudMenu>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                </div>
+                    </div>
+                }
             </div>
         </div>
     </section>
 </div>
 
 @code {
-    private int _totalUsers = 6;
-    private int _activeUsers = 5;
-    private int _inactiveUsers = 1;
-    private int _administrators = 1;
+    private List<UserViewModel> _users = new();
+    private bool _isLoading = true;
+    private string _errorMessage = string.Empty;
+
+    private int _totalUsers => _users.Count;
+    private int _activeUsers => _users.Count(u => u.Status == "active");
+    private int _inactiveUsers => _users.Count(u => u.Status == "inactive");
+    private int _administrators => _users.Count(u => u.RoleClass == "admin");
 
     private string _searchTerm = string.Empty;
     private string _selectedRole = "All Roles";
@@ -150,87 +195,165 @@
         ShowStatusFilter = !ShowStatusFilter;
     }
 
-    private readonly List<UserViewModel> _users = new()
+    protected override async Task OnInitializedAsync()
     {
-        new UserViewModel
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
         {
-            Name = "John Admin",
-            Email = "john@sominnercore.com",
-            Role = "Admin",
-            RoleClass = "admin",
-            Status = "active",
-            StatusClass = "active",
-            CreatedDate = "1/15/2025",
-            LastLogin = "11/19/2025",
-            Initial = "J",
-            AvatarColor = "#f97316"
-        },
-        new UserViewModel
-        {
-            Name = "Sarah Marketing",
-            Email = "sarah@sominnercore.com",
-            Role = "Marketing Manager",
-            RoleClass = "marketing",
-            Status = "active",
-            StatusClass = "active",
-            CreatedDate = "2/20/2025",
-            LastLogin = "11/18/2025",
-            Initial = "S",
-            AvatarColor = "#f97316"
-        },
-        new UserViewModel
-        {
-            Name = "Mike Support",
-            Email = "mike@sominnercore.com",
-            Role = "Support Specialist",
-            RoleClass = "support",
-            Status = "active",
-            StatusClass = "active",
-            CreatedDate = "3/10/2025",
-            LastLogin = "11/19/2025",
-            Initial = "M",
-            AvatarColor = "#22c55e"
-        },
-        new UserViewModel
-        {
-            Name = "Emily CRS",
-            Email = "emily@sominnercore.com",
-            Role = "CRS (Customer Relations Specialist)",
-            RoleClass = "crs",
-            Status = "active",
-            StatusClass = "active",
-            CreatedDate = "4/5/2025",
-            LastLogin = "11/17/2025",
-            Initial = "E",
-            AvatarColor = "#f97316"
-        },
-        new UserViewModel
-        {
-            Name = "David Developer",
-            Email = "david@sominnercore.com",
-            Role = "Developer",
-            RoleClass = "developer",
-            Status = "active",
-            StatusClass = "active",
-            CreatedDate = "5/12/2025",
-            LastLogin = "11/19/2025",
-            Initial = "D",
-            AvatarColor = "#f97316"
-        },
-        new UserViewModel
-        {
-            Name = "Lisa Former",
-            Email = "lisa@sominnercore.com",
-            Role = "Support Specialist",
-            RoleClass = "support",
-            Status = "inactive",
-            StatusClass = "inactive",
-            CreatedDate = "1/8/2025",
-            LastLogin = "10/15/2025",
-            Initial = "L",
-            AvatarColor = "#f97316"
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errorMessage = "You must be logged in to view users.";
+                return;
+            }
+
+            // Fetch both team members and auth users
+            var teamMembersTask = AuthService.GetTeamMembersAsync(accessToken);
+            var authUsersTask = AuthService.GetAllAuthUsersAsync(accessToken);
+
+            await Task.WhenAll(teamMembersTask, authUsersTask);
+
+            var teamMembers = await teamMembersTask;
+            var authUsers = await authUsersTask;
+
+            // Create a dictionary of team members by auth_user_id for quick lookup
+            var teamMembersByAuthId = teamMembers.ToDictionary(tm => tm.AuthUserId.ToString(), StringComparer.OrdinalIgnoreCase);
+
+            // Merge: Use team member data when available, otherwise use auth user data
+            _users = authUsers.Select(au =>
+            {
+                var authUserId = au.Id;
+                var hasTeamMember = teamMembersByAuthId.TryGetValue(authUserId, out var tm);
+
+                if (hasTeamMember && tm != null)
+                {
+                    // User has team member record - use that data
+                    return new UserViewModel
+                    {
+                        AuthUserId = authUserId,
+                        Name = tm.DisplayName,
+                        Email = tm.Email,
+                        Role = FormatRoleName(tm.Role?.Name ?? "unknown"),
+                        RoleClass = GetRoleClass(tm.Role?.Name ?? "unknown"),
+                        Status = tm.Status,
+                        StatusClass = tm.Status,
+                        CreatedDate = tm.CreatedAt.ToString("M/d/yyyy"),
+                        LastLogin = ParseDate(au.LastSignInAt) ?? "Never",
+                        Initial = GetInitial(tm.DisplayName),
+                        AvatarColor = GetAvatarColor(tm.DisplayName)
+                    };
+                }
+                else
+                {
+                    // User exists in auth but not in team_members - show with default values
+                    var firstName = au.UserMetadata?.TryGetValue("first_name", out var fn) == true ? fn?.ToString() : null;
+                    var lastName = au.UserMetadata?.TryGetValue("last_name", out var ln) == true ? ln?.ToString() : null;
+                    var roleName = au.UserMetadata?.TryGetValue("role", out var r) == true ? r?.ToString() : null;
+                    var displayName = !string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName)
+                        ? $"{firstName} {lastName}"
+                        : au.Email?.Split('@')[0] ?? "Unknown User";
+
+                    return new UserViewModel
+                    {
+                        AuthUserId = authUserId,
+                        Name = displayName,
+                        Email = au.Email ?? "No email",
+                        Role = FormatRoleName(roleName ?? "unknown"),
+                        RoleClass = GetRoleClass(roleName ?? "unknown"),
+                        Status = "active", // Default status
+                        StatusClass = "active",
+                        CreatedDate = ParseDate(au.CreatedAt) ?? "Unknown",
+                        LastLogin = ParseDate(au.LastSignInAt) ?? "Never",
+                        Initial = GetInitial(displayName),
+                        AvatarColor = GetAvatarColor(displayName)
+                    };
+                }
+            }).ToList();
         }
-    };
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading users: {ex.Message}";
+            Console.WriteLine($"Error loading users: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string FormatRoleName(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "Admin",
+            "marketing_manager" => "Marketing Manager",
+            "customer_relations_specialist" => "CRS (Customer Relations Specialist)",
+            "support_specialist" => "Support Specialist",
+            "developer" => "Developer",
+            _ => string.Join(' ', roleName.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]))
+        };
+    }
+
+    private static string GetRoleClass(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "admin",
+            "marketing_manager" => "marketing",
+            "customer_relations_specialist" => "crs",
+            "support_specialist" => "support",
+            "developer" => "developer",
+            _ => "unknown"
+        };
+    }
+
+    private static string GetInitial(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+        return name.Trim().Substring(0, 1).ToUpperInvariant();
+    }
+
+    private static string GetAvatarColor(string name)
+    {
+        var colors = new[] { "#f97316", "#22c55e", "#3b82f6", "#a855f7", "#ec4899" };
+        var hash = name.GetHashCode();
+        return colors[Math.Abs(hash) % colors.Length];
+    }
+
+    private static string? ParseDate(string? dateString)
+    {
+        if (string.IsNullOrWhiteSpace(dateString))
+            return null;
+
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("M/d/yyyy");
+        }
+
+        return null;
+    }
+
+    private void NavigateToCreateUser()
+    {
+        Navigation.NavigateTo("/admin/users/create");
+    }
+
+    private void NavigateToEditUser(UserViewModel user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.AuthUserId))
+        {
+            Navigation.NavigateTo($"/admin/users/edit/{user.AuthUserId}");
+        }
+    }
 
     private List<UserViewModel> FilteredUsers
     {
@@ -248,6 +371,7 @@
 
     private class UserViewModel
     {
+        public string AuthUserId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;

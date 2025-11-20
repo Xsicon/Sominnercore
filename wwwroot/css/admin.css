@@ -2257,28 +2257,17 @@
 }
 
 .users-create-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: #14b8a6;
-    border: none;
-    border-radius: 12px;
-    color: #232323;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.15s ease;
-    font-family: inherit;
+    text-transform: none !important;
+    border-radius: 12px !important;
+    background: linear-gradient(90deg, #0d9488, #14b8a6) !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
 }
 
 .users-create-button:hover {
-    background: #0d9488;
+    background: linear-gradient(90deg, #0f766e, #0d9488) !important;
     transform: translateY(-1px);
-}
-
-.users-create-button:active {
-    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
 
 .users-create-icon {
@@ -2591,6 +2580,515 @@
     font-size: 1rem;
     color: rgba(148, 163, 184, 0.7);
     margin: 0 0 24px 0;
+}
+
+.users-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 16px;
+    color: rgba(148, 163, 184, 0.8);
+}
+
+.users-loading p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.users-error {
+    margin: 20px 24px;
+    border-radius: 12px;
+}
+
+/* Create User Form Page Styles */
+.create-user-page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 24px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.create-user-back-link {
+    margin-bottom: 8px;
+}
+
+.back-link-button {
+    text-transform: none !important;
+    color: rgba(226, 232, 240, 0.85) !important;
+    padding: 8px 0 !important;
+    min-width: auto !important;
+    font-size: 0.95rem !important;
+}
+
+.back-link-button:hover {
+    color: rgba(226, 232, 240, 0.95) !important;
+    background: transparent !important;
+}
+
+.create-user-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-section {
+    background: rgba(11, 11, 13, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 18px;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-section-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.form-section-icon {
+    font-size: 1.5rem !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    color: rgba(13, 148, 136, 0.9);
+}
+
+.form-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: rgba(248, 250, 252, 0.9);
+    margin: 0;
+}
+
+.form-section-description {
+    font-size: 0.9rem;
+    color: rgba(148, 163, 184, 0.7);
+    margin: 0;
+}
+
+.form-section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-row-split {
+    flex-direction: row;
+    gap: 16px;
+}
+
+.form-field-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field {
+    width: 100%;
+}
+
+.form-field .mud-input-control {
+    background: rgba(17, 24, 39, 0.3) !important;
+}
+
+.form-field .mud-input-control fieldset {
+    border-color: rgba(148, 163, 184, 0.12) !important;
+    border-width: 1px !important;
+}
+
+.form-field .mud-input-control:hover fieldset {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+.form-field .mud-input-control.mud-input-focused fieldset {
+    border-color: rgba(13, 148, 136, 0.6) !important;
+    border-width: 1px !important;
+}
+
+.form-field .mud-input-outlined,
+.form-field .mud-input-outlined fieldset,
+.form-field .mud-input-outlined .mud-input-outlined-adornment,
+.form-field .mud-input-control .mud-input-outlined {
+    border-color: rgba(148, 163, 184, 0.12) !important;
+    color: rgba(248, 250, 252, 0.9) !important;
+}
+
+.form-field .mud-input-outlined:hover,
+.form-field .mud-input-outlined:hover fieldset,
+.form-field .mud-input-control:hover .mud-input-outlined fieldset {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+.form-field .mud-input-outlined.mud-input-outlined-focused,
+.form-field .mud-input-outlined.mud-input-outlined-focused fieldset,
+.form-field .mud-input-control .mud-input-outlined.mud-input-outlined-focused fieldset {
+    border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+.form-field .mud-input-outlined.mud-input-outlined-focused:hover,
+.form-field .mud-input-outlined.mud-input-outlined-focused:hover fieldset {
+    border-color: rgba(13, 148, 136, 0.6) !important;
+}
+
+.form-label {
+    color: rgba(226, 232, 240, 0.85) !important;
+    font-size: 0.95rem !important;
+}
+
+.form-label.mud-input-label-focused {
+    color: #0d9488 !important;
+}
+
+.form-field .mud-input {
+    color: rgba(248, 250, 252, 0.9) !important;
+    font-size: 0.95rem !important;
+}
+
+.form-field .mud-input::placeholder {
+    color: rgba(148, 163, 184, 0.5) !important;
+}
+
+.form-field .mud-input-adornment {
+    color: rgba(148, 163, 184, 0.6) !important;
+}
+
+.form-field .mud-input-adornment:hover {
+    color: rgba(148, 163, 184, 0.8) !important;
+}
+
+.required-asterisk {
+    color: #ef4444;
+}
+
+.password-hint {
+    font-size: 0.875rem;
+    color: rgba(148, 163, 184, 0.7);
+    margin: -4px 0 0 0;
+}
+
+.form-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.form-setting-row:last-child {
+    border-bottom: none;
+}
+
+.form-setting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.form-setting-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: rgba(248, 250, 252, 0.9);
+}
+
+.form-setting-description {
+    font-size: 0.875rem;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.form-setting-control {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-labels {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-label {
+    font-size: 0.875rem;
+    color: rgba(148, 163, 184, 0.6);
+    transition: color 0.2s ease;
+}
+
+.toggle-label.active {
+    color: rgba(248, 250, 252, 0.9);
+    font-weight: 500;
+}
+
+.status-toggle {
+    margin: 0 !important;
+}
+
+.form-error-alert {
+    margin-top: 8px;
+    border-radius: 12px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.cancel-button {
+    text-transform: none !important;
+    border-radius: 12px !important;
+    color: rgba(226, 232, 240, 0.9) !important;
+    border-color: rgba(148, 163, 184, 0.3) !important;
+    padding: 10px 24px !important;
+}
+
+.cancel-button:hover {
+    background: rgba(17, 24, 39, 0.5) !important;
+    border-color: rgba(148, 163, 184, 0.5) !important;
+}
+
+.create-button {
+    text-transform: none !important;
+    border-radius: 12px !important;
+    background: linear-gradient(90deg, #0d9488, #14b8a6) !important;
+    padding: 10px 24px !important;
+    font-weight: 600 !important;
+}
+
+.create-button:hover:not(:disabled) {
+    background: linear-gradient(90deg, #0f766e, #0d9488) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
+}
+
+.create-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* MudSelect styling */
+.form-field .mud-select {
+    color: rgba(248, 250, 252, 0.9) !important;
+    width: 100%;
+}
+
+.form-field .mud-select .mud-input-control {
+    background: rgba(17, 24, 39, 0.3) !important;
+}
+
+.form-field .mud-select .mud-input-control .mud-input {
+    color: rgba(248, 250, 252, 0.9) !important;
+}
+
+.form-field .mud-select .mud-input-outlined {
+    background: rgba(17, 24, 39, 0.3) !important;
+}
+
+.form-field .mud-select .mud-input-adornment {
+    color: rgba(148, 163, 184, 0.6) !important;
+}
+
+.form-field .mud-select .mud-input-adornment:hover {
+    color: rgba(148, 163, 184, 0.8) !important;
+}
+
+.form-field .mud-select .mud-input-outlined,
+.form-field .mud-select .mud-input-outlined fieldset {
+    border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+.form-field .mud-select .mud-input-outlined:hover,
+.form-field .mud-select .mud-input-outlined:hover fieldset {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+.form-field .mud-select .mud-input-outlined.mud-input-outlined-focused,
+.form-field .mud-select .mud-input-outlined.mud-input-outlined-focused fieldset {
+    border-color: rgba(13, 148, 136, 0.6) !important;
+}
+
+/* MudSelect dropdown/popover styling */
+.mud-popover-paper,
+.mud-popover-paper.mud-popover-paper {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+    border: 1px solid rgba(148, 163, 184, 0.14) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    z-index: 1000 !important;
+    overflow: hidden !important;
+}
+
+.mud-popover {
+    z-index: 1000 !important;
+}
+
+.mud-select-popover,
+.mud-select-popover .mud-popover-paper {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+
+.mud-select-popover .mud-list,
+.mud-popover-paper .mud-list {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+    padding: 4px 0 !important;
+    max-height: 300px !important;
+    overflow-y: auto !important;
+}
+
+.mud-select-popover .mud-list-item,
+.mud-popover-paper .mud-list-item {
+    color: rgba(248, 250, 252, 0.9) !important;
+    min-height: 40px !important;
+    padding: 10px 16px !important;
+    font-size: 0.95rem !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+
+.mud-select-popover .mud-list-item:hover,
+.mud-popover-paper .mud-list-item:hover {
+    background: rgba(17, 24, 39, 0.6) !important;
+    background-color: rgba(17, 24, 39, 0.6) !important;
+}
+
+.mud-select-popover .mud-list-item.mud-selected-item,
+.mud-popover-paper .mud-list-item.mud-selected-item {
+    background: rgba(13, 148, 136, 0.25) !important;
+    background-color: rgba(13, 148, 136, 0.25) !important;
+    color: rgba(13, 148, 136, 1) !important;
+    font-weight: 500 !important;
+}
+
+.mud-select-popover .mud-list-item.mud-disabled,
+.mud-popover-paper .mud-list-item.mud-disabled {
+    color: rgba(148, 163, 184, 0.5) !important;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+}
+
+/* Ensure dropdown appears above other content */
+.mud-overlay {
+    z-index: 999 !important;
+}
+
+.mud-overlay-scrim {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Additional targeting for MudSelect popover */
+.mud-select .mud-popover-paper {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+}
+
+.mud-select .mud-popover-paper .mud-list {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+}
+
+/* Global MudSelect popover styling - more aggressive targeting */
+div[class*="mud-popover"],
+div[class*="mud-popover-paper"],
+.mud-popover-root,
+.mud-popover-root .mud-popover-paper {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+}
+
+div[class*="mud-popover"] .mud-list,
+div[class*="mud-popover-paper"] .mud-list,
+.mud-popover-root .mud-list {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+}
+
+/* Very aggressive global targeting for any popover in the admin area */
+body .mud-popover-paper,
+body .mud-popover-root,
+body [class*="mud-popover"] {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+    border: 1px solid rgba(148, 163, 184, 0.14) !important;
+    border-radius: 12px !important;
+}
+
+body .mud-popover-paper .mud-list,
+body .mud-popover-root .mud-list,
+body [class*="mud-popover"] .mud-list {
+    background: rgba(11, 11, 13, 0.98) !important;
+    background-color: rgba(11, 11, 13, 0.98) !important;
+}
+
+/* MudSwitch styling */
+.form-setting-control .mud-switch {
+    margin: 0 !important;
+}
+
+.form-setting-control .mud-switch .mud-switch-track {
+    background-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+.form-setting-control .mud-switch .mud-switch-thumb {
+    background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+.form-setting-control .mud-switch.mud-checked .mud-switch-track {
+    background-color: #0d9488 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-section {
+        padding: 20px 16px;
+    }
+
+    .form-row-split {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .form-setting-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .form-setting-control {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cancel-button,
+    .create-button {
+        width: 100%;
+    }
 }
 
 
