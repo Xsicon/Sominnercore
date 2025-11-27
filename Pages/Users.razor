@@ -130,7 +130,14 @@
                                         <span class="role-badge role-@user.RoleClass">@user.Role</span>
                                     </td>
                                     <td>
-                                        <span class="status-badge status-@user.StatusClass">@user.Status</span>
+                                        <div class="status-switch-container" 
+                                             style="@(_updatingStatusUsers.Contains(user.AuthUserId) ? "opacity: 0.5; pointer-events: none;" : "")"
+                                             @onclick="@(() => ToggleUserStatus(user, !user.Status.Equals("active", StringComparison.OrdinalIgnoreCase)))">
+                                            <div class="status-switch @(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "status-switch-active" : "status-switch-inactive")">
+                                                <span class="status-switch-label">@(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "Active" : "Inactive")</span>
+                                                <div class="status-switch-slider"></div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="date-cell">
@@ -142,21 +149,13 @@
                                         <span class="date-text">@user.LastLogin</span>
                                     </td>
                                     <td>
-                                        <MudMenu>
-                                            <ActivatorContent>
-                                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" 
-                                                               Class="users-action-btn" 
-                                                               Color="Color.Default" 
-                                                               Size="Size.Small" 
-                                                               Variant="Variant.Text" />
-                                            </ActivatorContent>
-                                            <ChildContent>
-                                                <MudMenuItem OnClick="() => NavigateToEditUser(user)">
-                                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3" />
-                                                    Edit User
-                                                </MudMenuItem>
-                                            </ChildContent>
-                                        </MudMenu>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                       Class="users-action-btn" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small" 
+                                                       Variant="Variant.Text"
+                                                       OnClick="() => NavigateToEditUser(user)"
+                                                       Title="Edit User" />
                                     </td>
                                 </tr>
                             }
@@ -173,6 +172,7 @@
     private List<UserViewModel> _users = new();
     private bool _isLoading = true;
     private string _errorMessage = string.Empty;
+    private HashSet<string> _updatingStatusUsers = new();
 
     private int _totalUsers => _users.Count;
     private int _activeUsers => _users.Count(u => u.Status == "active");
@@ -352,6 +352,48 @@
         if (!string.IsNullOrWhiteSpace(user.AuthUserId))
         {
             Navigation.NavigateTo($"/admin/users/edit/{user.AuthUserId}");
+        }
+    }
+
+    private async Task ToggleUserStatus(UserViewModel user, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(user.AuthUserId))
+            return;
+
+        _updatingStatusUsers.Add(user.AuthUserId);
+        StateHasChanged();
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errorMessage = "You must be logged in to update user status.";
+                return;
+            }
+
+            await AuthService.UpdateUserStatusAsync(user.AuthUserId, isActive, accessToken);
+
+            // Update the local user list
+            var userToUpdate = _users.FirstOrDefault(u => u.AuthUserId == user.AuthUserId);
+            if (userToUpdate != null)
+            {
+                userToUpdate.Status = isActive ? "active" : "inactive";
+                userToUpdate.StatusClass = isActive ? "active" : "inactive";
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error updating user status: {ex.Message}";
+            Console.WriteLine($"Error updating user status: {ex.Message}");
+            StateHasChanged();
+        }
+        finally
+        {
+            _updatingStatusUsers.Remove(user.AuthUserId);
+            StateHasChanged();
         }
     }
 

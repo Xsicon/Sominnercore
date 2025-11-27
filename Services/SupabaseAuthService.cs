@@ -404,8 +404,14 @@ public class SupabaseAuthService
         }
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        Console.WriteLine($"[SupabaseAuthService] GetTeamMemberByAuthUserIdAsync response: {content}");
         var teamMembers = JsonSerializer.Deserialize<TeamMemberDto[]>(content, _serializerOptions);
-        return teamMembers?.FirstOrDefault();
+        var teamMember = teamMembers?.FirstOrDefault();
+        if (teamMember != null)
+        {
+            Console.WriteLine($"[SupabaseAuthService] Deserialized team member - Email: {teamMember.Email}, Status: '{teamMember.Status}'");
+        }
+        return teamMember;
     }
 
     public async Task<AuthUserDto?> GetAuthUserByIdAsync(string userId, string? accessToken, CancellationToken cancellationToken = default)
@@ -555,6 +561,45 @@ public class SupabaseAuthService
                 var content = await createTeamMemberResponse.Content.ReadAsStringAsync(cancellationToken);
                 throw new SupabaseAuthException(createTeamMemberResponse.StatusCode, content);
             }
+        }
+    }
+
+    public async Task UpdateUserStatusAsync(
+        string userId,
+        bool isActive,
+        string? accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new InvalidOperationException("Access token is required to update user status.");
+        }
+
+        EnsureConfigured();
+
+        // Update team member status
+        var updateTeamMemberRequest = new HttpRequestMessage(
+            HttpMethod.Patch,
+            $"{_options.Url!.TrimEnd('/')}/rest/v1/team_members?auth_user_id=eq.{Uri.EscapeDataString(userId)}");
+        updateTeamMemberRequest.Headers.Add("apikey", _options.AnonKey);
+        updateTeamMemberRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        updateTeamMemberRequest.Headers.Add("Prefer", "return=minimal");
+
+        var teamMemberPayload = new
+        {
+            status = isActive ? "active" : "inactive"
+        };
+
+        updateTeamMemberRequest.Content = new StringContent(
+            JsonSerializer.Serialize(teamMemberPayload, _serializerOptions),
+            Encoding.UTF8,
+            "application/json");
+
+        var updateTeamMemberResponse = await _httpClient.SendAsync(updateTeamMemberRequest, cancellationToken);
+        if (!updateTeamMemberResponse.IsSuccessStatusCode)
+        {
+            var content = await updateTeamMemberResponse.Content.ReadAsStringAsync(cancellationToken);
+            throw new SupabaseAuthException(updateTeamMemberResponse.StatusCode, content);
         }
     }
 

@@ -113,31 +113,6 @@
                     </div>
                 </div>
 
-                <!-- Additional Settings Section -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <div class="form-section-title-wrapper">
-                            <MudIcon Icon="@Icons.Material.Filled.Shield" Class="form-section-icon" />
-                            <h3 class="form-section-title">Additional Settings</h3>
-                        </div>
-                    </div>
-                    <div class="form-section-content">
-                        <div class="form-setting-row">
-                            <div class="form-setting-info">
-                                <div class="form-setting-label">Account Status</div>
-                                <div class="form-setting-description">Set the status of the user account</div>
-                            </div>
-                            <div class="form-setting-control">
-                                <div class="toggle-labels">
-                                    <span class="toggle-label @(_isActive ? "" : "active")">Inactive</span>
-                                    <MudSwitch T="bool" @bind-Checked="_isActive" Color="Color.Success" Class="status-toggle" />
-                                    <span class="toggle-label @(_isActive ? "active" : "")">Active</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Error Messages -->
                 @if (_errors != null && _errors.Length > 0)
                 {
@@ -186,7 +161,6 @@
     private string _lastName = string.Empty;
     private string _email = string.Empty;
     private string? _selectedRole;
-    private bool _isActive = true;
 
     // Available roles
     private List<RoleOption> _availableRoles = new();
@@ -195,6 +169,16 @@
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadRolesAsync(), LoadUserDataAsync());
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isLoadingUser)
+        {
+            // Force UI update after first render when data is loaded
+            StateHasChanged();
+            await Task.CompletedTask;
+        }
     }
 
     private async Task LoadUserDataAsync()
@@ -221,10 +205,11 @@
                 _lastName = ExtractLastName(teamMember.DisplayName);
                 _email = teamMember.Email;
                 _selectedRole = teamMember.Role?.Name;
-                _isActive = teamMember.Status == "active";
+                
             }
             else
             {
+                Console.WriteLine($"[EditUser] Team member not found for UserId: {UserId}");
                 // Fall back to auth user data
                 var authUser = await AuthService.GetAuthUserByIdAsync(UserId, accessToken);
                 if (authUser == null)
@@ -237,8 +222,8 @@
                 _firstName = authUser.UserMetadata?.TryGetValue("first_name", out var fn) == true ? fn?.ToString() ?? string.Empty : string.Empty;
                 _lastName = authUser.UserMetadata?.TryGetValue("last_name", out var ln) == true ? ln?.ToString() ?? string.Empty : string.Empty;
                 _selectedRole = authUser.UserMetadata?.TryGetValue("role", out var r) == true ? r?.ToString() : null;
-                _isActive = true; // Default to active if no team member record
             }
+            
         }
         catch (Exception ex)
         {
@@ -247,7 +232,10 @@
         }
         finally
         {
+            // Set loading to false AFTER all values are set
             _isLoadingUser = false;
+            // Force UI update after all data is loaded
+            StateHasChanged();
         }
     }
 
@@ -351,7 +339,7 @@
                 firstName: _firstName,
                 lastName: _lastName,
                 roleName: _selectedRole,
-                isActive: _isActive,
+                isActive: true, // Status is managed from the users list page
                 accessToken: accessToken
             );
 

@@ -110,10 +110,48 @@
             if (!string.IsNullOrWhiteSpace(accessToken))
             {
                 var user = await AuthService.GetUserAsync(accessToken);
-                if (user?.Email is { Length: > 0 } email)
+                if (user != null && !string.IsNullOrWhiteSpace(user.Id))
                 {
-                    var at = email.IndexOf('@');
-                    _displayName = at > 0 ? email[..at] : email;
+                    // Try to get team member record first for display name
+                    var teamMember = await AuthService.GetTeamMemberByAuthUserIdAsync(user.Id, accessToken);
+                    if (teamMember != null && !string.IsNullOrWhiteSpace(teamMember.DisplayName))
+                    {
+                        _displayName = teamMember.DisplayName;
+                    }
+                    else if (user.UserMetadata != null)
+                    {
+                        // Fall back to first_name + last_name from metadata
+                        var hasFirstName = user.UserMetadata.TryGetValue("first_name", out var fnObj);
+                        var hasLastName = user.UserMetadata.TryGetValue("last_name", out var lnObj);
+                        
+                        var firstName = hasFirstName ? fnObj?.ToString() : null;
+                        var lastName = hasLastName ? lnObj?.ToString() : null;
+                        
+                        if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName))
+                        {
+                            _displayName = $"{firstName} {lastName}";
+                        }
+                        else if (!string.IsNullOrWhiteSpace(firstName))
+                        {
+                            _displayName = firstName!;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(lastName))
+                        {
+                            _displayName = lastName!;
+                        }
+                        else if (user.Email is { Length: > 0 } email)
+                        {
+                            // Final fallback to email
+                            var at = email.IndexOf('@');
+                            _displayName = at > 0 ? email[..at] : email;
+                        }
+                    }
+                    else if (user.Email is { Length: > 0 } email)
+                    {
+                        // Fallback to email if no metadata
+                        var at = email.IndexOf('@');
+                        _displayName = at > 0 ? email[..at] : email;
+                    }
                 }
 
                 if (user?.UserMetadata is { } metadata && metadata.TryGetValue("role", out var roleObj))
