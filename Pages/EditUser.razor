@@ -5,146 +5,148 @@
 @inject SupabaseAuthService AuthService
 @inject IJSRuntime JSRuntime
 
-<div class="create-user-page">
-    <div class="create-user-back-link">
-        <MudButton Variant="Variant.Text" 
-                   StartIcon="@Icons.Material.Filled.ArrowBack" 
-                   OnClick="NavigateBack"
-                   Class="back-link-button">
-            Back to Users
-        </MudButton>
-    </div>
-
-    @if (_isLoadingUser)
-    {
-        <div class="users-loading">
-            <MudProgressCircular Indeterminate="true" />
-            <p>Loading user data...</p>
+<AuthorizeRole RequiredRoles="@(new[] { "admin" })">
+    <div class="create-user-page">
+        <div class="create-user-back-link">
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="NavigateBack"
+                       Class="back-link-button">
+                Back to Users
+            </MudButton>
         </div>
-    }
-    else
-    {
-        <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
-            <div class="create-user-form-container">
-                <!-- Personal Information Section -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <div class="form-section-title-wrapper">
-                            <MudIcon Icon="@Icons.Material.Filled.Person" Class="form-section-icon" />
-                            <h3 class="form-section-title">Personal Information</h3>
-                        </div>
-                        <p class="form-section-description">Update the user's basic information</p>
-                    </div>
-                    <div class="form-section-content">
-                        <div class="form-row form-row-split">
-                            <div class="form-field-wrapper">
-                                <MudTextField @bind-Value="_firstName"
-                                          Label="First Name *"
-                                          Required="true"
-                                          RequiredError="First name is required"
-                                          Variant="Variant.Outlined"
-                                          Class="form-field"
-                                          ClassLabel="form-label"
-                                          Adornment="Adornment.End"
-                                          AdornmentIcon="@Icons.Material.Filled.MoreVert"
-                                          AdornmentAriaLabel="More options" />
-                            </div>
-                            <div class="form-field-wrapper">
-                                <MudTextField @bind-Value="_lastName"
-                                          Label="Last Name *"
-                                          Required="true"
-                                          RequiredError="Last name is required"
-                                          Variant="Variant.Outlined"
-                                          Class="form-field"
-                                          ClassLabel="form-label"
-                                          Adornment="Adornment.None" />
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <MudTextField @bind-Value="_email"
-                                      Label="Email Address *"
-                                      Required="true"
-                                      RequiredError="Email is required"
-                                      Variant="Variant.Outlined"
-                                      InputType="InputType.Email"
-                                      Class="form-field"
-                                      ClassLabel="form-label"
-                                      Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Email" />
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Role & Permissions Section -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <div class="form-section-title-wrapper">
-                            <MudIcon Icon="@Icons.Material.Filled.Work" Class="form-section-icon" />
-                            <h3 class="form-section-title">Role & Permissions</h3>
-                        </div>
-                        <p class="form-section-description">Assign a role to determine user permissions</p>
-                    </div>
-                    <div class="form-section-content">
-                        <div class="form-row">
-                            <MudSelect T="string" 
-                                       @bind-Value="_selectedRole"
-                                       Label="Select Role *"
-                                       Required="true"
-                                       RequiredError="Please select a role"
-                                       Variant="Variant.Outlined"
-                                       Class="form-field"
-                                       ClassLabel="form-label"
-                                       Disabled="@_isLoadingRoles"
-                                       AnchorOrigin="Origin.BottomCenter"
-                                       TransformOrigin="Origin.TopCenter">
-                                @if (_isLoadingRoles)
-                                {
-                                    <MudSelectItem Value="@("loading")" Disabled="true">Loading roles...</MudSelectItem>
-                                }
-                                else
-                                {
-                                    @foreach (var role in _availableRoles)
-                                    {
-                                        <MudSelectItem Value="@role.DatabaseName">@role.DisplayName</MudSelectItem>
-                                    }
-                                }
-                            </MudSelect>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Error Messages -->
-                @if (_errors != null && _errors.Length > 0)
-                {
-                    <MudAlert Severity="Severity.Error" Class="form-error-alert">
-                        @foreach (var error in _errors)
-                        {
-                            <div>@error</div>
-                        }
-                    </MudAlert>
-                }
-
-                <!-- Form Actions -->
-                <div class="form-actions">
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               OnClick="HandleCancel"
-                               Class="cancel-button">
-                        Cancel
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Success"
-                               OnClick="HandleUpdateUser"
-                               StartIcon="@Icons.Material.Filled.Save"
-                               Disabled="@(!_isFormValid || _isSubmitting)"
-                               Class="create-button">
-                        Update User
-                    </MudButton>
-                </div>
+        @if (_isLoadingUser)
+        {
+            <div class="users-loading">
+                <MudProgressCircular Indeterminate="true" />
+                <p>Loading user data...</p>
             </div>
-        </MudForm>
-    }
-</div>
+        }
+        else
+        {
+            <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
+                <div class="create-user-form-container">
+                    <!-- Personal Information Section -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <div class="form-section-title-wrapper">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Class="form-section-icon" />
+                                <h3 class="form-section-title">Personal Information</h3>
+                            </div>
+                            <p class="form-section-description">Update the user's basic information</p>
+                        </div>
+                        <div class="form-section-content">
+                            <div class="form-row form-row-split">
+                                <div class="form-field-wrapper">
+                                    <MudTextField @bind-Value="_firstName"
+                                              Label="First Name *"
+                                              Required="true"
+                                              RequiredError="First name is required"
+                                              Variant="Variant.Outlined"
+                                              Class="form-field"
+                                              ClassLabel="form-label"
+                                              Adornment="Adornment.End"
+                                              AdornmentIcon="@Icons.Material.Filled.MoreVert"
+                                              AdornmentAriaLabel="More options" />
+                                </div>
+                                <div class="form-field-wrapper">
+                                    <MudTextField @bind-Value="_lastName"
+                                              Label="Last Name *"
+                                              Required="true"
+                                              RequiredError="Last name is required"
+                                              Variant="Variant.Outlined"
+                                              Class="form-field"
+                                              ClassLabel="form-label"
+                                              Adornment="Adornment.None" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <MudTextField @bind-Value="_email"
+                                          Label="Email Address *"
+                                          Required="true"
+                                          RequiredError="Email is required"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Email"
+                                          Class="form-field"
+                                          ClassLabel="form-label"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Role & Permissions Section -->
+                    <div class="form-section">
+                        <div class="form-section-header">
+                            <div class="form-section-title-wrapper">
+                                <MudIcon Icon="@Icons.Material.Filled.Work" Class="form-section-icon" />
+                                <h3 class="form-section-title">Role & Permissions</h3>
+                            </div>
+                            <p class="form-section-description">Assign a role to determine user permissions</p>
+                        </div>
+                        <div class="form-section-content">
+                            <div class="form-row">
+                                <MudSelect T="string" 
+                                           @bind-Value="_selectedRole"
+                                           Label="Select Role *"
+                                           Required="true"
+                                           RequiredError="Please select a role"
+                                           Variant="Variant.Outlined"
+                                           Class="form-field"
+                                           ClassLabel="form-label"
+                                           Disabled="@_isLoadingRoles"
+                                           AnchorOrigin="Origin.BottomCenter"
+                                           TransformOrigin="Origin.TopCenter">
+                                    @if (_isLoadingRoles)
+                                    {
+                                        <MudSelectItem Value="@("loading")" Disabled="true">Loading roles...</MudSelectItem>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var role in _availableRoles)
+                                        {
+                                            <MudSelectItem Value="@role.DatabaseName">@role.DisplayName</MudSelectItem>
+                                        }
+                                    }
+                                </MudSelect>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Messages -->
+                    @if (_errors != null && _errors.Length > 0)
+                    {
+                        <MudAlert Severity="Severity.Error" Class="form-error-alert">
+                            @foreach (var error in _errors)
+                            {
+                                <div>@error</div>
+                            }
+                        </MudAlert>
+                    }
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   OnClick="HandleCancel"
+                                   Class="cancel-button">
+                            Cancel
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   OnClick="HandleUpdateUser"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   Disabled="@(!_isFormValid || _isSubmitting)"
+                                   Class="create-button">
+                            Update User
+                        </MudButton>
+                    </div>
+                </div>
+            </MudForm>
+        }
+    </div>
+</AuthorizeRole>
 
 @code {
     [Parameter]

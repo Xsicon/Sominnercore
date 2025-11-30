@@ -72,7 +72,7 @@
 }
 
 .admin-nav-link:hover {
-/*    border-color: rgba(55, 65, 81, 0.35);*/
+    /*    border-color: rgba(55, 65, 81, 0.35);*/
     color: rgba(248, 250, 252, 0.95);
 }
 
@@ -142,6 +142,7 @@
     color: transparent;
     margin-right: 4px;
 }
+
 .admin-search {
     display: flex;
     align-items: center;
@@ -210,6 +211,7 @@
     background: rgba(45, 55, 72, 0.75) !important;
     transform: translateY(-1px);
 }
+
 .admin-user {
     display: flex;
     align-items: center;
@@ -377,7 +379,7 @@
 .quick-action-button {
     border-radius: 16px;
     padding: 14px 18px;
-/*    background: rgba(17, 24, 39, 0.75);*/
+    /*    background: rgba(17, 24, 39, 0.75);*/
     border: 1px solid rgba(148, 163, 184, 0.15);
     color: rgba(248, 250, 252, 0.88);
     font-size: 0.95rem;
@@ -398,7 +400,7 @@
     border: none;
     color: #fff;
     font-weight: 600;
-/*    box-shadow: 0 15px 30px rgba(15, 118, 110, 0.28);*/
+    /*    box-shadow: 0 15px 30px rgba(15, 118, 110, 0.28);*/
 }
 
 .quick-action-button.primary:hover {
@@ -495,7 +497,7 @@
     text-transform: none !important;
     border: 1px solid rgba(148, 163, 184, 0.25) !important;
     color: rgba(226, 232, 240, 0.9) !important;
-/*    background: rgba(17, 24, 39, 0.75) !important;*/
+    /*    background: rgba(17, 24, 39, 0.75) !important;*/
 }
 
 .submissions-status {
@@ -807,10 +809,21 @@
     background: #22d3ee;
 }
 
-.activity-dot.green { background: #22c55e; }
-.activity-dot.blue { background: #3b82f6; }
-.activity-dot.orange { background: #f97316; }
-.activity-dot.purple { background: #a855f7; }
+.activity-dot.green {
+    background: #22c55e;
+}
+
+.activity-dot.blue {
+    background: #3b82f6;
+}
+
+.activity-dot.orange {
+    background: #f97316;
+}
+
+.activity-dot.purple {
+    background: #a855f7;
+}
 
 .activity-content {
     display: flex;
@@ -973,7 +986,7 @@
     gap: 16px;
     padding: 18px;
     border-radius: 18px;
-/*    background: rgba(17, 24, 39, 0.65);*/
+    /*    background: rgba(17, 24, 39, 0.65);*/
     border: 1px solid transparent;
     cursor: pointer;
     transition: background 0.2s ease, border 0.2s ease, transform 0.2s ease;
@@ -985,9 +998,9 @@
 }
 
 .chat-conversation-item.selected {
-/*    background: rgba(56, 189, 248, 0.14);*/
+    /*    background: rgba(56, 189, 248, 0.14);*/
     border-color: rgba(56, 189, 248, 0.35);
-/*    box-shadow: 0 14px 28px rgba(14, 165, 233, 0.18);*/
+    /*    box-shadow: 0 14px 28px rgba(14, 165, 233, 0.18);*/
     transform: translateY(-1px);
     margin-right: 5px;
 }
@@ -1249,6 +1262,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .chat-message.incoming.new-message .chat-message-content,
     .chat-message.system.new-message .chat-message-content {
         animation: none;
@@ -1263,6 +1277,7 @@
         box-shadow: 0 0 0 6px rgba(13, 148, 136, 0.55);
         background-color: rgba(13, 148, 136, 0.3);
     }
+
     100% {
         box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
         background-color: transparent;
@@ -1292,7 +1307,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-/*    background: rgba(17, 24, 39, 0.85);*/
+    /*    background: rgba(17, 24, 39, 0.85);*/
     border-radius: 14px;
     border: 1px solid rgba(148, 163, 184, 0.18);
     padding: 10px 16px;
@@ -1319,7 +1334,7 @@
 .chat-send-button {
     background: linear-gradient(135deg, #0d9488, #f97316) !important;
     color: #ffffff !important;
-/*    opacity: 0.6;*/
+    /*    opacity: 0.6;*/
 }
 
 .chat-send-button.disabled {
@@ -1438,7 +1453,7 @@
 .submission-detail-overlay {
     position: fixed;
     inset: 0;
-/*    background: rgba(15, 23, 42, 0.65);*/
+    /*    background: rgba(15, 23, 42, 0.65);*/
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1457,7 +1472,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-/*    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.65);*/
+    /*    box-shadow: 0 24px 60px rgba(2, 6, 23, 0.65);*/
 }
 
 .submission-detail-close {
@@ -1659,7 +1674,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-/*    justify-content: space-between;*/
+    /*    justify-content: space-between;*/
 }
 
 .submission-name {
@@ -1859,7 +1874,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-/*    align-items: flex-end;*/
+    /*    align-items: flex-end;*/
 }
 
 .submission-action {
@@ -2962,57 +2977,66 @@
     cursor: not-allowed;
 }
 
-/* MudSelect styling */
+/* MudSelect styling - Enhanced Input Field */
 .form-field .mud-select {
     color: rgba(248, 250, 252, 0.9) !important;
     width: 100%;
 }
 
 .form-field .mud-select .mud-input-control {
-    background: rgba(17, 24, 39, 0.3) !important;
+    background: rgba(17, 24, 39, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .form-field .mud-select .mud-input-control .mud-input {
     color: rgba(248, 250, 252, 0.9) !important;
+    font-weight: 500 !important;
 }
 
 .form-field .mud-select .mud-input-outlined {
-    background: rgba(17, 24, 39, 0.3) !important;
+    background: rgba(17, 24, 39, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .form-field .mud-select .mud-input-adornment {
     color: rgba(148, 163, 184, 0.6) !important;
+    transition: all 0.2s ease !important;
 }
 
 .form-field .mud-select .mud-input-adornment:hover {
-    color: rgba(148, 163, 184, 0.8) !important;
+    color: rgba(148, 163, 184, 0.9) !important;
 }
 
 .form-field .mud-select .mud-input-outlined,
 .form-field .mud-select .mud-input-outlined fieldset {
     border-color: rgba(148, 163, 184, 0.12) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .form-field .mud-select .mud-input-outlined:hover,
 .form-field .mud-select .mud-input-outlined:hover fieldset {
-    border-color: rgba(148, 163, 184, 0.2) !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
+    background: rgba(17, 24, 39, 0.5) !important;
 }
 
 .form-field .mud-select .mud-input-outlined.mud-input-outlined-focused,
 .form-field .mud-select .mud-input-outlined.mud-input-outlined-focused fieldset {
     border-color: rgba(13, 148, 136, 0.6) !important;
+    background: rgba(17, 24, 39, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1), 0 0 20px rgba(13, 148, 136, 0.15) !important;
 }
 
-/* MudSelect dropdown/popover styling */
+/* MudSelect dropdown/popover styling - Enhanced Design */
 .mud-popover-paper,
 .mud-popover-paper.mud-popover-paper {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
-    border: 1px solid rgba(148, 163, 184, 0.14) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(94, 234, 212, 0.1) !important;
     z-index: 1000 !important;
     overflow: hidden !important;
+    backdrop-filter: blur(20px) !important;
 }
 
 .mud-popover {
@@ -3021,50 +3045,121 @@
 
 .mud-select-popover,
 .mud-select-popover .mud-popover-paper {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
-    border-radius: 12px !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
+    border-radius: 16px !important;
     overflow: hidden !important;
 }
 
 .mud-select-popover .mud-list,
 .mud-popover-paper .mud-list {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
-    padding: 4px 0 !important;
-    max-height: 300px !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
+    padding: 8px !important;
+    max-height: 320px !important;
     overflow-y: auto !important;
+}
+
+/* Custom scrollbar for dropdown */
+.mud-select-popover .mud-list::-webkit-scrollbar,
+.mud-popover-paper .mud-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mud-select-popover .mud-list::-webkit-scrollbar-track,
+.mud-popover-paper .mud-list::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 10px;
+}
+
+.mud-select-popover .mud-list::-webkit-scrollbar-thumb,
+.mud-popover-paper .mud-list::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+}
+
+.mud-select-popover .mud-list::-webkit-scrollbar-thumb:hover,
+.mud-popover-paper .mud-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
 }
 
 .mud-select-popover .mud-list-item,
 .mud-popover-paper .mud-list-item {
     color: rgba(248, 250, 252, 0.9) !important;
-    min-height: 40px !important;
-    padding: 10px 16px !important;
+    min-height: 48px !important;
+    padding: 12px 16px !important;
     font-size: 0.95rem !important;
-    border-radius: 0 !important;
+    border-radius: 10px !important;
     background: transparent !important;
+    margin: 2px 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Subtle left border accent on hover */
+.mud-select-popover .mud-list-item::before,
+.mud-popover-paper .mud-list-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #0d9488, #14b8a6);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 
 .mud-select-popover .mud-list-item:hover,
 .mud-popover-paper .mud-list-item:hover {
-    background: rgba(17, 24, 39, 0.6) !important;
-    background-color: rgba(17, 24, 39, 0.6) !important;
+    background: rgba(30, 41, 59, 0.7) !important;
+    background-color: rgba(30, 41, 59, 0.7) !important;
+    transform: translateX(4px) !important;
+    padding-left: 20px !important;
+}
+
+.mud-select-popover .mud-list-item:hover::before,
+.mud-popover-paper .mud-list-item:hover::before {
+    opacity: 1;
 }
 
 .mud-select-popover .mud-list-item.mud-selected-item,
 .mud-popover-paper .mud-list-item.mud-selected-item {
-    background: rgba(13, 148, 136, 0.25) !important;
-    background-color: rgba(13, 148, 136, 0.25) !important;
-    color: rgba(13, 148, 136, 1) !important;
-    font-weight: 500 !important;
+    background: linear-gradient(90deg, rgba(13, 148, 136, 0.2), rgba(20, 184, 166, 0.15)) !important;
+    background-color: rgba(13, 148, 136, 0.2) !important;
+    color: #5eead4 !important;
+    font-weight: 600 !important;
+    border-left: 3px solid #0d9488 !important;
+    padding-left: 16px !important;
+    box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.3) inset !important;
+}
+
+.mud-select-popover .mud-list-item.mud-selected-item::before,
+.mud-popover-paper .mud-list-item.mud-selected-item::before {
+    opacity: 1;
+}
+
+.mud-select-popover .mud-list-item.mud-selected-item:hover,
+.mud-popover-paper .mud-list-item.mud-selected-item:hover {
+    background: linear-gradient(90deg, rgba(13, 148, 136, 0.3), rgba(20, 184, 166, 0.25)) !important;
+    background-color: rgba(13, 148, 136, 0.3) !important;
+    transform: translateX(4px) !important;
 }
 
 .mud-select-popover .mud-list-item.mud-disabled,
 .mud-popover-paper .mud-list-item.mud-disabled {
-    color: rgba(148, 163, 184, 0.5) !important;
-    opacity: 0.6 !important;
+    color: rgba(148, 163, 184, 0.4) !important;
+    opacity: 0.5 !important;
     cursor: not-allowed !important;
+    background: transparent !important;
+}
+
+.mud-select-popover .mud-list-item.mud-disabled:hover,
+.mud-popover-paper .mud-list-item.mud-disabled:hover {
+    transform: none !important;
+    background: transparent !important;
 }
 
 /* Ensure dropdown appears above other content */
@@ -3078,13 +3173,13 @@
 
 /* Additional targeting for MudSelect popover */
 .mud-select .mud-popover-paper {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
 }
 
 .mud-select .mud-popover-paper .mud-list {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
 }
 
 /* Global MudSelect popover styling - more aggressive targeting */
@@ -3092,32 +3187,32 @@ div[class*="mud-popover"],
 div[class*="mud-popover-paper"],
 .mud-popover-root,
 .mud-popover-root .mud-popover-paper {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
 }
 
 div[class*="mud-popover"] .mud-list,
 div[class*="mud-popover-paper"] .mud-list,
 .mud-popover-root .mud-list {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
 }
 
 /* Very aggressive global targeting for any popover in the admin area */
 body .mud-popover-paper,
 body .mud-popover-root,
 body [class*="mud-popover"] {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
-    border: 1px solid rgba(148, 163, 184, 0.14) !important;
-    border-radius: 12px !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    border-radius: 16px !important;
 }
 
 body .mud-popover-paper .mud-list,
 body .mud-popover-root .mud-list,
 body [class*="mud-popover"] .mud-list {
-    background: rgba(11, 11, 13, 0.98) !important;
-    background-color: rgba(11, 11, 13, 0.98) !important;
+    background: rgba(17, 24, 39, 0.98) !important;
+    background-color: rgba(17, 24, 39, 0.98) !important;
 }
 
 /* MudSwitch styling */
@@ -3168,5 +3263,3 @@ body [class*="mud-popover"] .mud-list {
         width: 100%;
     }
 }
-
-

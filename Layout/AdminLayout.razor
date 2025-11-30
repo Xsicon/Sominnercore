@@ -70,21 +70,26 @@
 </MudLayout>
 
 @code {
-    private readonly IReadOnlyList<AdminNavItem> _navItems = new[]
+    private readonly IReadOnlyList<AdminNavItem> _allNavItems = new[]
     {
-        new AdminNavItem("dashboard", "Dashboard", Icons.Material.Filled.Dashboard, "/admin"),
-        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions"),
-        new AdminNavItem("backend-chat", "Backend Chat", Icons.Material.Filled.Chat, "/admin/backend-chat"),
-        new AdminNavItem("projects", "Projects", Icons.Material.Filled.Folder, "/admin/projects"),
-        new AdminNavItem("tasks", "Tasks", Icons.Material.Filled.Task, "/admin/tasks"),
-        new AdminNavItem("clients", "Clients", Icons.Material.Filled.People, "/admin/clients"),
-        new AdminNavItem("analytics", "Analytics", Icons.Material.Filled.Analytics, "/admin/analytics"),
-        new AdminNavItem("users", "Users", Icons.Material.Filled.Person, "/admin/users")
+        new AdminNavItem("dashboard", "Dashboard", Icons.Material.Filled.Dashboard, "/admin", new[] { "admin", "marketing_manager", "customer_relations_specialist", "support_specialist", "developer" }),
+        new AdminNavItem("submissions", "Customer Submissions", Icons.Material.Filled.Description, "/admin/submissions", new[] { "admin", "marketing_manager", "customer_relations_specialist", "support_specialist" }),
+        new AdminNavItem("backend-chat", "Backend Chat", Icons.Material.Filled.Chat, "/admin/backend-chat", new[] { "admin", "customer_relations_specialist", "support_specialist" }),
+        new AdminNavItem("projects", "Projects", Icons.Material.Filled.Folder, "/admin/projects", new[] { "admin", "marketing_manager", "developer" }),
+        new AdminNavItem("tasks", "Tasks", Icons.Material.Filled.Task, "/admin/tasks", new[] { "admin", "marketing_manager", "developer" }),
+        new AdminNavItem("clients", "Clients", Icons.Material.Filled.People, "/admin/clients", new[] { "admin", "marketing_manager", "customer_relations_specialist" }),
+        new AdminNavItem("analytics", "Analytics", Icons.Material.Filled.Analytics, "/admin/analytics", new[] { "admin", "marketing_manager", "customer_relations_specialist", "developer" }),
+        new AdminNavItem("users", "Users", Icons.Material.Filled.Person, "/admin/users", new[] { "admin" }) // Only admins can see Users
     };
+
+    private IEnumerable<AdminNavItem> _navItems => _allNavItems.Where(item => 
+        item.AllowedRoles == null || 
+        item.AllowedRoles.Length == 0 || 
+        item.AllowedRoles.Contains(_userRole, StringComparer.OrdinalIgnoreCase));
 
     private string _activeNav = "dashboard";
     private string _displayName = "Admin";
-    private string _userRole = "Admin";
+    private string _userRole = "admin"; // Default to admin, will be updated from database
     private bool _sidebarOpen;
 
     private void NavigateToWebsite()
@@ -112,11 +117,17 @@
                 var user = await AuthService.GetUserAsync(accessToken);
                 if (user != null && !string.IsNullOrWhiteSpace(user.Id))
                 {
-                    // Try to get team member record first for display name
+                    // Try to get team member record first for display name and role
                     var teamMember = await AuthService.GetTeamMemberByAuthUserIdAsync(user.Id, accessToken);
                     if (teamMember != null && !string.IsNullOrWhiteSpace(teamMember.DisplayName))
                     {
                         _displayName = teamMember.DisplayName;
+                        
+                        // Get role from team member
+                        if (teamMember.Role != null && !string.IsNullOrWhiteSpace(teamMember.Role.Name))
+                        {
+                            _userRole = teamMember.Role.Name; // Store database role name
+                        }
                     }
                     else if (user.UserMetadata != null)
                     {
@@ -145,21 +156,22 @@
                             var at = email.IndexOf('@');
                             _displayName = at > 0 ? email[..at] : email;
                         }
+                        
+                        // Get role from metadata as fallback
+                        if (user.UserMetadata.TryGetValue("role", out var roleObj))
+                        {
+                            var role = Convert.ToString(roleObj);
+                            if (!string.IsNullOrWhiteSpace(role))
+                            {
+                                _userRole = role!; // Store database role name
+                            }
+                        }
                     }
                     else if (user.Email is { Length: > 0 } email)
                     {
                         // Fallback to email if no metadata
                         var at = email.IndexOf('@');
                         _displayName = at > 0 ? email[..at] : email;
-                    }
-                }
-
-                if (user?.UserMetadata is { } metadata && metadata.TryGetValue("role", out var roleObj))
-                {
-                    var role = Convert.ToString(roleObj);
-                    if (!string.IsNullOrWhiteSpace(role))
-                    {
-                        _userRole = FormatRole(role!);
                     }
                 }
             }
@@ -170,7 +182,7 @@
         }
     }
 
-    private sealed record AdminNavItem(string Key, string Label, string Icon, string? Route);
+    private sealed record AdminNavItem(string Key, string Label, string Icon, string? Route, string[]? AllowedRoles = null);
 
     private static string FormatRole(string role) =>
         string.Join(' ', role.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)

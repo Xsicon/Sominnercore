@@ -7,166 +7,168 @@
 @inject SupabaseAuthService AuthService
 @inject IJSRuntime JSRuntime
 
-<DashboardHeader Title="User Management" 
-                 Subtitle="Manage team members and permissions" />
+<AuthorizeRole RequiredRoles="@(new[] { "admin" })">
+    <DashboardHeader Title="User Management" 
+                     Subtitle="Manage team members and permissions" />
 
-<div class="users-page">
-    <section class="users-status">
-        <div class="user-stat-card user-stat-card-total">
-            <div class="user-stat-info">
-                <span class="user-stat-label">Total Users</span>
-                <span class="user-stat-value">@_totalUsers</span>
-            </div>
-            <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
-        </div>
-        <div class="user-stat-card user-stat-card-active">
-            <div class="user-stat-info">
-                <span class="user-stat-label">Active Users</span>
-                <span class="user-stat-value">@_activeUsers</span>
-            </div>
-            <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
-        </div>
-        <div class="user-stat-card user-stat-card-inactive">
-            <div class="user-stat-info">
-                <span class="user-stat-label">Inactive Users</span>
-                <span class="user-stat-value">@_inactiveUsers</span>
-            </div>
-            <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
-        </div>
-        <div class="user-stat-card user-stat-card-admin">
-            <div class="user-stat-info">
-                <span class="user-stat-label">Administrators</span>
-                <span class="user-stat-value">@_administrators</span>
-            </div>
-            <MudIcon Icon="@Icons.Material.Outlined.Shield" Class="user-stat-icon" />
-        </div>
-    </section>
-
-    <section class="users-content">
-        <div class="users-filters">
-            <div class="users-filters-card">
-                <div class="users-search">
-                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="users-search-icon" />
-                    <input class="users-search-input"
-                           placeholder="Search by name or email..."
-                           @bind="_searchTerm"
-                           @bind:event="oninput" />
+    <div class="users-page">
+        <section class="users-status">
+            <div class="user-stat-card user-stat-card-total">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Total Users</span>
+                    <span class="user-stat-value">@_totalUsers</span>
                 </div>
-                <div class="users-filter-buttons">
-                    <button class="users-filter-btn" @onclick="ToggleRoleFilter" type="button">
-                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
-                        <span>@_selectedRole</span>
-                    </button>
-                    <button class="users-filter-btn" @onclick="ToggleStatusFilter" type="button">
-                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
-                        <span>@_selectedStatus</span>
-                    </button>
-                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
             </div>
-        </div>
+            <div class="user-stat-card user-stat-card-active">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Active Users</span>
+                    <span class="user-stat-value">@_activeUsers</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
+            </div>
+            <div class="user-stat-card user-stat-card-inactive">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Inactive Users</span>
+                    <span class="user-stat-value">@_inactiveUsers</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
+            </div>
+            <div class="user-stat-card user-stat-card-admin">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Administrators</span>
+                    <span class="user-stat-value">@_administrators</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Shield" Class="user-stat-icon" />
+            </div>
+        </section>
 
-        <div class="users-table-container">
-            <div class="users-table-card">
-                <div class="users-table-header">
-                    <div>
-                        <h2 class="users-table-title">All Users</h2>
-                        <span class="users-count">@FilteredUsers.Count</span>
+        <section class="users-content">
+            <div class="users-filters">
+                <div class="users-filters-card">
+                    <div class="users-search">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Class="users-search-icon" />
+                        <input class="users-search-input"
+                               placeholder="Search by name or email..."
+                               @bind="_searchTerm"
+                               @bind:event="oninput" />
                     </div>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Success"
-                               StartIcon="@Icons.Material.Filled.PersonAdd"
-                               OnClick="NavigateToCreateUser"
-                               Class="users-create-button">
-                        Create User
-                    </MudButton>
-                </div>
-                @if (_isLoading)
-                {
-                    <div class="users-loading">
-                        <MudProgressCircular Indeterminate="true" />
-                        <p>Loading users...</p>
+                    <div class="users-filter-buttons">
+                        <button class="users-filter-btn" @onclick="ToggleRoleFilter" type="button">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
+                            <span>@_selectedRole</span>
+                        </button>
+                        <button class="users-filter-btn" @onclick="ToggleStatusFilter" type="button">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
+                            <span>@_selectedStatus</span>
+                        </button>
                     </div>
-                }
-                else if (!string.IsNullOrWhiteSpace(_errorMessage))
-                {
-                    <MudAlert Severity="Severity.Error" Class="users-error">
-                        @_errorMessage
-                    </MudAlert>
-                }
-                else
-                {
-                    <div class="users-table-wrapper">
-                        <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Last Login</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in FilteredUsers)
-                            {
+                </div>
+            </div>
+
+            <div class="users-table-container">
+                <div class="users-table-card">
+                    <div class="users-table-header">
+                        <div>
+                            <h2 class="users-table-title">All Users</h2>
+                            <span class="users-count">@FilteredUsers.Count</span>
+                        </div>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   OnClick="NavigateToCreateUser"
+                                   Class="users-create-button">
+                            Create User
+                        </MudButton>
+                    </div>
+                    @if (_isLoading)
+                    {
+                        <div class="users-loading">
+                            <MudProgressCircular Indeterminate="true" />
+                            <p>Loading users...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Class="users-error">
+                            @_errorMessage
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <div class="users-table-wrapper">
+                            <table class="users-table">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div class="user-cell">
-                                            <div class="user-avatar" style="background: @user.AvatarColor">
-                                                @user.Initial
-                                            </div>
-                                            <span class="user-name">@user.Name</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="email-cell">
-                                            <MudIcon Icon="@Icons.Material.Outlined.Email" Class="email-icon" />
-                                            <span>@user.Email</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="role-badge role-@user.RoleClass">@user.Role</span>
-                                    </td>
-                                    <td>
-                                        <div class="status-switch-container" 
-                                             style="@(_updatingStatusUsers.Contains(user.AuthUserId) ? "opacity: 0.5; pointer-events: none;" : "")"
-                                             @onclick="@(() => ToggleUserStatus(user, !user.Status.Equals("active", StringComparison.OrdinalIgnoreCase)))">
-                                            <div class="status-switch @(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "status-switch-active" : "status-switch-inactive")">
-                                                <span class="status-switch-label">@(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "Active" : "Inactive")</span>
-                                                <div class="status-switch-slider"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="date-cell">
-                                            <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Class="date-icon" />
-                                            <span>@user.CreatedDate</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="date-text">@user.LastLogin</span>
-                                    </td>
-                                    <td>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
-                                                       Class="users-action-btn" 
-                                                       Color="Color.Default" 
-                                                       Size="Size.Small" 
-                                                       Variant="Variant.Text"
-                                                       OnClick="() => NavigateToEditUser(user)"
-                                                       Title="Edit User" />
-                                    </td>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                    </div>
-                }
+                            </thead>
+                            <tbody>
+                                @foreach (var user in FilteredUsers)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="user-cell">
+                                                <div class="user-avatar" style="background: @user.AvatarColor">
+                                                    @user.Initial
+                                                </div>
+                                                <span class="user-name">@user.Name</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="email-cell">
+                                                <MudIcon Icon="@Icons.Material.Outlined.Email" Class="email-icon" />
+                                                <span>@user.Email</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="role-badge role-@user.RoleClass">@user.Role</span>
+                                        </td>
+                                        <td>
+                                            <div class="status-switch-container" 
+                                                 style="@(_updatingStatusUsers.Contains(user.AuthUserId) ? "opacity: 0.5; pointer-events: none;" : "")"
+                                                 @onclick="@(() => ToggleUserStatus(user, !user.Status.Equals("active", StringComparison.OrdinalIgnoreCase)))">
+                                                <div class="status-switch @(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "status-switch-active" : "status-switch-inactive")">
+                                                    <span class="status-switch-label">@(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "Active" : "Inactive")</span>
+                                                    <div class="status-switch-slider"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="date-cell">
+                                                <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Class="date-icon" />
+                                                <span>@user.CreatedDate</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="date-text">@user.LastLogin</span>
+                                        </td>
+                                        <td>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Class="users-action-btn" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small" 
+                                                           Variant="Variant.Text"
+                                                           OnClick="() => NavigateToEditUser(user)"
+                                                           Title="Edit User" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        </div>
+                    }
+                </div>
             </div>
-        </div>
-    </section>
-</div>
+        </section>
+    </div>
+</AuthorizeRole>
 
 @code {
     private List<UserViewModel> _users = new();

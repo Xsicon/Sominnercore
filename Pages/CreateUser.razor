@@ -5,19 +5,20 @@
 @inject SupabaseAuthService AuthService
 @inject IJSRuntime JSRuntime
 
-<div class="create-user-page">
-    <div class="create-user-back-link">
-        <MudButton Variant="Variant.Text" 
-                   StartIcon="@Icons.Material.Filled.ArrowBack" 
-                   OnClick="NavigateBack"
-                   Class="back-link-button">
-            Back to Users
-        </MudButton>
-    </div>
+<AuthorizeRole RequiredRoles="@(new[] { "admin" })">
+    <div class="create-user-page">
+        <div class="create-user-back-link">
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="NavigateBack"
+                       Class="back-link-button">
+                Back to Users
+            </MudButton>
+        </div>
 
-    <form autocomplete="off" novalidate>
-        <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
-        <div class="create-user-form-container">
+        <form autocomplete="off" novalidate>
+            <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
+            <div class="create-user-form-container">
             <!-- Personal Information Section -->
             <div class="form-section">
                 <div class="form-section-header">
@@ -218,10 +219,11 @@
                     Create User
                 </MudButton>
             </div>
-        </div>
-    </MudForm>
-    </form>
-</div>
+            </div>
+        </MudForm>
+        </form>
+    </div>
+</AuthorizeRole>
 
 @code {
     private MudForm? _form;

@@ -1,0 +1,140 @@
+@using Sominnercore.Services
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+@if (_isAuthorized)
+{
+    @ChildContent
+}
+else if (_isLoading)
+{
+    <div class="authorization-loading">
+        <MudProgressCircular Indeterminate="true" />
+        <p>Checking permissions...</p>
+    </div>
+}
+else
+{
+    <div class="authorization-denied">
+        <MudAlert Severity="Severity.Error" Class="authorization-alert">
+            <h3>Access Denied</h3>
+            <p>You do not have permission to access this page.</p>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToDashboard">
+                Go to Dashboard
+            </MudButton>
+        </MudAlert>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string[]? RequiredRoles { get; set; }
+
+    private bool _isLoading = true;
+    private bool _isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _isAuthorized = false;
+                Navigation.NavigateTo("/admin/login", true);
+                return;
+            }
+
+            var user = await AuthService.GetUserAsync(accessToken);
+            if (user == null || string.IsNullOrWhiteSpace(user.Id))
+            {
+                _isAuthorized = false;
+                Navigation.NavigateTo("/admin/login", true);
+                return;
+            }
+
+            // Get user's role
+            string? userRole = null;
+            
+            // Try to get from team member first
+            var teamMember = await AuthService.GetTeamMemberByAuthUserIdAsync(user.Id, accessToken);
+            if (teamMember?.Role != null && !string.IsNullOrWhiteSpace(teamMember.Role.Name))
+            {
+                userRole = teamMember.Role.Name;
+            }
+            else if (user.UserMetadata?.TryGetValue("role", out var roleObj) == true)
+            {
+                userRole = Convert.ToString(roleObj);
+            }
+
+            // Check if user has required role
+            if (RequiredRoles == null || RequiredRoles.Length == 0)
+            {
+                _isAuthorized = true; // No role requirement
+            }
+            else if (!string.IsNullOrWhiteSpace(userRole))
+            {
+                _isAuthorized = RequiredRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                _isAuthorized = false;
+            }
+        }
+        catch
+        {
+            _isAuthorized = false;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateToDashboard()
+    {
+        Navigation.NavigateTo("/admin");
+    }
+}
+
+<style>
+    .authorization-loading,
+    .authorization-denied {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    .authorization-loading p {
+        margin-top: 20px;
+        color: rgba(226, 232, 240, 0.8);
+        font-size: 1rem;
+    }
+
+    .authorization-alert {
+        max-width: 500px;
+        border-radius: 16px !important;
+    }
+
+    .authorization-alert h3 {
+        margin: 0 0 12px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .authorization-alert p {
+        margin: 0 0 24px 0;
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+</style>
