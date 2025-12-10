@@ -62,9 +62,147 @@
 
             <!-- Main Content Section (9/12 columns) -->
             <div class="main-content-section">
-                <p style="color: rgba(226, 232, 240, 0.5); text-align: center; padding: 60px 20px;">
-                    Main content area (9 columns)
-                </p>
+                @if (_selectedProjectId > 0)
+                {
+                    var selectedProject = _projects.FirstOrDefault(p => p.Id == _selectedProjectId);
+                    if (selectedProject != null)
+                    {
+                        <!-- Project Header -->
+                        <div class="project-detail-header">
+                            <div class="project-detail-top">
+                                <div class="project-detail-left">
+                                    <div class="project-detail-icon">
+                                        <MudIcon Icon="@selectedProject.Icon" />
+                                    </div>
+                                    <div class="project-detail-info">
+                                        <div class="project-detail-title-row">
+                                            <h2 class="project-detail-title">@selectedProject.Name</h2>
+                                            <span class="project-badge">
+                                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" />
+                                                public
+                                            </span>
+                                        </div>
+                                        <p class="project-detail-description">@selectedProject.Description</p>
+                                        <div class="project-detail-meta">
+                                            <span class="meta-item">
+                                                <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
+                                                @selectedProject.Client
+                                            </span>
+                                            <span class="meta-item">
+                                                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" />
+                                                $@selectedProject.Budget.ToString("N0")
+                                            </span>
+                                            <span class="meta-item">
+                                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                Due @selectedProject.DueDate.ToString("yyyy-MM-dd")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="project-detail-actions">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Share" Size="Size.Medium" Class="action-icon-btn" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Settings" Size="Size.Medium" Class="action-icon-btn" />
+                                </div>
+                            </div>
+
+                            <!-- Stats Cards -->
+                            <div class="project-stats">
+                                <div class="stat-card">
+                                    <span class="stat-label">Total Tasks</span>
+                                    <span class="stat-value">@selectedProject.TaskCount</span>
+                                </div>
+                                <div class="stat-card stat-completed">
+                                    <span class="stat-label">Completed</span>
+                                    <span class="stat-value">@selectedProject.CompletedTasks</span>
+                                </div>
+                                <div class="stat-card stat-progress">
+                                    <span class="stat-label">In Progress</span>
+                                    <span class="stat-value">@selectedProject.InProgressTasks</span>
+                                </div>
+                                <div class="stat-card stat-overdue">
+                                    <span class="stat-label">Overdue</span>
+                                    <span class="stat-value">@selectedProject.OverdueTasks</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters and Search -->
+                        <div class="task-filters">
+                            <div class="search-box">
+                                <MudIcon Icon="@Icons.Material.Filled.Search" Class="search-icon" />
+                                <input type="text" placeholder="Search tasks..." class="search-input" />
+                            </div>
+                            
+                            <div class="custom-select-wrapper">
+                                <select class="custom-select">
+                                    <option value="all">All Status</option>
+                                    <option value="done">Done</option>
+                                    <option value="in-progress">In Progress</option>
+                                    <option value="todo">To Do</option>
+                                </select>
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Class="select-arrow" />
+                            </div>
+                            
+                            <div class="custom-select-wrapper">
+                                <select class="custom-select">
+                                    <option value="all">All Priority</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Class="select-arrow" />
+                            </div>
+                            
+                            <div class="view-toggles">
+                                <MudIconButton Icon="@Icons.Material.Filled.ViewList" Size="Size.Medium" Class="view-toggle-btn active" />
+                                <MudIconButton Icon="@Icons.Material.Filled.GridView" Size="Size.Medium" Class="view-toggle-btn" />
+                                <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Medium" Class="view-toggle-btn" />
+                                <MudIconButton Icon="@Icons.Material.Filled.BarChart" Size="Size.Medium" Class="view-toggle-btn" />
+                            </div>
+                        </div>
+
+                        <!-- Tasks List -->
+                        <div class="tasks-list">
+                            @foreach (var task in selectedProject.Tasks)
+                            {
+                                <div class="task-item">
+                                    <div class="task-main">
+                                        <div class="task-title-section">
+                                            <h4 class="task-title">@task.Title</h4>
+                                            <span class="task-subtasks">@task.CompletedSubtasks/@task.TotalSubtasks</span>
+                                        </div>
+                                        <div class="task-meta-row">
+                                            <span class="task-status task-status-@task.Status.ToLower()">@task.Status</span>
+                                            <span class="task-priority task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                            <span class="task-date">
+                                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                @task.DueDate.ToString("yyyy-MM-dd")
+                                            </span>
+                                            <span class="task-assignees">
+                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                @task.AssignedCount assigned
+                                            </span>
+                                            <span class="task-comments">
+                                                <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Small" />
+                                                @task.CommentCount
+                                            </span>
+                                            @foreach (var tag in task.Tags)
+                                            {
+                                                <span class="task-tag">@tag</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (task.TotalSubtasks > 0)
+                                    {
+                                        <div class="task-progress-bar">
+                                            <div class="task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
             </div>
         </div>
     </div>
@@ -80,19 +218,97 @@
         { 
             Id = 1, 
             Name = "E-commerce Platform", 
+            Description = "Full-stack e-commerce solution with modern UI/UX",
+            Client = "TechCorp",
+            Budget = 50000,
+            DueDate = new DateTime(2024, 3, 30),
             TaskCount = 3, 
             CompletedTasks = 1,
+            InProgressTasks = 1,
+            OverdueTasks = 2,
             Icon = Icons.Material.Filled.ShoppingCart,
-            IconColor = "blue"
+            IconColor = "blue",
+            Tasks = new List<TaskItem>
+            {
+                new TaskItem
+                {
+                    Title = "Setup project infrastructure",
+                    Status = "Done",
+                    Priority = "high",
+                    DueDate = new DateTime(2024, 2, 20),
+                    AssignedCount = 2,
+                    CommentCount = 1,
+                    TotalSubtasks = 3,
+                    CompletedSubtasks = 3,
+                    Tags = new List<string> { "Backend", "Frontend" }
+                },
+                new TaskItem
+                {
+                    Title = "Design product catalog UI",
+                    Status = "In Progress",
+                    Priority = "high",
+                    DueDate = new DateTime(2024, 2, 25),
+                    AssignedCount = 1,
+                    CommentCount = 0,
+                    TotalSubtasks = 3,
+                    CompletedSubtasks = 1,
+                    Tags = new List<string> { "Design", "Frontend" }
+                },
+                new TaskItem
+                {
+                    Title = "Implement shopping cart",
+                    Status = "To Do",
+                    Priority = "medium",
+                    DueDate = new DateTime(2024, 3, 1),
+                    AssignedCount = 1,
+                    CommentCount = 0,
+                    TotalSubtasks = 0,
+                    CompletedSubtasks = 0,
+                    Tags = new List<string> { "Frontend", "Feature" }
+                }
+            }
         },
         new ProjectItem 
         { 
             Id = 2, 
             Name = "Mobile App Redesign", 
+            Description = "Modern redesign of mobile application",
+            Client = "StartupCo",
+            Budget = 30000,
+            DueDate = new DateTime(2024, 4, 15),
             TaskCount = 2, 
             CompletedTasks = 0,
+            InProgressTasks = 1,
+            OverdueTasks = 0,
             Icon = Icons.Material.Filled.PhoneAndroid,
-            IconColor = "purple"
+            IconColor = "purple",
+            Tasks = new List<TaskItem>
+            {
+                new TaskItem
+                {
+                    Title = "Create wireframes",
+                    Status = "In Progress",
+                    Priority = "high",
+                    DueDate = new DateTime(2024, 3, 10),
+                    AssignedCount = 1,
+                    CommentCount = 2,
+                    TotalSubtasks = 5,
+                    CompletedSubtasks = 2,
+                    Tags = new List<string> { "Design", "UI" }
+                },
+                new TaskItem
+                {
+                    Title = "Develop prototype",
+                    Status = "To Do",
+                    Priority = "medium",
+                    DueDate = new DateTime(2024, 3, 20),
+                    AssignedCount = 2,
+                    CommentCount = 0,
+                    TotalSubtasks = 0,
+                    CompletedSubtasks = 0,
+                    Tags = new List<string> { "Development" }
+                }
+            }
         }
     };
 
@@ -123,10 +339,30 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Client { get; set; } = string.Empty;
+        public decimal Budget { get; set; }
+        public DateTime DueDate { get; set; }
         public int TaskCount { get; set; }
         public int CompletedTasks { get; set; }
+        public int InProgressTasks { get; set; }
+        public int OverdueTasks { get; set; }
         public string Icon { get; set; } = string.Empty;
         public string IconColor { get; set; } = string.Empty;
+        public List<TaskItem> Tasks { get; set; } = new();
         public int ProgressPercentage => TaskCount > 0 ? (CompletedTasks * 100 / TaskCount) : 0;
+    }
+
+    private class TaskItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string Priority { get; set; } = string.Empty;
+        public DateTime DueDate { get; set; }
+        public int AssignedCount { get; set; }
+        public int CommentCount { get; set; }
+        public int TotalSubtasks { get; set; }
+        public int CompletedSubtasks { get; set; }
+        public List<string> Tags { get; set; } = new();
     }
 }
