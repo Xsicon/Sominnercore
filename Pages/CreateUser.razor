@@ -363,23 +363,64 @@
     {
         try
         {
+            Console.WriteLine("[CreateUser] LoadRolesAsync started");
             var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
-            var roles = await AuthService.GetRolesAsync(accessToken);
+            Console.WriteLine($"[CreateUser] Access token retrieved: {(string.IsNullOrEmpty(accessToken) ? "EMPTY" : "EXISTS")}");
             
-            _availableRoles = roles.Select(r => new RoleOption
+            var roles = await AuthService.GetRolesAsync(accessToken);
+            Console.WriteLine($"[CreateUser] Roles fetched: {roles?.Length ?? 0} roles");
+            
+            if (roles == null || roles.Length == 0)
             {
-                DisplayName = FormatRoleName(r.Name),
-                DatabaseName = r.Name,
-                Description = r.Description
-            }).ToList();
+                Console.WriteLine("[CreateUser] No roles returned from API, using fallback roles");
+                // Fallback to default roles if API returns empty
+                _availableRoles = new List<RoleOption>
+                {
+                    new RoleOption { DisplayName = "Admin", DatabaseName = "admin", Description = "Administrator" },
+                    new RoleOption { DisplayName = "Marketing Manager", DatabaseName = "marketing_manager", Description = "Marketing Manager" },
+                    new RoleOption { DisplayName = "CRS (Customer Relations Specialist)", DatabaseName = "customer_relations_specialist", Description = "Customer Relations Specialist" },
+                    new RoleOption { DisplayName = "Support Specialist", DatabaseName = "support_specialist", Description = "Support Specialist" },
+                    new RoleOption { DisplayName = "Developer", DatabaseName = "developer", Description = "Developer" }
+                };
+            }
+            else
+            {
+                _availableRoles = roles.Select(r => new RoleOption
+                {
+                    DisplayName = FormatRoleName(r.Name),
+                    DatabaseName = r.Name,
+                    Description = r.Description
+                }).ToList();
+            }
+            
+            Console.WriteLine($"[CreateUser] Available roles populated: {_availableRoles.Count} roles");
+            
+            // Force UI update
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            _errors = new[] { $"Error loading roles: {ex.Message}" };
+            Console.WriteLine($"[CreateUser] Error loading roles: {ex.Message}");
+            Console.WriteLine($"[CreateUser] Stack trace: {ex.StackTrace}");
+            
+            // Use fallback roles on error
+            _availableRoles = new List<RoleOption>
+            {
+                new RoleOption { DisplayName = "Admin", DatabaseName = "admin", Description = "Administrator" },
+                new RoleOption { DisplayName = "Marketing Manager", DatabaseName = "marketing_manager", Description = "Marketing Manager" },
+                new RoleOption { DisplayName = "CRS (Customer Relations Specialist)", DatabaseName = "customer_relations_specialist", Description = "Customer Relations Specialist" },
+                new RoleOption { DisplayName = "Support Specialist", DatabaseName = "support_specialist", Description = "Support Specialist" },
+                new RoleOption { DisplayName = "Developer", DatabaseName = "developer", Description = "Developer" }
+            };
+            
+            _errors = new[] { $"Error loading roles from database (using defaults): {ex.Message}" };
         }
         finally
         {
             _isLoadingRoles = false;
+            Console.WriteLine($"[CreateUser] LoadRolesAsync completed. _isLoadingRoles = {_isLoadingRoles}, Roles count = {_availableRoles.Count}");
+            // Force UI update
+            await InvokeAsync(StateHasChanged);
         }
     }
 

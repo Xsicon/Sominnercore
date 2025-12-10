@@ -3206,6 +3206,22 @@ body [class*="mud-popover"] {
     background-color: rgba(17, 24, 39, 0.98) !important;
     border: 1px solid rgba(148, 163, 184, 0.2) !important;
     border-radius: 16px !important;
+    z-index: 1400 !important;
+    /* Ensure dropdowns appear above everything */
+}
+
+/* Ensure MudSelect dropdowns are visible */
+.mud-popover,
+.mud-popover-provider,
+.mud-overlay,
+.mud-popover-open {
+    z-index: 1400 !important;
+}
+
+/* Specific targeting for select popovers */
+.mud-select-popover,
+.mud-select .mud-popover {
+    z-index: 1400 !important;
 }
 
 body .mud-popover-paper .mud-list,
