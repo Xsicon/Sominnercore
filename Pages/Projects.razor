@@ -24,16 +24,89 @@
             </div>
         </div>
 
-        <!-- Projects Content (placeholder for now) -->
-        <div class="projects-content">
-            <p style="color: rgba(226, 232, 240, 0.7); text-align: center; padding: 60px 20px;">
-                Projects content will go here...
-            </p>
+        <!-- Projects Content Grid -->
+        <div class="projects-content-grid">
+            <!-- Projects Section (3/12 columns) -->
+            <div class="projects-section">
+                <div class="section-header">
+                    <MudIcon Icon="@Icons.Material.Filled.GridView" Class="section-icon" />
+                    <h3 class="section-title">Projects</h3>
+                </div>
+
+                <div class="projects-list">
+                    @foreach (var project in _projects)
+                    {
+                        <div class="@GetProjectCardClass(project.Id)" @onclick="() => SelectProject(project.Id)">
+                            <div class="project-card-header">
+                                <div class="project-icon project-icon-@project.IconColor">
+                                    <MudIcon Icon="@project.Icon" />
+                                </div>
+                                <div class="project-info">
+                                    <h4 class="project-name">@project.Name</h4>
+                                    <p class="project-tasks">@project.TaskCount tasks</p>
+                                </div>
+                            </div>
+                            <div class="project-progress">
+                                <div class="progress-header">
+                                    <span class="progress-label">Progress</span>
+                                    <span class="progress-ratio">@project.CompletedTasks/@project.TaskCount</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: @(project.ProgressPercentage)%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Main Content Section (9/12 columns) -->
+            <div class="main-content-section">
+                <p style="color: rgba(226, 232, 240, 0.5); text-align: center; padding: 60px 20px;">
+                    Main content area (9 columns)
+                </p>
+            </div>
         </div>
     </div>
 </AuthorizeRole>
 
+
 @code {
+    private int _selectedProjectId = 1; // Default to first project
+    
+    private List<ProjectItem> _projects = new()
+    {
+        new ProjectItem 
+        { 
+            Id = 1, 
+            Name = "E-commerce Platform", 
+            TaskCount = 3, 
+            CompletedTasks = 1,
+            Icon = Icons.Material.Filled.ShoppingCart,
+            IconColor = "blue"
+        },
+        new ProjectItem 
+        { 
+            Id = 2, 
+            Name = "Mobile App Redesign", 
+            TaskCount = 2, 
+            CompletedTasks = 0,
+            Icon = Icons.Material.Filled.PhoneAndroid,
+            IconColor = "purple"
+        }
+    };
+
+    private void SelectProject(int projectId)
+    {
+        _selectedProjectId = projectId;
+        Console.WriteLine($"Selected project: {projectId}");
+    }
+
+    private string GetProjectCardClass(int projectId)
+    {
+        return _selectedProjectId == projectId ? "project-card project-card-active" : "project-card";
+    }
+
     private void HandleNewProject()
     {
         // TODO: Navigate to create project page or open modal
@@ -44,5 +117,16 @@
     {
         // TODO: Navigate to create task page or open modal
         Console.WriteLine("New Task clicked");
+    }
+
+    private class ProjectItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int TaskCount { get; set; }
+        public int CompletedTasks { get; set; }
+        public string Icon { get; set; } = string.Empty;
+        public string IconColor { get; set; } = string.Empty;
+        public int ProgressPercentage => TaskCount > 0 ? (CompletedTasks * 100 / TaskCount) : 0;
     }
 }
