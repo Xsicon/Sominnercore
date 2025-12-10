@@ -1,39 +1,48 @@
 @page "/admin/projects"
 @layout Sominnercore.Layout.AdminLayout
-@using System.Linq
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
-<DashboardHeader Title="Project Management" 
-                 Subtitle="Manage and track all your projects" />
-
-<div class="projects-page">
-    <section class="projects-content">
-        <div class="projects-header-actions">
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      StartIcon="@Icons.Material.Filled.Add"
-                      Class="projects-new-button">
-                New Project
-            </MudButton>
-        </div>
-
-        <div class="projects-container">
-            <div class="projects-placeholder">
-                <MudIcon Icon="@Icons.Material.Filled.Folder" 
-                        Class="projects-placeholder-icon" />
-                <h3>No projects yet</h3>
-                <p>Get started by creating your first project</p>
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          StartIcon="@Icons.Material.Filled.Add"
-                          Class="projects-placeholder-button">
-                    Create Project
+<AuthorizeRole RequiredRoles="@(new[] { "admin", "marketing_manager", "developer" })">
+    <div class="projects-page">
+        <!-- Projects Header -->
+        <div class="projects-header">
+            <p class="projects-subtitle">Manage projects and collaborate with your team</p>
+            <div class="projects-header-actions">
+                <MudButton Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="HandleNewProject"
+                           Class="new-project-button">
+                    New Project
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="HandleNewTask"
+                           Class="new-task-button">
+                    New Task
                 </MudButton>
             </div>
         </div>
-    </section>
-</div>
+
+        <!-- Projects Content (placeholder for now) -->
+        <div class="projects-content">
+            <p style="color: rgba(226, 232, 240, 0.7); text-align: center; padding: 60px 20px;">
+                Projects content will go here...
+            </p>
+        </div>
+    </div>
+</AuthorizeRole>
 
 @code {
-    // Project management logic will be added here
-}
+    private void HandleNewProject()
+    {
+        // TODO: Navigate to create project page or open modal
+        Console.WriteLine("New Project clicked");
+    }
 
+    private void HandleNewTask()
+    {
+        // TODO: Navigate to create task page or open modal
+        Console.WriteLine("New Task clicked");
+    }
+}
