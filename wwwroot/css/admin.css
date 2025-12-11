@@ -2414,7 +2414,7 @@
 }
 
 .users-table thead {
-    background: rgba(17, 24, 39, 0.3);
+    background: rgb(8, 8, 10);
 }
 
 .users-table th {
@@ -2434,7 +2434,7 @@
 }
 
 .users-table tbody tr:hover {
-    background: rgba(17, 24, 39, 0.3);
+    background: rgb(8, 8, 10);
 }
 
 .users-table td {
@@ -3822,7 +3822,6 @@ body [class*="mud-popover"] .mud-list {
 }
 
 .task-item {
-    background: rgba(17, 24, 39, 0.3);
     border: 1px solid rgba(148, 163, 184, 0.1);
     border-radius: 12px;
     padding: 16px;
@@ -3882,6 +3881,7 @@ body [class*="mud-popover"] .mud-list {
 .task-status-in.progress {
     background: rgba(59, 130, 246, 0.15);
     color: #3b82f6;
+    padding: 0px 14px 20px;
 }
 
 .task-status-to.do {
