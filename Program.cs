@@ -20,5 +20,6 @@ builder.Services.AddSingleton(Options.Create(supabaseOptions));
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseChatService>();
+builder.Services.AddScoped<SupabaseProjectsService>();
 
 await builder.Build().RunAsync();

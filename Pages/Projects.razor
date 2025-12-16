@@ -2,6 +2,9 @@
 @layout Sominnercore.Layout.AdminLayout
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject SupabaseProjectsService ProjectsService
+@using Sominnercore.Models
+@using Sominnercore.Services
 
 <AuthorizeRole RequiredRoles="@(new[] { "admin", "marketing_manager", "developer" })">
     <div class="projects-page">
@@ -34,9 +37,23 @@
                 </div>
 
                 <div class="projects-list">
-                    @foreach (var project in _projects)
+                    @if (_isLoading)
                     {
-                        <div class="@GetProjectCardClass(project.Id)" @onclick="() => SelectProject(project.Id)">
+                        <p style="color: rgba(226, 232, 240, 0.6); padding: 20px; text-align: center;">Loading projects...</p>
+                    }
+                    else if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <p style="color: #ef4444; padding: 20px; text-align: center;">@_errorMessage</p>
+                    }
+                    else if (_projects.Count == 0)
+                    {
+                        <p style="color: rgba(226, 232, 240, 0.6); padding: 20px; text-align: center;">No projects found</p>
+                    }
+                    else
+                    {
+                        @foreach (var project in _projects)
+                        {
+                            <div class="@GetProjectCardClass(project.Id)" @onclick="() => SelectProject(project.Id)">
                             <div class="project-card-header">
                                 <div class="project-icon project-icon-@project.IconColor">
                                     <MudIcon Icon="@project.Icon" />
@@ -56,6 +73,7 @@
                                 </div>
                             </div>
                         </div>
+                        }
                     }
                 </div>
             </div>
@@ -154,53 +172,199 @@
                             </div>
                             
                             <div class="view-toggles">
-                                <MudIconButton Icon="@Icons.Material.Filled.ViewList" Size="Size.Medium" Class="view-toggle-btn active" />
-                                <MudIconButton Icon="@Icons.Material.Filled.GridView" Size="Size.Medium" Class="view-toggle-btn" />
-                                <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Medium" Class="view-toggle-btn" />
-                                <MudIconButton Icon="@Icons.Material.Filled.BarChart" Size="Size.Medium" Class="view-toggle-btn" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ViewList" 
+                                             Size="Size.Medium" 
+                                             Class='@GetViewToggleClass("list")'
+                                             OnClick='() => SetViewMode("list")' />
+                                <MudIconButton Icon="@Icons.Material.Filled.GridView" 
+                                             Size="Size.Medium" 
+                                             Class='@GetViewToggleClass("grid")'
+                                             OnClick='() => SetViewMode("grid")' />
+                                <MudIconButton Icon="@Icons.Material.Filled.CalendarMonth" 
+                                             Size="Size.Medium" 
+                                             Class='@GetViewToggleClass("calendar")'
+                                             OnClick='() => SetViewMode("calendar")' />
+                                <MudIconButton Icon="@Icons.Material.Filled.BarChart" 
+                                             Size="Size.Medium" 
+                                             Class='@GetViewToggleClass("chart")'
+                                             OnClick='() => SetViewMode("chart")' />
                             </div>
                         </div>
 
-                        <!-- Tasks List -->
-                        <div class="tasks-list">
-                            @foreach (var task in selectedProject.Tasks)
-                            {
-                                <div class="task-item">
-                                    <div class="task-main">
-                                        <div class="task-title-section">
-                                            <h4 class="task-title">@task.Title</h4>
-                                            <span class="task-subtasks">@task.CompletedSubtasks/@task.TotalSubtasks</span>
+                        <!-- Tasks View -->
+                        @if (_viewMode == "list")
+                        {
+                            <!-- Tasks List View -->
+                            <div class="tasks-list">
+                                @foreach (var task in selectedProject.Tasks)
+                                {
+                                    <div class="task-item">
+                                        <div class="task-main">
+                                            <div class="task-title-section">
+                                                <h4 class="task-title">@task.Title</h4>
+                                                <span class="task-subtasks">@task.CompletedSubtasks/@task.TotalSubtasks</span>
+                                            </div>
+                                            <div class="task-meta-row">
+                                                <span class='task-status task-status-@task.Status.ToLower().Replace(" ", "-")'>@task.Status</span>
+                                                <span class="task-priority task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                                <span class="task-date">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                    @task.DueDate.ToString("yyyy-MM-dd")
+                                                </span>
+                                                <span class="task-assignees">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                    @task.AssignedCount assigned
+                                                </span>
+                                                <span class="task-comments">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Small" />
+                                                    @task.CommentCount
+                                                </span>
+                                                @foreach (var tag in task.Tags)
+                                                {
+                                                    <span class="task-tag">@tag</span>
+                                                }
+                                            </div>
                                         </div>
-                                        <div class="task-meta-row">
-                                            <span class="task-status task-status-@task.Status.ToLower()">@task.Status</span>
-                                            <span class="task-priority task-priority-@task.Priority.ToLower()">@task.Priority</span>
-                                            <span class="task-date">
-                                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
-                                                @task.DueDate.ToString("yyyy-MM-dd")
-                                            </span>
-                                            <span class="task-assignees">
-                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                                                @task.AssignedCount assigned
-                                            </span>
-                                            <span class="task-comments">
-                                                <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Small" />
-                                                @task.CommentCount
-                                            </span>
-                                            @foreach (var tag in task.Tags)
-                                            {
-                                                <span class="task-tag">@tag</span>
-                                            }
-                                        </div>
+                                        @if (task.TotalSubtasks > 0)
+                                        {
+                                            <div class="task-progress-bar">
+                                                <div class="task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                            </div>
+                                        }
                                     </div>
-                                    @if (task.TotalSubtasks > 0)
-                                    {
-                                        <div class="task-progress-bar">
-                                            <div class="task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
-                                        </div>
-                                    }
+                                }
+                            </div>
+                        }
+                        else if (_viewMode == "grid")
+                        {
+                            <!-- Tasks Grid/Kanban View -->
+                            <div class="tasks-grid-view">
+                                <!-- To Do Column -->
+                                <div class="kanban-column">
+                                    <div class="kanban-column-header">
+                                        <h3 class="kanban-column-title">To Do</h3>
+                                        <span class="kanban-column-count">@GetTasksByStatus(selectedProject.Tasks, "To Do").Count</span>
+                                    </div>
+                                    <div class="kanban-column-content">
+                                        @foreach (var task in GetTasksByStatus(selectedProject.Tasks, "To Do"))
+                                        {
+                                            <div class="kanban-task-card">
+                                                <div class="kanban-task-header">
+                                                    <h4 class="kanban-task-title">@task.Title</h4>
+                                                    <span class="kanban-task-priority kanban-task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                                </div>
+                                                <div class="kanban-task-date">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                    @task.DueDate.ToString("yyyy-MM-dd")
+                                                </div>
+                                                <div class="kanban-task-tags">
+                                                    @foreach (var tag in task.Tags)
+                                                    {
+                                                        <span class="kanban-task-tag">@tag</span>
+                                                    }
+                                                </div>
+                                                @if (task.TotalSubtasks > 0)
+                                                {
+                                                    <div class="kanban-task-progress">
+                                                        <div class="kanban-task-progress-bar">
+                                                            <div class="kanban-task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
-                            }
-                        </div>
+
+                                <!-- In Progress Column -->
+                                <div class="kanban-column">
+                                    <div class="kanban-column-header">
+                                        <h3 class="kanban-column-title">In Progress</h3>
+                                        <span class="kanban-column-count">@GetTasksByStatus(selectedProject.Tasks, "In Progress").Count</span>
+                                    </div>
+                                    <div class="kanban-column-content">
+                                        @foreach (var task in GetTasksByStatus(selectedProject.Tasks, "In Progress"))
+                                        {
+                                            <div class="kanban-task-card">
+                                                <div class="kanban-task-header">
+                                                    <h4 class="kanban-task-title">@task.Title</h4>
+                                                    <span class="kanban-task-priority kanban-task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                                </div>
+                                                <div class="kanban-task-date">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                    @task.DueDate.ToString("yyyy-MM-dd")
+                                                </div>
+                                                <div class="kanban-task-tags">
+                                                    @foreach (var tag in task.Tags)
+                                                    {
+                                                        <span class="kanban-task-tag">@tag</span>
+                                                    }
+                                                </div>
+                                                @if (task.TotalSubtasks > 0)
+                                                {
+                                                    <div class="kanban-task-progress">
+                                                        <div class="kanban-task-progress-bar">
+                                                            <div class="kanban-task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Review Column -->
+                                <div class="kanban-column">
+                                    <div class="kanban-column-header">
+                                        <h3 class="kanban-column-title">Review</h3>
+                                        <span class="kanban-column-count">@GetTasksByStatus(selectedProject.Tasks, "Done").Count</span>
+                                    </div>
+                                    <div class="kanban-column-content">
+                                        @foreach (var task in GetTasksByStatus(selectedProject.Tasks, "Done"))
+                                        {
+                                            <div class="kanban-task-card">
+                                                <div class="kanban-task-header">
+                                                    <h4 class="kanban-task-title">@task.Title</h4>
+                                                    <span class="kanban-task-priority kanban-task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                                </div>
+                                                <div class="kanban-task-date">
+                                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                    @task.DueDate.ToString("yyyy-MM-dd")
+                                                </div>
+                                                <div class="kanban-task-tags">
+                                                    @foreach (var tag in task.Tags)
+                                                    {
+                                                        <span class="kanban-task-tag">@tag</span>
+                                                    }
+                                                </div>
+                                                @if (task.TotalSubtasks > 0)
+                                                {
+                                                    <div class="kanban-task-progress">
+                                                        <div class="kanban-task-progress-bar">
+                                                            <div class="kanban-task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (_viewMode == "calendar")
+                        {
+                            <!-- Calendar View (Placeholder) -->
+                            <div class="tasks-calendar-view">
+                                <p style="color: rgba(226, 232, 240, 0.6); padding: 40px; text-align: center;">Calendar view coming soon...</p>
+                            </div>
+                        }
+                        else if (_viewMode == "chart")
+                        {
+                            <!-- Chart View (Placeholder) -->
+                            <div class="tasks-chart-view">
+                                <p style="color: rgba(226, 232, 240, 0.6); padding: 40px; text-align: center;">Chart view coming soon...</p>
+                            </div>
+                        }
                     }
                 }
             </div>
@@ -210,115 +374,89 @@
 
 
 @code {
-    private int _selectedProjectId = 1; // Default to first project
+    private long _selectedProjectId = 0;
+    private string _viewMode = "list"; // Default to list view
+    private bool _isLoading = true;
+    private string? _errorMessage;
     
-    private List<ProjectItem> _projects = new()
+    private List<ProjectItem> _projects = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        new ProjectItem 
-        { 
-            Id = 1, 
-            Name = "E-commerce Platform", 
-            Description = "Full-stack e-commerce solution with modern UI/UX",
-            Client = "TechCorp",
-            Budget = 50000,
-            DueDate = new DateTime(2024, 3, 30),
-            TaskCount = 3, 
-            CompletedTasks = 1,
-            InProgressTasks = 1,
-            OverdueTasks = 2,
-            Icon = Icons.Material.Filled.ShoppingCart,
-            IconColor = "blue",
-            Tasks = new List<TaskItem>
+        await LoadProjectsAsync();
+    }
+
+    private async Task LoadProjectsAsync()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+
+            var projectsWithTasks = await ProjectsService.GetAllProjectsWithTasksAsync();
+            
+            _projects = projectsWithTasks.Select(p => new ProjectItem
             {
-                new TaskItem
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description ?? string.Empty,
+                Client = p.Client ?? string.Empty,
+                Budget = p.Budget ?? 0,
+                DueDate = p.DueDate ?? DateTime.Now,
+                TaskCount = p.Tasks?.Length ?? 0,
+                CompletedTasks = p.Tasks?.Count(t => t.Status == "Done") ?? 0,
+                InProgressTasks = p.Tasks?.Count(t => t.Status == "In Progress") ?? 0,
+                OverdueTasks = p.Tasks?.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.Now && t.Status != "Done") ?? 0,
+                Icon = GetIconFromString(p.Icon ?? "folder"),
+                IconColor = p.IconColor ?? "blue",
+                Tasks = p.Tasks?.Select(t => new TaskItem
                 {
-                    Title = "Setup project infrastructure",
-                    Status = "Done",
-                    Priority = "high",
-                    DueDate = new DateTime(2024, 2, 20),
-                    AssignedCount = 2,
-                    CommentCount = 1,
-                    TotalSubtasks = 3,
-                    CompletedSubtasks = 3,
-                    Tags = new List<string> { "Backend", "Frontend" }
-                },
-                new TaskItem
-                {
-                    Title = "Design product catalog UI",
-                    Status = "In Progress",
-                    Priority = "high",
-                    DueDate = new DateTime(2024, 2, 25),
-                    AssignedCount = 1,
-                    CommentCount = 0,
-                    TotalSubtasks = 3,
-                    CompletedSubtasks = 1,
-                    Tags = new List<string> { "Design", "Frontend" }
-                },
-                new TaskItem
-                {
-                    Title = "Implement shopping cart",
-                    Status = "To Do",
-                    Priority = "medium",
-                    DueDate = new DateTime(2024, 3, 1),
-                    AssignedCount = 1,
-                    CommentCount = 0,
-                    TotalSubtasks = 0,
-                    CompletedSubtasks = 0,
-                    Tags = new List<string> { "Frontend", "Feature" }
-                }
-            }
-        },
-        new ProjectItem 
-        { 
-            Id = 2, 
-            Name = "Mobile App Redesign", 
-            Description = "Modern redesign of mobile application",
-            Client = "StartupCo",
-            Budget = 30000,
-            DueDate = new DateTime(2024, 4, 15),
-            TaskCount = 2, 
-            CompletedTasks = 0,
-            InProgressTasks = 1,
-            OverdueTasks = 0,
-            Icon = Icons.Material.Filled.PhoneAndroid,
-            IconColor = "purple",
-            Tasks = new List<TaskItem>
+                    Title = t.Title,
+                    Status = t.Status,
+                    Priority = t.Priority,
+                    DueDate = t.DueDate ?? DateTime.Now,
+                    AssignedCount = t.AssignedCount,
+                    CommentCount = t.CommentCount,
+                    TotalSubtasks = t.TotalSubtasks,
+                    CompletedSubtasks = t.CompletedSubtasks,
+                    Tags = t.Tags?.Select(tag => tag.Tag).ToList() ?? new List<string>()
+                }).ToList() ?? new List<TaskItem>()
+            }).ToList();
+
+            // Select first project by default if available
+            if (_projects.Count > 0 && _selectedProjectId == 0)
             {
-                new TaskItem
-                {
-                    Title = "Create wireframes",
-                    Status = "In Progress",
-                    Priority = "high",
-                    DueDate = new DateTime(2024, 3, 10),
-                    AssignedCount = 1,
-                    CommentCount = 2,
-                    TotalSubtasks = 5,
-                    CompletedSubtasks = 2,
-                    Tags = new List<string> { "Design", "UI" }
-                },
-                new TaskItem
-                {
-                    Title = "Develop prototype",
-                    Status = "To Do",
-                    Priority = "medium",
-                    DueDate = new DateTime(2024, 3, 20),
-                    AssignedCount = 2,
-                    CommentCount = 0,
-                    TotalSubtasks = 0,
-                    CompletedSubtasks = 0,
-                    Tags = new List<string> { "Development" }
-                }
+                _selectedProjectId = _projects[0].Id;
             }
         }
-    };
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load projects: {ex.Message}";
+            Console.WriteLine($"Error loading projects: {ex}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
 
-    private void SelectProject(int projectId)
+    private string GetIconFromString(string iconName)
+    {
+        return iconName switch
+        {
+            "shopping_cart" => Icons.Material.Filled.ShoppingCart,
+            "phone_android" => Icons.Material.Filled.PhoneAndroid,
+            _ => Icons.Material.Filled.Folder
+        };
+    }
+
+    private void SelectProject(long projectId)
     {
         _selectedProjectId = projectId;
         Console.WriteLine($"Selected project: {projectId}");
     }
 
-    private string GetProjectCardClass(int projectId)
+    private string GetProjectCardClass(long projectId)
     {
         return _selectedProjectId == projectId ? "project-card project-card-active" : "project-card";
     }
@@ -335,9 +473,29 @@
         Console.WriteLine("New Task clicked");
     }
 
+    private void SetViewMode(string mode)
+    {
+        _viewMode = mode;
+        StateHasChanged();
+    }
+
+    private string GetViewToggleClass(string mode)
+    {
+        return _viewMode == mode ? "view-toggle-btn active" : "view-toggle-btn";
+    }
+
+    private List<TaskItem> GetTasksByStatus(List<TaskItem> tasks, string status)
+    {
+        if (status == "Done")
+        {
+            return tasks.Where(t => t.Status == "Done").ToList();
+        }
+        return tasks.Where(t => t.Status == status).ToList();
+    }
+
     private class ProjectItem
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Client { get; set; } = string.Empty;

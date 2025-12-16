@@ -3878,13 +3878,12 @@ body [class*="mud-popover"] .mud-list {
     color: #10b981;
 }
 
-.task-status-in.progress {
+.task-status-in-progress {
     background: rgba(59, 130, 246, 0.15);
     color: #3b82f6;
-    padding: 0px 14px 20px;
 }
 
-.task-status-to.do {
+.task-status-to-do {
     background: rgba(148, 163, 184, 0.15);
     color: rgba(226, 232, 240, 0.7);
 }
@@ -3954,6 +3953,168 @@ body [class*="mud-popover"] .mud-list {
     transition: width 0.3s ease;
 }
 
+/* Tasks Grid/Kanban View */
+.tasks-grid-view {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.kanban-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 400px;
+}
+
+.kanban-column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 12px;
+}
+
+.kanban-column-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.kanban-column-count {
+    padding: 4px 10px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.7);
+}
+
+.kanban-column-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+}
+
+.kanban-task-card {
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.kanban-task-card:hover {
+    background: rgba(17, 24, 39, 0.8);
+    border-color: rgba(148, 163, 184, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.kanban-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.kanban-task-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.95);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.kanban-task-priority {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.kanban-task-priority-high {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.kanban-task-priority-medium {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+}
+
+.kanban-task-priority-low {
+    background: rgba(148, 163, 184, 0.15);
+    color: rgba(226, 232, 240, 0.7);
+}
+
+.kanban-task-date {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: rgba(226, 232, 240, 0.6);
+    margin-bottom: 12px;
+}
+
+.kanban-task-date .mud-icon-root {
+    font-size: 0.9rem;
+    color: rgba(148, 163, 184, 0.7);
+}
+
+.kanban-task-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.kanban-task-tag {
+    padding: 3px 8px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    font-size: 0.7rem;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.kanban-task-progress {
+    margin-top: 8px;
+}
+
+.kanban-task-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.kanban-task-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #0ea5e9);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Calendar and Chart View Placeholders */
+.tasks-calendar-view,
+.tasks-chart-view {
+    min-height: 400px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.3);
+}
+
 /* Responsive Design for Projects Page */
 @media (max-width: 768px) {
     .projects-header {
@@ -3990,6 +4151,16 @@ body [class*="mud-popover"] .mud-list {
 
     .main-content-section {
         order: 1;
+    }
+
+    /* Stack kanban columns on mobile */
+    .tasks-grid-view {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .kanban-column {
+        min-height: auto;
     }
 }
 
