@@ -10,3 +10,4 @@ ORDER BY ordinal_position;
 -- If the table exists but has wrong structure, you can see it here
 -- If no rows are returned, the table doesn't exist
 
+

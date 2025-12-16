@@ -34,3 +34,4 @@ SELECT
 FROM pg_policies 
 WHERE tablename IN ('projects', 'tasks', 'task_tags');
 
+

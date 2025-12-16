@@ -54,6 +54,9 @@
                         @foreach (var project in _projects)
                         {
                             <div class="@GetProjectCardClass(project.Id)" @onclick="() => SelectProject(project.Id)">
+                            <button class="project-delete-btn" @onclick="(e) => DeleteProject(project.Id, project.Name, e)" @onclick:stopPropagation="true">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            </button>
                             <div class="project-card-header">
                                 <div class="project-icon project-icon-@project.IconColor">
                                     <MudIcon Icon="@project.Icon" />
@@ -89,7 +92,7 @@
                         <div class="project-detail-header">
                             <div class="project-detail-top">
                                 <div class="project-detail-left">
-                                    <div class="project-detail-icon">
+                                    <div class="project-detail-icon project-detail-icon-@selectedProject.IconColor">
                                         <MudIcon Icon="@selectedProject.Icon" />
                                     </div>
                                     <div class="project-detail-info">
@@ -370,6 +373,20 @@
             </div>
         </div>
     </div>
+
+    <!-- Create Project Dialog -->
+    <CreateProjectDialog 
+        IsVisible="_showCreateDialog" 
+        OnClose="CloseCreateDialog"
+        OnProjectCreated="HandleProjectCreated" />
+
+    <!-- Delete Confirmation Dialog -->
+    <DeleteConfirmDialog 
+        IsVisible="_showDeleteDialog"
+        ProjectName="@_projectToDelete"
+        IsDeleting="_isDeleting"
+        OnCancel="CloseDeleteDialog"
+        OnConfirm="ConfirmDelete" />
 </AuthorizeRole>
 
 
@@ -378,6 +395,11 @@
     private string _viewMode = "list"; // Default to list view
     private bool _isLoading = true;
     private string? _errorMessage;
+    private bool _showCreateDialog = false;
+    private bool _showDeleteDialog = false;
+    private bool _isDeleting = false;
+    private long _projectIdToDelete = 0;
+    private string _projectToDelete = string.Empty;
     
     private List<ProjectItem> _projects = new();
 
@@ -444,8 +466,13 @@
     {
         return iconName switch
         {
+            "computer" => Icons.Material.Filled.Computer,
             "shopping_cart" => Icons.Material.Filled.ShoppingCart,
             "phone_android" => Icons.Material.Filled.PhoneAndroid,
+            "folder" => Icons.Material.Filled.Folder,
+            "code" => Icons.Material.Filled.Code,
+            "web" => Icons.Material.Filled.Web,
+            "design_services" => Icons.Material.Filled.DesignServices,
             _ => Icons.Material.Filled.Folder
         };
     }
@@ -463,8 +490,71 @@
 
     private void HandleNewProject()
     {
-        // TODO: Navigate to create project page or open modal
-        Console.WriteLine("New Project clicked");
+        _showCreateDialog = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _showCreateDialog = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleProjectCreated(bool success)
+    {
+        if (success)
+        {
+            await LoadProjectsAsync();
+        }
+    }
+
+    private void DeleteProject(long projectId, string projectName, MouseEventArgs e)
+    {
+        _projectIdToDelete = projectId;
+        _projectToDelete = projectName;
+        _showDeleteDialog = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        if (!_isDeleting)
+        {
+            _showDeleteDialog = false;
+            _projectIdToDelete = 0;
+            _projectToDelete = string.Empty;
+        }
+    }
+
+    private async Task ConfirmDelete()
+    {
+        _isDeleting = true;
+        
+        try
+        {
+            await ProjectsService.DeleteProjectAsync(_projectIdToDelete);
+            
+            // If the deleted project was selected, clear selection
+            if (_selectedProjectId == _projectIdToDelete)
+            {
+                _selectedProjectId = 0;
+            }
+            
+            // Reload projects list
+            await LoadProjectsAsync();
+            
+            Console.WriteLine($"Project '{_projectToDelete}' deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete project: {ex.Message}";
+            Console.WriteLine($"Error deleting project: {ex}");
+        }
+        finally
+        {
+            _isDeleting = false;
+            _showDeleteDialog = false;
+            _projectIdToDelete = 0;
+            _projectToDelete = string.Empty;
+        }
     }
 
     private void HandleNewTask()

@@ -3415,6 +3415,7 @@ body [class*="mud-popover"] .mud-list {
     padding: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
+    position: relative;
 }
 
 .project-card:hover {
@@ -3431,6 +3432,40 @@ body [class*="mud-popover"] .mud-list {
 .project-card-active:hover {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(14, 165, 233, 0.4));
     border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Project Delete Button */
+.project-delete-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.project-card:hover .project-delete-btn {
+    opacity: 1;
+}
+
+.project-delete-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: scale(1.05);
+}
+
+.project-delete-btn:active {
+    transform: scale(0.95);
 }
 
 /* Project Card Header */
@@ -3459,6 +3494,21 @@ body [class*="mud-popover"] .mud-list {
 .project-icon-purple {
     background: rgba(168, 85, 247, 0.2);
     color: #a855f7;
+}
+
+.project-icon-green {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.project-icon-orange {
+    background: rgba(249, 115, 22, 0.2);
+    color: #f97316;
+}
+
+.project-icon-red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
 }
 
 .project-icon .mud-icon-root {
@@ -3565,7 +3615,6 @@ body [class*="mud-popover"] .mud-list {
 .project-detail-icon {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(14, 165, 233, 0.2));
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -3575,7 +3624,46 @@ body [class*="mud-popover"] .mud-list {
 
 .project-detail-icon .mud-icon-root {
     font-size: 2rem;
+}
+
+.project-detail-icon-blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(14, 165, 233, 0.2));
+}
+
+.project-detail-icon-blue .mud-icon-root {
     color: #3b82f6;
+}
+
+.project-detail-icon-purple {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.2));
+}
+
+.project-detail-icon-purple .mud-icon-root {
+    color: #a855f7;
+}
+
+.project-detail-icon-green {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+}
+
+.project-detail-icon-green .mud-icon-root {
+    color: #10b981;
+}
+
+.project-detail-icon-orange {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.2));
+}
+
+.project-detail-icon-orange .mud-icon-root {
+    color: #f97316;
+}
+
+.project-detail-icon-red {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.2));
+}
+
+.project-detail-icon-red .mud-icon-root {
+    color: #ef4444;
 }
 
 .project-detail-info {

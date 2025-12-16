@@ -200,6 +200,83 @@ public class SupabaseProjectsService
         return projectsWithTasks.ToArray();
     }
 
+    public async Task<ProjectDto> CreateProjectAsync(CreateProjectRequest request, string? accessToken = null, CancellationToken cancellationToken = default)
+    {
+        EnsureConfigured();
+
+        var projectData = new
+        {
+            name = request.Name,
+            description = request.Description,
+            client = request.Client,
+            budget = request.Budget,
+            due_date = request.EndDate?.ToString("yyyy-MM-dd"),
+            icon = request.Icon,
+            icon_color = request.ColorTheme,
+            is_public = request.IsPublic
+        };
+
+        var json = JsonSerializer.Serialize(projectData, _serializerOptions);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_options.Url!.TrimEnd('/')}/rest/v1/projects");
+        requestMessage.Content = content;
+        requestMessage.Headers.Add("apikey", _options.AnonKey);
+        requestMessage.Headers.Add("Prefer", "return=representation");
+
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+        else
+        {
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AnonKey);
+        }
+
+        var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to create project: {response.StatusCode} - {responseContent}");
+        }
+
+        var projects = JsonSerializer.Deserialize<ProjectDto[]>(responseContent, _serializerOptions);
+        if (projects == null || projects.Length == 0)
+        {
+            throw new InvalidOperationException("Failed to create project: No data returned");
+        }
+
+        return projects[0];
+    }
+
+    public async Task<bool> DeleteProjectAsync(long projectId, string? accessToken = null, CancellationToken cancellationToken = default)
+    {
+        EnsureConfigured();
+
+        var requestMessage = new HttpRequestMessage(HttpMethod.Delete, $"{_options.Url!.TrimEnd('/')}/rest/v1/projects?id=eq.{projectId}");
+        requestMessage.Headers.Add("apikey", _options.AnonKey);
+
+        if (!string.IsNullOrWhiteSpace(accessToken))
+        {
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+        else
+        {
+            requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AnonKey);
+        }
+
+        var response = await _httpClient.SendAsync(requestMessage, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Failed to delete project: {response.StatusCode} - {content}");
+        }
+
+        return true;
+    }
+
     private void EnsureConfigured()
     {
         if (string.IsNullOrWhiteSpace(_options.Url) || string.IsNullOrWhiteSpace(_options.AnonKey) ||
@@ -209,5 +286,18 @@ public class SupabaseProjectsService
             throw new InvalidOperationException("Supabase configuration is missing or still using placeholder values.");
         }
     }
+}
+
+public class CreateProjectRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Client { get; set; }
+    public decimal? Budget { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? Icon { get; set; }
+    public string? ColorTheme { get; set; }
+    public bool IsPublic { get; set; }
 }
 

@@ -56,3 +56,4 @@ FROM information_schema.tables
 WHERE table_name IN ('projects', 'tasks', 'task_tags')
 AND table_schema = 'public';
 
+
