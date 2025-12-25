@@ -1,0 +1,39 @@
+@page "/admin/tasks"
+@layout Sominnercore.Layout.AdminLayout
+@using System.Linq
+
+<DashboardHeader Title="Task Management" 
+                 Subtitle="Organize and prioritize your tasks" />
+
+<div class="tasks-page">
+    <section class="tasks-content">
+        <div class="tasks-header-actions">
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Add"
+                      Class="tasks-new-button">
+                New Task
+            </MudButton>
+        </div>
+
+        <div class="tasks-container">
+            <div class="tasks-placeholder">
+                <MudIcon Icon="@Icons.Material.Filled.Task" 
+                        Class="tasks-placeholder-icon" />
+                <h3>No tasks yet</h3>
+                <p>Get started by creating your first task</p>
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Add"
+                          Class="tasks-placeholder-button">
+                    Create Task
+                </MudButton>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    // Task management logic will be added here
+}
+

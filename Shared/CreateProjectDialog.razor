@@ -1,0 +1,339 @@
+@inject SupabaseProjectsService ProjectsService
+@inject ISnackbar Snackbar
+@using Sominnercore.Services
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+@if (IsVisible)
+{
+    <div class="custom-dialog-overlay" @onclick="OnOverlayClick" @onkeydown="HandleKeyDown" tabindex="-1">
+        <div class="custom-dialog-container" @onclick:stopPropagation="true">
+            <div class="custom-dialog-content">
+                <!-- Title with Close Button -->
+                <div class="dialog-header">
+                    <h2 class="dialog-title">Create New Project</h2>
+                    <button class="dialog-close-btn" @onclick="Cancel" type="button">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
+                    </button>
+                </div>
+
+                <!-- Form Content -->
+                <div class="dialog-body">
+                    <form class="project-form" @onsubmit="Submit" @onsubmit:preventDefault>
+                        <!-- Project Name -->
+                        <div class="form-field-wrapper">
+                            <label class="field-label">Project Name <span class="required-asterisk">*</span></label>
+                            <input type="text" 
+                                   class="custom-input" 
+                                   placeholder="Enter project name"
+                                   @bind="_model.Name" />
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-field-wrapper">
+                            <label class="field-label">Description</label>
+                            <textarea class="custom-input custom-textarea" 
+                                      rows="3"
+                                      placeholder="Enter project description"
+                                      @bind="_model.Description"></textarea>
+                        </div>
+
+                        <!-- Two Column Grid for Remaining Fields -->
+                        <div class="project-form-grid">
+                            <!-- Icon -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Icon</label>
+                                <div class="custom-select" @onclick="() => ToggleDropdown(1)">
+                                    <div class="select-value">
+                                        <MudIcon Icon="@GetIconString(_model.Icon)" Size="Size.Small" />
+                                        <span>@GetIconLabel(_model.Icon)</span>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                    @if (_openDropdown == 1)
+                                    {
+                                        <div class="custom-dropdown">
+                                            @foreach (var icon in _iconOptions)
+                                            {
+                                                <div class="dropdown-item" @onclick="() => SelectIcon(icon.Value)" @onclick:stopPropagation>
+                                                    <MudIcon Icon="@icon.Icon" Size="Size.Small" />
+                                                    <span>@icon.Label</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Color Theme -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Color Theme</label>
+                                <div class="custom-select" @onclick="() => ToggleDropdown(2)">
+                                    <div class="select-value">
+                                        <div class="color-dot color-dot-@_model.ColorTheme"></div>
+                                        <span>@GetColorLabel(_model.ColorTheme)</span>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                    @if (_openDropdown == 2)
+                                    {
+                                        <div class="custom-dropdown">
+                                            @foreach (var color in _colorOptions)
+                                            {
+                                                <div class="dropdown-item" @onclick="() => SelectColor(color.Value)" @onclick:stopPropagation>
+                                                    <div class="color-dot color-dot-@color.Value"></div>
+                                                    <span>@color.Label</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Client -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Client</label>
+                                <input type="text" 
+                                       class="custom-input" 
+                                       placeholder="Client name"
+                                       @bind="_model.Client" />
+                            </div>
+
+                            <!-- Budget -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Budget ($)</label>
+                                <input type="number" 
+                                       class="custom-input" 
+                                       placeholder="0"
+                                       step="100"
+                                       min="0"
+                                       @bind="_model.Budget" />
+                            </div>
+
+                            <!-- Start Date -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Start Date</label>
+                                <input type="date" 
+                                       class="custom-input custom-date-input" 
+                                       @bind="_model.StartDate" />
+                            </div>
+
+                            <!-- End Date -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">End Date</label>
+                                <input type="date" 
+                                       class="custom-input custom-date-input" 
+                                       @bind="_model.EndDate" />
+                            </div>
+
+                            <!-- Visibility -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Visibility</label>
+                                <div class="custom-select" @onclick="() => ToggleDropdown(3)">
+                                    <div class="select-value">
+                                        <MudIcon Icon="@(_model.IsPublic ? Icons.Material.Filled.Public : Icons.Material.Filled.Lock)" Size="Size.Small" />
+                                        <span>@(_model.IsPublic ? "Public" : "Private")</span>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                    @if (_openDropdown == 3)
+                                    {
+                                        <div class="custom-dropdown">
+                                            <div class="dropdown-item" @onclick="() => SelectVisibility(true)" @onclick:stopPropagation>
+                                                <MudIcon Icon="@Icons.Material.Filled.Public" Size="Size.Small" />
+                                                <span>Public</span>
+                                            </div>
+                                            <div class="dropdown-item" @onclick="() => SelectVisibility(false)" @onclick:stopPropagation>
+                                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" />
+                                                <span>Private</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Actions -->
+                <div class="dialog-actions">
+                    <button type="button" @onclick="Cancel" class="dialog-cancel-button">Cancel</button>
+                    <button type="button" @onclick="Submit" class="dialog-create-button" disabled="@_isSubmitting">
+                        @if (_isSubmitting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Create Project</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnProjectCreated { get; set; }
+
+    private bool _isSubmitting = false;
+    private CreateProjectModel _model = new();
+    private int _openDropdown = 0;
+
+    private class CreateProjectModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Icon { get; set; } = "computer";
+        public string ColorTheme { get; set; } = "blue";
+        public string? Client { get; set; }
+        public decimal? Budget { get; set; } = 0;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public bool IsPublic { get; set; } = true;
+    }
+
+    private List<IconOption> _iconOptions = new()
+    {
+        new("computer", "Computer", Icons.Material.Filled.Computer),
+        new("shopping_cart", "Shopping Cart", Icons.Material.Filled.ShoppingCart),
+        new("phone_android", "Phone", Icons.Material.Filled.PhoneAndroid),
+        new("folder", "Folder", Icons.Material.Filled.Folder),
+        new("code", "Code", Icons.Material.Filled.Code),
+        new("web", "Web", Icons.Material.Filled.Web),
+        new("design_services", "Design", Icons.Material.Filled.DesignServices)
+    };
+
+    private List<ColorOption> _colorOptions = new()
+    {
+        new("blue", "Blue"),
+        new("purple", "Purple"),
+        new("green", "Green"),
+        new("orange", "Orange"),
+        new("red", "Red")
+    };
+
+    private record IconOption(string Value, string Label, string Icon);
+    private record ColorOption(string Value, string Label);
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && IsVisible)
+        {
+            // Focus management can be added here if needed
+        }
+    }
+
+    private void ToggleDropdown(int dropdownId)
+    {
+        _openDropdown = _openDropdown == dropdownId ? 0 : dropdownId;
+    }
+
+    private void SelectIcon(string icon)
+    {
+        _model.Icon = icon;
+        _openDropdown = 0;
+    }
+
+    private void SelectColor(string color)
+    {
+        _model.ColorTheme = color;
+        _openDropdown = 0;
+    }
+
+    private void SelectVisibility(bool isPublic)
+    {
+        _model.IsPublic = isPublic;
+        _openDropdown = 0;
+    }
+
+    private string GetIconString(string iconValue)
+    {
+        return _iconOptions.FirstOrDefault(i => i.Value == iconValue)?.Icon ?? Icons.Material.Filled.Computer;
+    }
+
+    private string GetIconLabel(string iconValue)
+    {
+        return _iconOptions.FirstOrDefault(i => i.Value == iconValue)?.Label ?? "Computer";
+    }
+
+    private string GetColorLabel(string colorValue)
+    {
+        return _colorOptions.FirstOrDefault(c => c.Value == colorValue)?.Label ?? "Blue";
+    }
+
+    private async Task Cancel()
+    {
+        _openDropdown = 0;
+        await OnClose.InvokeAsync();
+    }
+
+    private void OnOverlayClick()
+    {
+        // Close dialog when clicking outside
+        if (!_isSubmitting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && !_isSubmitting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            Snackbar.Add("Project name is required", Severity.Error);
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var request = new CreateProjectRequest
+            {
+                Name = _model.Name,
+                Description = _model.Description,
+                Client = _model.Client,
+                Budget = _model.Budget,
+                StartDate = _model.StartDate,
+                EndDate = _model.EndDate,
+                Icon = _model.Icon,
+                ColorTheme = _model.ColorTheme,
+                IsPublic = _model.IsPublic
+            };
+
+            var project = await ProjectsService.CreateProjectAsync(request);
+            
+            Snackbar.Add($"Project '{project.Name}' created successfully!", Severity.Success);
+            
+            // Reset form
+            _model = new CreateProjectModel();
+            
+            // Notify parent and close
+            await OnProjectCreated.InvokeAsync(true);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create project: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error creating project: {ex}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

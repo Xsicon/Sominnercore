@@ -1,0 +1,431 @@
+@page "/admin/users"
+@layout Sominnercore.Layout.AdminLayout
+@using System.Linq
+@using Microsoft.AspNetCore.Components.Web
+@using Sominnercore.Services
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+<AuthorizeRole RequiredRoles="@(new[] { "admin" })">
+    <DashboardHeader Title="User Management" 
+                     Subtitle="Manage team members and permissions" />
+
+    <div class="users-page">
+        <section class="users-status">
+            <div class="user-stat-card user-stat-card-total">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Total Users</span>
+                    <span class="user-stat-value">@_totalUsers</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
+            </div>
+            <div class="user-stat-card user-stat-card-active">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Active Users</span>
+                    <span class="user-stat-value">@_activeUsers</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
+            </div>
+            <div class="user-stat-card user-stat-card-inactive">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Inactive Users</span>
+                    <span class="user-stat-value">@_inactiveUsers</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Person" Class="user-stat-icon" />
+            </div>
+            <div class="user-stat-card user-stat-card-admin">
+                <div class="user-stat-info">
+                    <span class="user-stat-label">Administrators</span>
+                    <span class="user-stat-value">@_administrators</span>
+                </div>
+                <MudIcon Icon="@Icons.Material.Outlined.Shield" Class="user-stat-icon" />
+            </div>
+        </section>
+
+        <section class="users-content">
+            <div class="users-filters">
+                <div class="users-filters-card">
+                    <div class="users-search">
+                        <MudIcon Icon="@Icons.Material.Filled.Search" Class="users-search-icon" />
+                        <input class="users-search-input"
+                               placeholder="Search by name or email..."
+                               @bind="_searchTerm"
+                               @bind:event="oninput" />
+                    </div>
+                    <div class="users-filter-buttons">
+                        <button class="users-filter-btn" @onclick="ToggleRoleFilter" type="button">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
+                            <span>@_selectedRole</span>
+                        </button>
+                        <button class="users-filter-btn" @onclick="ToggleStatusFilter" type="button">
+                            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="users-filter-icon" />
+                            <span>@_selectedStatus</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="users-table-container">
+                <div class="users-table-card">
+                    <div class="users-table-header">
+                        <div>
+                            <h2 class="users-table-title">All Users</h2>
+                            <span class="users-count">@FilteredUsers.Count</span>
+                        </div>
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   OnClick="NavigateToCreateUser"
+                                   Class="users-create-button">
+                            Create User
+                        </MudButton>
+                    </div>
+                    @if (_isLoading)
+                    {
+                        <div class="users-loading">
+                            <MudProgressCircular Indeterminate="true" />
+                            <p>Loading users...</p>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Class="users-error">
+                            @_errorMessage
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <div class="users-table-wrapper">
+                            <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in FilteredUsers)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="user-cell">
+                                                <div class="user-avatar" style="background: @user.AvatarColor">
+                                                    @user.Initial
+                                                </div>
+                                                <span class="user-name">@user.Name</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="email-cell">
+                                                <MudIcon Icon="@Icons.Material.Outlined.Email" Class="email-icon" />
+                                                <span>@user.Email</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="role-badge role-@user.RoleClass">@user.Role</span>
+                                        </td>
+                                        <td>
+                                            <div class="status-switch-container" 
+                                                 style="@(_updatingStatusUsers.Contains(user.AuthUserId) ? "opacity: 0.5; pointer-events: none;" : "")"
+                                                 @onclick="@(() => ToggleUserStatus(user, !user.Status.Equals("active", StringComparison.OrdinalIgnoreCase)))">
+                                                <div class="status-switch @(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "status-switch-active" : "status-switch-inactive")">
+                                                    <span class="status-switch-label">@(user.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ? "Active" : "Inactive")</span>
+                                                    <div class="status-switch-slider"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="date-cell">
+                                                <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Class="date-icon" />
+                                                <span>@user.CreatedDate</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="date-text">@user.LastLogin</span>
+                                        </td>
+                                        <td>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                           Class="users-action-btn" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small" 
+                                                           Variant="Variant.Text"
+                                                           OnClick="() => NavigateToEditUser(user)"
+                                                           Title="Edit User" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    </div>
+</AuthorizeRole>
+
+@code {
+    private List<UserViewModel> _users = new();
+    private bool _isLoading = true;
+    private string _errorMessage = string.Empty;
+    private HashSet<string> _updatingStatusUsers = new();
+
+    private int _totalUsers => _users.Count;
+    private int _activeUsers => _users.Count(u => u.Status == "active");
+    private int _inactiveUsers => _users.Count(u => u.Status == "inactive");
+    private int _administrators => _users.Count(u => u.RoleClass == "admin");
+
+    private string _searchTerm = string.Empty;
+    private string _selectedRole = "All Roles";
+    private string _selectedStatus = "All Status";
+    private bool ShowRoleFilter = false;
+    private bool ShowStatusFilter = false;
+
+    private void ToggleRoleFilter(MouseEventArgs e)
+    {
+        ShowRoleFilter = !ShowRoleFilter;
+    }
+
+    private void ToggleStatusFilter(MouseEventArgs e)
+    {
+        ShowStatusFilter = !ShowStatusFilter;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errorMessage = "You must be logged in to view users.";
+                return;
+            }
+
+            // Fetch both team members and auth users
+            var teamMembersTask = AuthService.GetTeamMembersAsync(accessToken);
+            var authUsersTask = AuthService.GetAllAuthUsersAsync(accessToken);
+
+            await Task.WhenAll(teamMembersTask, authUsersTask);
+
+            var teamMembers = await teamMembersTask;
+            var authUsers = await authUsersTask;
+
+            // Create a dictionary of team members by auth_user_id for quick lookup
+            var teamMembersByAuthId = teamMembers.ToDictionary(tm => tm.AuthUserId.ToString(), StringComparer.OrdinalIgnoreCase);
+
+            // Merge: Use team member data when available, otherwise use auth user data
+            _users = authUsers.Select(au =>
+            {
+                var authUserId = au.Id;
+                var hasTeamMember = teamMembersByAuthId.TryGetValue(authUserId, out var tm);
+
+                if (hasTeamMember && tm != null)
+                {
+                    // User has team member record - use that data
+                    return new UserViewModel
+                    {
+                        AuthUserId = authUserId,
+                        Name = tm.DisplayName,
+                        Email = tm.Email,
+                        Role = FormatRoleName(tm.Role?.Name ?? "unknown"),
+                        RoleClass = GetRoleClass(tm.Role?.Name ?? "unknown"),
+                        Status = tm.Status,
+                        StatusClass = tm.Status,
+                        CreatedDate = tm.CreatedAt.ToString("M/d/yyyy"),
+                        LastLogin = ParseDate(au.LastSignInAt) ?? "Never",
+                        Initial = GetInitial(tm.DisplayName),
+                        AvatarColor = GetAvatarColor(tm.DisplayName)
+                    };
+                }
+                else
+                {
+                    // User exists in auth but not in team_members - show with default values
+                    var firstName = au.UserMetadata?.TryGetValue("first_name", out var fn) == true ? fn?.ToString() : null;
+                    var lastName = au.UserMetadata?.TryGetValue("last_name", out var ln) == true ? ln?.ToString() : null;
+                    var roleName = au.UserMetadata?.TryGetValue("role", out var r) == true ? r?.ToString() : null;
+                    var displayName = !string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName)
+                        ? $"{firstName} {lastName}"
+                        : au.Email?.Split('@')[0] ?? "Unknown User";
+
+                    return new UserViewModel
+                    {
+                        AuthUserId = authUserId,
+                        Name = displayName,
+                        Email = au.Email ?? "No email",
+                        Role = FormatRoleName(roleName ?? "unknown"),
+                        RoleClass = GetRoleClass(roleName ?? "unknown"),
+                        Status = "active", // Default status
+                        StatusClass = "active",
+                        CreatedDate = ParseDate(au.CreatedAt) ?? "Unknown",
+                        LastLogin = ParseDate(au.LastSignInAt) ?? "Never",
+                        Initial = GetInitial(displayName),
+                        AvatarColor = GetAvatarColor(displayName)
+                    };
+                }
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading users: {ex.Message}";
+            Console.WriteLine($"Error loading users: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string FormatRoleName(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "Admin",
+            "marketing_manager" => "Marketing Manager",
+            "customer_relations_specialist" => "CRS (Customer Relations Specialist)",
+            "support_specialist" => "Support Specialist",
+            "developer" => "Developer",
+            _ => string.Join(' ', roleName.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]))
+        };
+    }
+
+    private static string GetRoleClass(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "admin",
+            "marketing_manager" => "marketing",
+            "customer_relations_specialist" => "crs",
+            "support_specialist" => "support",
+            "developer" => "developer",
+            _ => "unknown"
+        };
+    }
+
+    private static string GetInitial(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+        return name.Trim().Substring(0, 1).ToUpperInvariant();
+    }
+
+    private static string GetAvatarColor(string name)
+    {
+        var colors = new[] { "#f97316", "#22c55e", "#3b82f6", "#a855f7", "#ec4899" };
+        var hash = name.GetHashCode();
+        return colors[Math.Abs(hash) % colors.Length];
+    }
+
+    private static string? ParseDate(string? dateString)
+    {
+        if (string.IsNullOrWhiteSpace(dateString))
+            return null;
+
+        if (DateTime.TryParse(dateString, out var date))
+        {
+            return date.ToString("M/d/yyyy");
+        }
+
+        return null;
+    }
+
+    private void NavigateToCreateUser()
+    {
+        Navigation.NavigateTo("/admin/users/create");
+    }
+
+    private void NavigateToEditUser(UserViewModel user)
+    {
+        if (!string.IsNullOrWhiteSpace(user.AuthUserId))
+        {
+            Navigation.NavigateTo($"/admin/users/edit/{user.AuthUserId}");
+        }
+    }
+
+    private async Task ToggleUserStatus(UserViewModel user, bool isActive)
+    {
+        if (string.IsNullOrWhiteSpace(user.AuthUserId))
+            return;
+
+        _updatingStatusUsers.Add(user.AuthUserId);
+        StateHasChanged();
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errorMessage = "You must be logged in to update user status.";
+                return;
+            }
+
+            await AuthService.UpdateUserStatusAsync(user.AuthUserId, isActive, accessToken);
+
+            // Update the local user list
+            var userToUpdate = _users.FirstOrDefault(u => u.AuthUserId == user.AuthUserId);
+            if (userToUpdate != null)
+            {
+                userToUpdate.Status = isActive ? "active" : "inactive";
+                userToUpdate.StatusClass = isActive ? "active" : "inactive";
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error updating user status: {ex.Message}";
+            Console.WriteLine($"Error updating user status: {ex.Message}");
+            StateHasChanged();
+        }
+        finally
+        {
+            _updatingStatusUsers.Remove(user.AuthUserId);
+            StateHasChanged();
+        }
+    }
+
+    private List<UserViewModel> FilteredUsers
+    {
+        get
+        {
+            return _users.Where(u =>
+                (string.IsNullOrWhiteSpace(_searchTerm) ||
+                 u.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                 u.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+                (_selectedRole == "All Roles" || u.Role == _selectedRole) &&
+                (_selectedStatus == "All Status" || u.Status == _selectedStatus))
+                .ToList();
+        }
+    }
+
+    private class UserViewModel
+    {
+        public string AuthUserId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string RoleClass { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string StatusClass { get; set; } = string.Empty;
+        public string CreatedDate { get; set; } = string.Empty;
+        public string LastLogin { get; set; } = string.Empty;
+        public string Initial { get; set; } = string.Empty;
+        public string AvatarColor { get; set; } = string.Empty;
+    }
+}
+

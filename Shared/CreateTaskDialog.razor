@@ -1,0 +1,457 @@
+@inject SupabaseProjectsService ProjectsService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@using Sominnercore.Services
+@using Sominnercore.Models
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+@if (IsVisible)
+{
+    <div class="custom-dialog-overlay" @onclick="OnOverlayClick" @onkeydown="HandleKeyDown" tabindex="-1">
+        <div class="@GetDialogContainerClass()" @onclick:stopPropagation="true">
+            <div class="custom-dialog-content">
+                <!-- Title with Close Button -->
+                <div class="dialog-header">
+                    <h2 class="dialog-title">Create New Task</h2>
+                    <button class="dialog-close-btn dialog-delete-btn" @onclick="Cancel" type="button">
+                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                    </button>
+                </div>
+
+                <!-- Form Content -->
+                <div class="@GetDialogBodyClass()">
+                    <div class="dialog-form-section">
+                        <form class="project-form" @onsubmit="Submit" @onsubmit:preventDefault>
+                        <!-- Project Selection -->
+                        <div class="form-field-wrapper">
+                            <label class="field-label">Project <span class="required-asterisk">*</span></label>
+                            <div class="custom-select" @onclick="() => ToggleDropdown(1)">
+                                <div class="select-value">
+                                    @if (_model.ProjectId > 0)
+                                    {
+                                        var selectedProject = _projects.FirstOrDefault(p => p.Id == _model.ProjectId);
+                                        if (selectedProject != null)
+                                        {
+                                            <span>@selectedProject.Name</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: #64748b;">Select a project</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span style="color: #64748b;">Select a project</span>
+                                    }
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                @if (_openDropdown == 1)
+                                {
+                                    <div class="custom-dropdown">
+                                        @if (_projects.Count == 0)
+                                        {
+                                            <div class="dropdown-item" style="cursor: default; color: #64748b;">
+                                                <span>No projects available</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var project in _projects)
+                                            {
+                                                <div class="dropdown-item" @onclick="async () => await SelectProject(project.Id)" @onclick:stopPropagation>
+                                                    <span>@project.Name</span>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Task Title -->
+                        <div class="form-field-wrapper">
+                            <label class="field-label">Task Title <span class="required-asterisk">*</span></label>
+                            <input type="text" 
+                                   class="custom-input" 
+                                   placeholder="Enter task title"
+                                   @bind="_model.Title" />
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-field-wrapper">
+                            <label class="field-label">Description</label>
+                            <textarea class="custom-input custom-textarea" 
+                                      rows="3"
+                                      placeholder="Enter task description"
+                                      @bind="_model.Description"></textarea>
+                        </div>
+
+                        <!-- Status and Priority Grid -->
+                        <div class="project-form-grid">
+                            <!-- Status -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Status</label>
+                                <div class="custom-select" @onclick="() => ToggleDropdown(2)">
+                                    <div class="select-value">
+                                        <span>@GetStatusLabel(_model.Status)</span>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                    @if (_openDropdown == 2)
+                                    {
+                                        <div class="custom-dropdown">
+                                            @foreach (var status in _statusOptions)
+                                            {
+                                                <div class="dropdown-item" @onclick="() => SelectStatus(status.Value)" @onclick:stopPropagation>
+                                                    <span>@status.Label</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Priority -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Priority</label>
+                                <div class="custom-select" @onclick="() => ToggleDropdown(3)">
+                                    <div class="select-value">
+                                        <span>@GetPriorityLabel(_model.Priority)</span>
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                    @if (_openDropdown == 3)
+                                    {
+                                        <div class="custom-dropdown">
+                                            @foreach (var priority in _priorityOptions)
+                                            {
+                                                <div class="dropdown-item" @onclick="() => SelectPriority(priority.Value)" @onclick:stopPropagation>
+                                                    <span>@priority.Label</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Start Date and Due Date Grid -->
+                        <div class="project-form-grid">
+                            <!-- Start Date -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Start Date</label>
+                                <input type="date" 
+                                       class="custom-input custom-date-input" 
+                                       @bind="_model.StartDate" />
+                            </div>
+
+                            <!-- Due Date -->
+                            <div class="form-field-wrapper">
+                                <label class="field-label">Due Date</label>
+                                <input type="date" 
+                                       class="custom-input custom-date-input" 
+                                       @bind="_model.DueDate" />
+                            </div>
+                        </div>
+                        </form>
+                    </div>
+
+                    <!-- Tasks Section -->
+                    @if (_model.ProjectId > 0 && _selectedProjectTasks.Count > 0)
+                    {
+                        <div class="dialog-tasks-section">
+                            <h3 class="tasks-section-title">Existing Tasks</h3>
+                            <div class="tasks-list tasks-list-dialog">
+                                @foreach (var task in _selectedProjectTasks)
+                                {
+                                    <div class="task-item task-item-dialog">
+                                        <div class="task-main">
+                                            <div class="task-title-section">
+                                                <h4 class="task-title">@task.Title</h4>
+                                                @if (task.TotalSubtasks > 0)
+                                                {
+                                                    <span class="task-subtasks">@task.CompletedSubtasks/@task.TotalSubtasks</span>
+                                                }
+                                            </div>
+                                            <div class="task-meta-row">
+                                                <span class='task-status task-status-@task.Status.ToLower().Replace(" ", "-")'>@task.Status</span>
+                                                <span class="task-priority task-priority-@task.Priority.ToLower()">@task.Priority</span>
+                                                @if (task.DueDate.HasValue)
+                                                {
+                                                    <span class="task-date">
+                                                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                                                        @task.DueDate.Value.ToString("yyyy-MM-dd")
+                                                    </span>
+                                                }
+                                                @if (task.AssignedCount > 0)
+                                                {
+                                                    <span class="task-assignees">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                        @task.AssignedCount assigned
+                                                    </span>
+                                                }
+                                                @if (task.CommentCount > 0)
+                                                {
+                                                    <span class="task-comments">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Small" />
+                                                        @task.CommentCount
+                                                    </span>
+                                                }
+                                                @if (task.Tags != null && task.Tags.Length > 0)
+                                                {
+                                                    @foreach (var tag in task.Tags)
+                                                    {
+                                                        <span class="task-tag">@tag.Tag</span>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                        @if (task.TotalSubtasks > 0)
+                                        {
+                                            <div class="task-progress-bar">
+                                                <div class="task-progress-fill" style="width: @((task.CompletedSubtasks * 100 / task.TotalSubtasks))%"></div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Actions -->
+                <div class="dialog-actions">
+                    <button type="button" @onclick="Cancel" class="dialog-cancel-button">Cancel</button>
+                    <button type="button" @onclick="Submit" class="dialog-create-button" disabled="@_isSubmitting">
+                        @if (_isSubmitting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Create Task</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnTaskCreated { get; set; }
+
+    private bool _isSubmitting = false;
+    private CreateTaskModel _model = new();
+    private int _openDropdown = 0;
+    private List<ProjectDto> _projects = new();
+    private List<TaskDto> _selectedProjectTasks = new();
+
+    private class CreateTaskModel
+    {
+        public long ProjectId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Status { get; set; } = "To Do";
+        public string Priority { get; set; } = "medium";
+        public DateTime? StartDate { get; set; }
+        public DateTime? DueDate { get; set; }
+    }
+
+    private List<StatusOption> _statusOptions = new()
+    {
+        new("To Do", "To Do"),
+        new("In Progress", "In Progress"),
+        new("Done", "Done")
+    };
+
+    private List<PriorityOption> _priorityOptions = new()
+    {
+        new("low", "Low"),
+        new("medium", "Medium"),
+        new("high", "High")
+    };
+
+    private record StatusOption(string Value, string Label);
+    private record PriorityOption(string Value, string Label);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible)
+        {
+            await LoadProjects();
+        }
+    }
+
+    private async Task LoadProjects()
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            _projects = (await ProjectsService.GetProjectsAsync(accessToken)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading projects: {ex}");
+            Snackbar.Add("Failed to load projects", Severity.Warning);
+            _projects = new List<ProjectDto>();
+        }
+    }
+
+    private async Task LoadProjectTasks(long projectId)
+    {
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            var projectWithTasks = await ProjectsService.GetProjectWithTasksAsync(projectId, accessToken);
+            _selectedProjectTasks = projectWithTasks?.Tasks?.ToList() ?? new List<TaskDto>();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading tasks: {ex}");
+            _selectedProjectTasks = new List<TaskDto>();
+        }
+    }
+
+    private void ToggleDropdown(int dropdownId)
+    {
+        _openDropdown = _openDropdown == dropdownId ? 0 : dropdownId;
+    }
+
+    private async Task SelectProject(long projectId)
+    {
+        _model.ProjectId = projectId;
+        _openDropdown = 0;
+        await LoadProjectTasks(projectId);
+    }
+
+    private void SelectStatus(string status)
+    {
+        _model.Status = status;
+        _openDropdown = 0;
+    }
+
+    private void SelectPriority(string priority)
+    {
+        _model.Priority = priority;
+        _openDropdown = 0;
+    }
+
+    private string GetStatusLabel(string statusValue)
+    {
+        return _statusOptions.FirstOrDefault(s => s.Value == statusValue)?.Label ?? "To Do";
+    }
+
+    private string GetPriorityLabel(string priorityValue)
+    {
+        return _priorityOptions.FirstOrDefault(p => p.Value == priorityValue)?.Label ?? "Medium";
+    }
+
+    private string GetDialogContainerClass()
+    {
+        return _model.ProjectId > 0 && _selectedProjectTasks.Count > 0 
+            ? "custom-dialog-container has-tasks" 
+            : "custom-dialog-container";
+    }
+
+    private string GetDialogBodyClass()
+    {
+        return _model.ProjectId > 0 && _selectedProjectTasks.Count > 0 
+            ? "dialog-body dialog-body-with-tasks" 
+            : "dialog-body";
+    }
+
+    private async Task Cancel()
+    {
+        _openDropdown = 0;
+        _model = new CreateTaskModel();
+        _selectedProjectTasks = new List<TaskDto>();
+        await OnClose.InvokeAsync();
+    }
+
+    private void OnOverlayClick()
+    {
+        // Close dialog when clicking outside
+        if (!_isSubmitting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && !_isSubmitting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (_model.ProjectId <= 0)
+        {
+            Snackbar.Add("Please select a project", Severity.Error);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.Title))
+        {
+            Snackbar.Add("Task title is required", Severity.Error);
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            
+            var request = new CreateTaskRequest
+            {
+                ProjectId = _model.ProjectId,
+                Title = _model.Title,
+                Description = _model.Description,
+                Status = _model.Status,
+                Priority = _model.Priority,
+                StartDate = _model.StartDate,
+                DueDate = _model.DueDate
+            };
+
+            var task = await ProjectsService.CreateTaskAsync(request, accessToken);
+            
+            Snackbar.Add($"Task '{task.Title}' created successfully!", Severity.Success);
+            
+            // Reload tasks for the project
+            await LoadProjectTasks(_model.ProjectId);
+            
+            // Reset form (keep project selected)
+            var projectId = _model.ProjectId;
+            _model = new CreateTaskModel { ProjectId = projectId, Status = "To Do", Priority = "medium", Description = null, StartDate = null, DueDate = null };
+            
+            // Notify parent
+            await OnTaskCreated.InvokeAsync(true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create task: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error creating task: {ex}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}
+

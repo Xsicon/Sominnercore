@@ -1,0 +1,81 @@
+@using MudBlazor
+
+@if (IsVisible)
+{
+    <div class="confirm-dialog-overlay" @onclick="OnOverlayClick">
+        <div class="confirm-dialog-container" @onclick:stopPropagation="true">
+            <div class="confirm-dialog-content">
+                <!-- Icon and Title -->
+                <div class="confirm-dialog-header">
+                    <div class="confirm-icon-warning">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Large" />
+                    </div>
+                    <h2 class="confirm-dialog-title">Delete Project</h2>
+                    <p class="confirm-dialog-message">
+                        Are you sure you want to delete <strong>"@ProjectName"</strong>? 
+                        This action cannot be undone and all associated tasks will be permanently deleted.
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="confirm-dialog-actions">
+                    <button type="button" @onclick="Cancel" class="confirm-cancel-button" disabled="@IsDeleting">Cancel</button>
+                    <button type="button" @onclick="Confirm" class="confirm-delete-button" disabled="@IsDeleting">
+                        @if (IsDeleting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="delete-spinner" />
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            <span>Delete Project</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public string ProjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool IsDeleting { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    private async Task Cancel()
+    {
+        if (!IsDeleting)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private async Task Confirm()
+    {
+        if (!IsDeleting)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    private void OnOverlayClick()
+    {
+        if (!IsDeleting)
+        {
+            _ = Cancel();
+        }
+    }
+}
+

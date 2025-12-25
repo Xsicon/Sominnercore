@@ -1,0 +1,547 @@
+@page "/admin/users/create"
+@layout Sominnercore.Layout.AdminLayout
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager Navigation
+@inject SupabaseAuthService AuthService
+@inject IJSRuntime JSRuntime
+
+<AuthorizeRole RequiredRoles="@(new[] { "admin" })">
+    <div class="create-user-page">
+        <div class="create-user-back-link">
+            <MudButton Variant="Variant.Text" 
+                       StartIcon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="NavigateBack"
+                       Class="back-link-button">
+                Back to Users
+            </MudButton>
+        </div>
+
+        <form autocomplete="off" novalidate>
+            <MudForm @ref="_form" @bind-IsValid="@_isFormValid" @bind-Errors="@_errors">
+            <div class="create-user-form-container">
+            <!-- Personal Information Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="form-section-title-wrapper">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Class="form-section-icon" />
+                        <h3 class="form-section-title">Personal Information</h3>
+                    </div>
+                    <p class="form-section-description">Enter the user's basic information</p>
+                </div>
+                <div class="form-section-content">
+                    <!-- Hidden dummy fields to trick browser autocomplete -->
+                    <div style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;">
+                        <input type="email" name="fake-email" autocomplete="off" tabindex="-1" />
+                        <input type="password" name="fake-password" autocomplete="off" tabindex="-1" />
+                    </div>
+                    
+                    <div class="form-row form-row-split">
+                        <div class="form-field-wrapper">
+                            <MudTextField @bind-Value="_firstName"
+                                      Label="First Name *"
+                                      Required="true"
+                                      RequiredError="First name is required"
+                                      Variant="Variant.Outlined"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@Icons.Material.Filled.MoreVert"
+                                      AdornmentAriaLabel="More options"
+                                      InputAttributes="_firstNameInputAttributes" />
+                        </div>
+                        <div class="form-field-wrapper">
+                            <MudTextField @bind-Value="_lastName"
+                                      Label="Last Name *"
+                                      Required="true"
+                                      RequiredError="Last name is required"
+                                      Variant="Variant.Outlined"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.None"
+                                      InputAttributes="_lastNameInputAttributes" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <MudTextField @bind-Value="_email"
+                                      Label="Email Address *"
+                                      Required="true"
+                                      RequiredError="Email is required"
+                                      Variant="Variant.Outlined"
+                                      InputType="InputType.Email"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      InputAttributes="_emailInputAttributes" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Information Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="form-section-title-wrapper">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Class="form-section-icon" />
+                        <h3 class="form-section-title">Security Information</h3>
+                    </div>
+                    <p class="form-section-description">Set up login credentials for the user</p>
+                </div>
+                <div class="form-section-content">
+                    <!-- Hidden dummy password field to trick browser autocomplete -->
+                    <div style="position: absolute; left: -9999px; opacity: 0; pointer-events: none;">
+                        <input type="password" name="fake-password-2" autocomplete="new-password" tabindex="-1" />
+                    </div>
+                    
+                    <div class="form-row">
+                        <MudTextField @bind-Value="_password"
+                                      Label="Password *"
+                                      Required="true"
+                                      RequiredError="Password is required"
+                                      Variant="Variant.Outlined"
+                                      InputType="@_passwordInputType"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@_passwordAdornmentIcon"
+                                      OnAdornmentClick="TogglePasswordVisibility"
+                                      AdornmentAriaLabel="Show password"
+                                      MinLength="8"
+                                      MinLengthError="Password must be at least 8 characters long"
+                                      InputAttributes="_passwordInputAttributes" />
+                        <p class="password-hint">Password must be at least 8 characters long</p>
+                    </div>
+                    <div class="form-row">
+                        <MudTextField @bind-Value="_confirmPassword"
+                                      Label="Confirm Password *"
+                                      Required="true"
+                                      RequiredError="Please confirm your password"
+                                      Variant="Variant.Outlined"
+                                      InputType="@_confirmPasswordInputType"
+                                      Class="form-field"
+                                      ClassLabel="form-label"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@_confirmPasswordAdornmentIcon"
+                                      OnAdornmentClick="ToggleConfirmPasswordVisibility"
+                                      AdornmentAriaLabel="Show confirm password"
+                                      InputAttributes="_passwordInputAttributes" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role & Permissions Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="form-section-title-wrapper">
+                        <MudIcon Icon="@Icons.Material.Filled.Work" Class="form-section-icon" />
+                        <h3 class="form-section-title">Role & Permissions</h3>
+                    </div>
+                    <p class="form-section-description">Assign a role to determine user permissions</p>
+                </div>
+                <div class="form-section-content">
+                    <div class="form-row">
+                        <MudSelect T="string" 
+                                   @bind-Value="_selectedRole"
+                                   Label="Select Role *"
+                                   Required="true"
+                                   RequiredError="Please select a role"
+                                   Variant="Variant.Outlined"
+                                   Class="form-field"
+                                   ClassLabel="form-label"
+                                   Disabled="@_isLoadingRoles"
+                                   AnchorOrigin="Origin.BottomCenter"
+                                   TransformOrigin="Origin.TopCenter">
+                            @if (_isLoadingRoles)
+                            {
+                                <MudSelectItem Value="@("loading")" Disabled="true">Loading roles...</MudSelectItem>
+                            }
+                            else
+                            {
+                                @foreach (var role in _availableRoles)
+                                {
+                                    <MudSelectItem Value="@role.DatabaseName">@role.DisplayName</MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Settings Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <div class="form-section-title-wrapper">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Class="form-section-icon" />
+                        <h3 class="form-section-title">Additional Settings</h3>
+                    </div>
+                </div>
+                <div class="form-section-content">
+                    <div class="form-setting-row">
+                        <div class="form-setting-info">
+                            <div class="form-setting-label">Account Status</div>
+                            <div class="form-setting-description">Set the initial status of the user account</div>
+                        </div>
+                        <div class="form-setting-control">
+                            <div class="toggle-labels">
+                                <span class="toggle-label @(_isActive ? "" : "active")">Inactive</span>
+                                <MudSwitch T="bool" @bind-Checked="_isActive" Color="Color.Success" Class="status-toggle" />
+                                <span class="toggle-label @(_isActive ? "active" : "")">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Messages -->
+            @if (_errors != null && _errors.Length > 0)
+            {
+                <MudAlert Severity="Severity.Error" Class="form-error-alert">
+                    @foreach (var error in _errors)
+                    {
+                        <div>@error</div>
+                    }
+                </MudAlert>
+            }
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           OnClick="HandleCancel"
+                           Class="cancel-button">
+                    Cancel
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           OnClick="HandleCreateUser"
+                           StartIcon="@Icons.Material.Filled.PersonAdd"
+                           Disabled="@(!_isFormValid || _isSubmitting)"
+                           Class="create-button">
+                    Create User
+                </MudButton>
+            </div>
+            </div>
+        </MudForm>
+        </form>
+    </div>
+</AuthorizeRole>
+
+@code {
+    private MudForm? _form;
+    private bool _isFormValid;
+    private string[] _errors = Array.Empty<string>();
+    private bool _isSubmitting;
+
+    // Form fields
+    private string _firstName = string.Empty;
+    private string _lastName = string.Empty;
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _confirmPassword = string.Empty;
+    private string? _selectedRole;
+    private bool _isActive = true;
+
+    // Password visibility
+    private bool _showPassword = false;
+    private bool _showConfirmPassword = false;
+
+    // Computed properties for InputType
+    private InputType _passwordInputType => _showPassword ? InputType.Text : InputType.Password;
+    private InputType _confirmPasswordInputType => _showConfirmPassword ? InputType.Text : InputType.Password;
+
+    // Computed properties for adornment icons
+    private string _passwordAdornmentIcon => _showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    private string _confirmPasswordAdornmentIcon => _showConfirmPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    // Input attributes to disable autocomplete - using multiple strategies
+    private Dictionary<string, object> _firstNameInputAttributes => new Dictionary<string, object> 
+    { 
+        { "autocomplete", "off" },
+        { "name", "create-user-firstname" },
+        { "data-form-type", "other" }
+    };
+    
+    private Dictionary<string, object> _lastNameInputAttributes => new Dictionary<string, object> 
+    { 
+        { "autocomplete", "off" },
+        { "name", "create-user-lastname" },
+        { "data-form-type", "other" }
+    };
+    
+    private Dictionary<string, object> _emailInputAttributes => new Dictionary<string, object> 
+    { 
+        { "autocomplete", "nope" },
+        { "name", "create-user-email-x7k9m2" },
+        { "data-form-type", "other" },
+        { "data-lpignore", "true" }
+    };
+    
+    private Dictionary<string, object> _passwordInputAttributes => new Dictionary<string, object> 
+    { 
+        { "autocomplete", "new-password" },
+        { "name", "create-user-password-q4w8p1" },
+        { "data-form-type", "other" },
+        { "data-lpignore", "true" }
+    };
+
+    // Available roles
+    private List<RoleOption> _availableRoles = new();
+    private bool _isLoadingRoles = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure fields start empty
+        _email = string.Empty;
+        _password = string.Empty;
+        _confirmPassword = string.Empty;
+        _firstName = string.Empty;
+        _lastName = string.Empty;
+        
+        await LoadRolesAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Clear any autofilled values using JavaScript - aggressive approach
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                (function() {
+                    function clearAutofill() {
+                        // Find all email inputs (MudBlazor creates input elements)
+                        var emailInputs = document.querySelectorAll('input[type=""email""]:not([style*=""-9999""]):not([name*=""fake""])');
+                        emailInputs.forEach(function(input) {
+                            if (input && input.value) {
+                                // Force set to empty
+                                input.value = '';
+                                input.setAttribute('value', '');
+                                // Trigger change event
+                                var event = new Event('input', { bubbles: true });
+                                input.dispatchEvent(event);
+                                // Also set autocomplete
+                                input.setAttribute('autocomplete', 'nope');
+                                input.setAttribute('data-lpignore', 'true');
+                            }
+                        });
+                        
+                        // Find all password inputs (excluding hidden dummy fields)
+                        var passwordInputs = document.querySelectorAll('input[type=""password""]:not([style*=""-9999""]):not([name*=""fake""])');
+                        passwordInputs.forEach(function(input) {
+                            if (input && input.value) {
+                                // Force set to empty
+                                input.value = '';
+                                input.setAttribute('value', '');
+                                // Trigger change event
+                                var event = new Event('input', { bubbles: true });
+                                input.dispatchEvent(event);
+                                // Also set autocomplete
+                                input.setAttribute('autocomplete', 'new-password');
+                                input.setAttribute('data-lpignore', 'true');
+                            }
+                        });
+                    }
+                    
+                    // Clear multiple times as browser autofill can happen at different times
+                    clearAutofill();
+                    setTimeout(clearAutofill, 50);
+                    setTimeout(clearAutofill, 150);
+                    setTimeout(clearAutofill, 300);
+                    setTimeout(clearAutofill, 500);
+                    setTimeout(clearAutofill, 1000);
+                    
+                    // Also clear on any focus events (autofill might trigger on focus)
+                    document.addEventListener('focusin', function(e) {
+                        if (e.target && (e.target.type === 'email' || e.target.type === 'password')) {
+                            setTimeout(clearAutofill, 10);
+                        }
+                    }, true);
+                })();
+            ");
+        }
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            Console.WriteLine("[CreateUser] LoadRolesAsync started");
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            Console.WriteLine($"[CreateUser] Access token retrieved: {(string.IsNullOrEmpty(accessToken) ? "EMPTY" : "EXISTS")}");
+            
+            var roles = await AuthService.GetRolesAsync(accessToken);
+            Console.WriteLine($"[CreateUser] Roles fetched: {roles?.Length ?? 0} roles");
+            
+            if (roles == null || roles.Length == 0)
+            {
+                Console.WriteLine("[CreateUser] No roles returned from API, using fallback roles");
+                // Fallback to default roles if API returns empty
+                _availableRoles = new List<RoleOption>
+                {
+                    new RoleOption { DisplayName = "Admin", DatabaseName = "admin", Description = "Administrator" },
+                    new RoleOption { DisplayName = "Marketing Manager", DatabaseName = "marketing_manager", Description = "Marketing Manager" },
+                    new RoleOption { DisplayName = "CRS (Customer Relations Specialist)", DatabaseName = "customer_relations_specialist", Description = "Customer Relations Specialist" },
+                    new RoleOption { DisplayName = "Support Specialist", DatabaseName = "support_specialist", Description = "Support Specialist" },
+                    new RoleOption { DisplayName = "Developer", DatabaseName = "developer", Description = "Developer" }
+                };
+            }
+            else
+            {
+                _availableRoles = roles.Select(r => new RoleOption
+                {
+                    DisplayName = FormatRoleName(r.Name),
+                    DatabaseName = r.Name,
+                    Description = r.Description
+                }).ToList();
+            }
+            
+            Console.WriteLine($"[CreateUser] Available roles populated: {_availableRoles.Count} roles");
+            
+            // Force UI update
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CreateUser] Error loading roles: {ex.Message}");
+            Console.WriteLine($"[CreateUser] Stack trace: {ex.StackTrace}");
+            
+            // Use fallback roles on error
+            _availableRoles = new List<RoleOption>
+            {
+                new RoleOption { DisplayName = "Admin", DatabaseName = "admin", Description = "Administrator" },
+                new RoleOption { DisplayName = "Marketing Manager", DatabaseName = "marketing_manager", Description = "Marketing Manager" },
+                new RoleOption { DisplayName = "CRS (Customer Relations Specialist)", DatabaseName = "customer_relations_specialist", Description = "Customer Relations Specialist" },
+                new RoleOption { DisplayName = "Support Specialist", DatabaseName = "support_specialist", Description = "Support Specialist" },
+                new RoleOption { DisplayName = "Developer", DatabaseName = "developer", Description = "Developer" }
+            };
+            
+            _errors = new[] { $"Error loading roles from database (using defaults): {ex.Message}" };
+        }
+        finally
+        {
+            _isLoadingRoles = false;
+            Console.WriteLine($"[CreateUser] LoadRolesAsync completed. _isLoadingRoles = {_isLoadingRoles}, Roles count = {_availableRoles.Count}");
+            // Force UI update
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string FormatRoleName(string roleName)
+    {
+        return roleName switch
+        {
+            "admin" => "Admin",
+            "marketing_manager" => "Marketing Manager",
+            "customer_relations_specialist" => "CRS (Customer Relations Specialist)",
+            "support_specialist" => "Support Specialist",
+            "developer" => "Developer",
+            _ => string.Join(' ', roleName.Split(['_', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => char.ToUpperInvariant(part[0]) + part[1..]))
+        };
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        _showPassword = !_showPassword;
+        StateHasChanged();
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        _showConfirmPassword = !_showConfirmPassword;
+        StateHasChanged();
+    }
+
+    private void HandleCancel()
+    {
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    private async Task HandleCreateUser()
+    {
+        if (_isSubmitting)
+            return;
+
+        // Validate form
+        _form?.Validate();
+        if (!_isFormValid)
+            return;
+
+        // Validate password match
+        if (_password != _confirmPassword)
+        {
+            _errors = new[] { "Passwords do not match" };
+            return;
+        }
+
+        // Validate password length
+        if (_password.Length < 8)
+        {
+            _errors = new[] { "Password must be at least 8 characters long" };
+            return;
+        }
+
+        _isSubmitting = true;
+        _errors = Array.Empty<string>();
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _errors = new[] { "You must be logged in to create users." };
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_selectedRole))
+            {
+                _errors = new[] { "Please select a role." };
+                return;
+            }
+
+            var result = await AuthService.CreateUserAsync(
+                email: _email,
+                password: _password,
+                firstName: _firstName,
+                lastName: _lastName,
+                roleName: _selectedRole,
+                isActive: _isActive,
+                accessToken: accessToken
+            );
+
+            if (result?.UserId != null)
+            {
+                Navigation.NavigateTo("/admin/users");
+            }
+            else
+            {
+                _errors = new[] { "Failed to create user. Please try again." };
+            }
+        }
+        catch (SupabaseAuthException ex)
+        {
+            _errors = new[] { $"Error creating user: {ex.Message}" };
+        }
+        catch (Exception ex)
+        {
+            _errors = new[] { $"Error creating user: {ex.Message}" };
+            Console.WriteLine($"Error creating user: {ex.Message}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class RoleOption
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string DatabaseName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+
+}
+
