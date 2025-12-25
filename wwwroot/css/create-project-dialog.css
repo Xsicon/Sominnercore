@@ -38,6 +38,18 @@
     animation: slideUp 0.3s ease;
 }
 
+/* Larger dialog for EditTaskDialog with tabs */
+.custom-dialog-container.has-tabs {
+    max-width: 900px;
+    max-height: none;
+    height: auto;
+}
+
+/* Wider dialog for task dialog with tasks list */
+.custom-dialog-container.has-tasks {
+    max-width: 900px;
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;
@@ -52,8 +64,12 @@
 .custom-dialog-content {
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 32px);
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
+}
+
+.custom-dialog-container.has-tabs .custom-dialog-content {
+    overflow: visible;
 }
 
 .dialog-header {
@@ -90,12 +106,82 @@
     color: #f1f5f9;
 }
 
+/* Dialog Delete Button (styled like project card delete button) */
+.dialog-delete-btn {
+    width: 32px;
+    height: 32px;
+    background-color: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    border-radius: 8px;
+    color: #ef4444 !important;
+    padding: 0;
+}
+
+.dialog-delete-btn:hover {
+    background-color: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.5) !important;
+    color: #ef4444 !important;
+    transform: scale(1.05);
+}
+
+.dialog-delete-btn:active {
+    transform: scale(0.95);
+}
+
 .dialog-body {
-    padding: 24px;
+    padding: 5px 24px;
     overflow-y: auto;
     overflow-x: hidden;
     flex: 1;
     min-height: 0;
+}
+
+/* Dialog body with tasks - two column layout */
+.dialog-body-with-tasks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 24px;
+}
+
+.dialog-form-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-tasks-section {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid rgba(148, 163, 184, 0.1);
+    padding-left: 24px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.tasks-section-title {
+    color: #f1f5f9;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.01em;
+}
+
+.tasks-list-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.task-item-dialog {
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.task-item-dialog:hover {
+    background: rgba(17, 24, 39, 0.5);
+    border-color: rgba(148, 163, 184, 0.2);
 }
 
 .dialog-actions {
@@ -300,14 +386,25 @@ input[type="number"].custom-input::-webkit-outer-spin-button {
     gap: 16px 12px;
 }
 
-/* Make visibility field span full width */
+/* Remove extra margin from grid items */
+.project-form-grid .form-field-wrapper {
+    margin-bottom: 0;
+}
+
+/* Make last child span full width (for project dialog visibility field) */
 .project-form-grid .form-field-wrapper:last-child {
     grid-column: 1 / -1;
 }
 
-/* Remove extra margin from grid items */
-.project-form-grid .form-field-wrapper {
-    margin-bottom: 0;
+/* For task dialogs (both CreateTaskDialog and EditTaskDialog), override to keep 2-column layout (Status and Priority side by side) */
+/* CreateTaskDialog structure: .dialog-body > .dialog-form-section > form.project-form > .project-form-grid */
+.dialog-form-section .project-form-grid .form-field-wrapper:last-child {
+    grid-column: auto !important;
+}
+
+/* EditTaskDialog structure: .dialog-body > form.project-form > .project-form-grid */
+.dialog-body > form.project-form > .project-form-grid .form-field-wrapper:last-child {
+    grid-column: auto !important;
 }
 
 /* Color Dots */
@@ -421,6 +518,7 @@ input[type="number"].custom-input::-webkit-outer-spin-button {
     .custom-dialog-container {
         max-height: calc(100vh - 16px);
         border-radius: 12px;
+        max-width: 100% !important;
     }
     
     .custom-dialog-content {
@@ -435,6 +533,19 @@ input[type="number"].custom-input::-webkit-outer-spin-button {
     
     .dialog-body {
         padding: 16px;
+    }
+    
+    .dialog-body-with-tasks {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 16px;
+    }
+    
+    .dialog-tasks-section {
+        border-left: none;
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+        padding-left: 0;
+        padding-top: 20px;
     }
     
     .project-form {

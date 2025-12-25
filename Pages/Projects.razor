@@ -201,7 +201,7 @@
                             <div class="tasks-list">
                                 @foreach (var task in selectedProject.Tasks)
                                 {
-                                    <div class="task-item">
+                                    <div class="task-item" @onclick="() => HandleTaskClick(task.Id)">
                                         <div class="task-main">
                                             <div class="task-title-section">
                                                 <h4 class="task-title">@task.Title</h4>
@@ -288,7 +288,7 @@
                                     <div class="kanban-column-content">
                                         @foreach (var task in GetTasksByStatus(selectedProject.Tasks, "In Progress"))
                                         {
-                                            <div class="kanban-task-card">
+                                            <div class="kanban-task-card" @onclick="() => HandleTaskClick(task.Id)">
                                                 <div class="kanban-task-header">
                                                     <h4 class="kanban-task-title">@task.Title</h4>
                                                     <span class="kanban-task-priority kanban-task-priority-@task.Priority.ToLower()">@task.Priority</span>
@@ -325,7 +325,7 @@
                                     <div class="kanban-column-content">
                                         @foreach (var task in GetTasksByStatus(selectedProject.Tasks, "Done"))
                                         {
-                                            <div class="kanban-task-card">
+                                            <div class="kanban-task-card" @onclick="() => HandleTaskClick(task.Id)">
                                                 <div class="kanban-task-header">
                                                     <h4 class="kanban-task-title">@task.Title</h4>
                                                     <span class="kanban-task-priority kanban-task-priority-@task.Priority.ToLower()">@task.Priority</span>
@@ -380,6 +380,20 @@
         OnClose="CloseCreateDialog"
         OnProjectCreated="HandleProjectCreated" />
 
+    <!-- Create Task Dialog -->
+    <CreateTaskDialog 
+        IsVisible="_showCreateTaskDialog" 
+        OnClose="CloseCreateTaskDialog"
+        OnTaskCreated="HandleTaskCreated" />
+
+    <!-- Edit Task Dialog -->
+    <EditTaskDialog 
+        IsVisible="_showEditTaskDialog" 
+        TaskId="_selectedTaskId"
+        OnClose="CloseEditTaskDialog"
+        OnTaskUpdated="HandleTaskUpdated"
+        OnTaskDeleted="HandleTaskDeleted" />
+
     <!-- Delete Confirmation Dialog -->
     <DeleteConfirmDialog 
         IsVisible="_showDeleteDialog"
@@ -396,6 +410,9 @@
     private bool _isLoading = true;
     private string? _errorMessage;
     private bool _showCreateDialog = false;
+    private bool _showCreateTaskDialog = false;
+    private bool _showEditTaskDialog = false;
+    private long? _selectedTaskId = null;
     private bool _showDeleteDialog = false;
     private bool _isDeleting = false;
     private long _projectIdToDelete = 0;
@@ -433,6 +450,7 @@
                 IconColor = p.IconColor ?? "blue",
                 Tasks = p.Tasks?.Select(t => new TaskItem
                 {
+                    Id = t.Id,
                     Title = t.Title,
                     Status = t.Status,
                     Priority = t.Priority,
@@ -559,8 +577,47 @@
 
     private void HandleNewTask()
     {
-        // TODO: Navigate to create task page or open modal
-        Console.WriteLine("New Task clicked");
+        _showCreateTaskDialog = true;
+    }
+
+    private void CloseCreateTaskDialog()
+    {
+        _showCreateTaskDialog = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleTaskCreated(bool success)
+    {
+        if (success)
+        {
+            await LoadProjectsAsync();
+        }
+    }
+
+    private void HandleTaskClick(long taskId)
+    {
+        _selectedTaskId = taskId;
+        _showEditTaskDialog = true;
+    }
+
+    private void CloseEditTaskDialog()
+    {
+        _showEditTaskDialog = false;
+        _selectedTaskId = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleTaskUpdated(bool success)
+    {
+        if (success)
+        {
+            await LoadProjectsAsync();
+        }
+    }
+
+    private async Task HandleTaskDeleted()
+    {
+        await LoadProjectsAsync();
     }
 
     private void SetViewMode(string mode)
@@ -603,6 +660,7 @@
 
     private class TaskItem
     {
+        public long Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public string Priority { get; set; } = string.Empty;

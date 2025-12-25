@@ -1,0 +1,373 @@
+/* Edit Task Dialog with Tabs - Additional Styles */
+
+.dialog-header-tabs {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    padding-bottom: 16px;
+    position: relative;
+}
+
+.dialog-header-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    position: relative;
+}
+
+.dialog-header-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.dialog-header-actions {
+    position: absolute;
+    top: 0;
+    right: -215%;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.dialog-title-large {
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.dialog-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.task-status-badge,
+.task-priority-badge {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.task-status-badge.task-status-done {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.task-status-badge.task-status-in-progress {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+
+.task-status-badge.task-status-to-do {
+    background: rgba(148, 163, 184, 0.15);
+    color: rgba(226, 232, 240, 0.7);
+}
+
+.task-priority-badge.task-priority-high {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.task-priority-badge.task-priority-medium {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+}
+
+.task-priority-badge.task-priority-low {
+    background: rgba(148, 163, 184, 0.15);
+    color: rgba(226, 232, 240, 0.7);
+}
+
+.dialog-body-tabs {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-panel-custom {
+    padding: 0;
+    overflow: visible;
+    flex: 1;
+    max-height: none;
+}
+
+.tab-content {
+    padding: 0px 0;
+    overflow: visible;
+}
+
+.tab-section {
+    margin-bottom: 24px;
+}
+
+.field-label-large {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.description-text {
+    color: #e2e8f0;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.tab-separator {
+    height: 1px;
+    background: rgba(148, 163, 184, 0.1);
+    margin: 24px 0;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.details-grid .form-field-wrapper {
+    margin-bottom: 0;
+}
+
+/* Override the last-child rule for details grid */
+.details-grid .form-field-wrapper:last-child {
+    grid-column: auto !important;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.activity-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+.activity-dot-green {
+    background-color: #10b981;
+}
+
+.activity-dot-blue {
+    background-color: #3b82f6;
+}
+
+.activity-text {
+    font-size: 14px;
+    color: #f1f5f9;
+    margin: 0 0 4px 0;
+}
+
+.activity-time {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Comments */
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2dd4bf 0%, #f97316 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.comment-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.comment-author {
+    font-weight: 600;
+    font-size: 14px;
+    color: #f1f5f9;
+}
+
+.comment-time {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.comment-text {
+    font-size: 14px;
+    color: #e2e8f0;
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.comment-input-section {
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    padding-top: 20px;
+}
+
+.comment-input-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.comment-input-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-textarea {
+    width: 100%;
+    background-color: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.comment-textarea:focus {
+    border-color: #2dd4bf;
+}
+
+.comment-textarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.comment-textarea::placeholder {
+    color: #64748b;
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.comment-submit-btn {
+    background: linear-gradient(135deg, #14b8a6 0%, #f97316 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comment-submit-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.comment-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* MudTabs customization for dark theme */
+.mud-tabs-toolbar {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
+    min-height: 36px !important;
+    height: 36px !important;
+}
+
+/* Center the tabbar content */
+.dialog-body-tabs .mud-tabs-tabbar-content {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+/* Center the tabbar wrapper inside the content */
+.dialog-body-tabs .mud-tabs-tabbar-wrapper {
+    margin: 0 auto !important;
+}
+
+.dialog-body-tabs .mud-tabs-toolbar .mud-tabs-scroll-button,
+.dialog-body-tabs .mud-tabs-toolbar .mud-tabs-scroll-button-right {
+    display: none !important;
+}
+
+.mud-tab {
+    color: rgba(226, 232, 240, 0.7) !important;
+    text-transform: none !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    padding: 6px 12px !important;
+    min-height: 36px !important;
+    height: 36px !important;
+}
+
+.mud-tab.mud-tab-active {
+    color: #2dd4bf !important;
+}
+
+.mud-tabs-slider {
+    background-color: #2dd4bf !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .details-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .dialog-title-large {
+        font-size: 20px;
+    }
+}
+

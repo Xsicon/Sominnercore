@@ -1,0 +1,621 @@
+@inject SupabaseProjectsService ProjectsService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@inject SupabaseAuthService AuthService
+@using Sominnercore.Services
+@using Sominnercore.Models
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Web
+
+@if (IsVisible)
+{
+    <div class="custom-dialog-overlay" @onclick="OnOverlayClick" @onkeydown="HandleKeyDown" tabindex="-1">
+        <div class="custom-dialog-container has-tabs" @onclick:stopPropagation="true">
+            <div class="custom-dialog-content">
+                <!-- Header with Title, Badges, and Actions -->
+                <div class="dialog-header dialog-header-tabs">
+                    <div class="dialog-header-content">
+                        <div class="dialog-header-left">
+                            @if (_task != null)
+                            {
+                                <h2 class="dialog-title dialog-title-large">@_task.Title</h2>
+                                <div class="dialog-badges">
+                                    <span class='task-status-badge task-status-@_task.Status.ToLower().Replace(" ", "-")'>@_task.Status</span>
+                                    <span class="task-priority-badge task-priority-@_task.Priority.ToLower()">@_task.Priority</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <h2 class="dialog-title">Edit Task</h2>
+                            }
+                        </div>
+                        <div class="dialog-header-actions">
+                            <button class="dialog-close-btn dialog-delete-btn" @onclick="HandleDelete" type="button" disabled="@(_isDeleting || _isSubmitting)" title="Delete Task">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                            </button>
+                            <button class="dialog-close-btn" @onclick="Cancel" type="button" disabled="@(_isDeleting || _isSubmitting)">
+                                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs Content -->
+                <div class="dialog-body dialog-body-tabs">
+                    @if (_isLoading)
+                    {
+                        <div style="display: flex; justify-content: center; align-items: center; padding: 40px;">
+                            <MudProgressCircular Size="Size.Medium" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (_task != null)
+                    {
+                        <MudTabs Rounded="true" PanelClass="tab-panel-custom" Color="Color.Primary">
+                            <!-- Overview Tab -->
+                            <MudTabPanel Text="Overview">
+                                <form class="project-form" @onsubmit="Submit" @onsubmit:preventDefault>
+                                    <div class="tab-content">
+                                        <!-- Task Title -->
+                                        <div class="tab-section">
+                                            <label class="field-label field-label-large">Task Title <span class="required-asterisk">*</span></label>
+                                            <input type="text" 
+                                                   class="custom-input" 
+                                                   placeholder="Enter task title"
+                                                   @bind="_model.Title" 
+                                                   disabled="@(_isDeleting || _isSubmitting)" />
+                                        </div>
+
+                                        <!-- Description -->
+                                        <div class="tab-section">
+                                            <label class="field-label field-label-large">Description</label>
+                                            <textarea class="custom-input custom-textarea" 
+                                                      rows="4"
+                                                      placeholder="Enter task description"
+                                                      @bind="_model.Description"
+                                                      disabled="@(_isDeleting || _isSubmitting)"></textarea>
+                                        </div>
+
+                                        <div class="tab-separator"></div>
+
+                                        <!-- Details Grid -->
+                                        <div class="details-grid">
+                                            <!-- Status -->
+                                            <div class="form-field-wrapper">
+                                                <label class="field-label">Status</label>
+                                                <div class="custom-select" @onclick="() => ToggleDropdown(1)">
+                                                    <div class="select-value">
+                                                        <span>@GetStatusLabel(_model.Status)</span>
+                                                    </div>
+                                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                                    @if (_openDropdown == 1)
+                                                    {
+                                                        <div class="custom-dropdown">
+                                                            @foreach (var status in _statusOptions)
+                                                            {
+                                                                <div class="dropdown-item" @onclick="() => SelectStatus(status.Value)" @onclick:stopPropagation>
+                                                                    <span>@status.Label</span>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <!-- Priority -->
+                                            <div class="form-field-wrapper">
+                                                <label class="field-label">Priority</label>
+                                                <div class="custom-select" @onclick="() => ToggleDropdown(2)">
+                                                    <div class="select-value">
+                                                        <span>@GetPriorityLabel(_model.Priority)</span>
+                                                    </div>
+                                                    <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Small" Class="select-arrow" />
+                                                    @if (_openDropdown == 2)
+                                                    {
+                                                        <div class="custom-dropdown">
+                                                            @foreach (var priority in _priorityOptions)
+                                                            {
+                                                                <div class="dropdown-item" @onclick="() => SelectPriority(priority.Value)" @onclick:stopPropagation>
+                                                                    <span>@priority.Label</span>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <!-- Start Date -->
+                                            <div class="form-field-wrapper">
+                                                <label class="field-label">Start Date</label>
+                                                <input type="date" 
+                                                       class="custom-input custom-date-input" 
+                                                       @bind="_model.StartDate" 
+                                                       disabled="@(_isDeleting || _isSubmitting)" />
+                                            </div>
+
+                                            <!-- Due Date -->
+                                            <div class="form-field-wrapper">
+                                                <label class="field-label">Due Date</label>
+                                                <input type="date" 
+                                                       class="custom-input custom-date-input" 
+                                                       @bind="_model.DueDate" 
+                                                       disabled="@(_isDeleting || _isSubmitting)" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </MudTabPanel>
+
+                            <!-- Comments Tab -->
+                            <MudTabPanel Text="@($"Comments ({_comments.Count})")">
+                                <div class="tab-content">
+                                    <div class="tab-section">
+                                        <div class="comments-list">
+                                            @if (_comments.Count == 0)
+                                            {
+                                                <div class="empty-state">
+                                                    <p>No comments yet</p>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var comment in _comments)
+                                                {
+                                                    <div class="comment-item">
+                                                        <div class="comment-avatar">
+                                                            @GetUserInitial(comment.UserName)
+                                                        </div>
+                                                        <div class="comment-content">
+                                                            <div class="comment-header">
+                                                                <span class="comment-author">@comment.UserName</span>
+                                                                <span class="comment-time">@comment.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
+                                                            </div>
+                                                            <p class="comment-text">@comment.Content</p>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+
+                                        <div class="comment-input-section">
+                                            <div class="comment-input-wrapper">
+                                                <div class="comment-avatar">
+                                                    @GetUserInitial(_currentUserName)
+                                                </div>
+                                                <div class="comment-input-container">
+                                                    <textarea class="comment-textarea"
+                                                              placeholder="Add a comment..."
+                                                              rows="3"
+                                                              @bind="_newCommentContent"
+                                                              disabled="@_isAddingComment"
+                                                              @onkeydown="@(async (e) => {
+                                                                  if (e.Key == "Enter" && (e.MetaKey || e.CtrlKey))
+                                                                  {
+                                                                      await HandleAddComment();
+                                                                  }
+                                                              })"></textarea>
+                                                    <div class="comment-actions">
+                                                        <button type="button" 
+                                                                class="comment-submit-btn"
+                                                                @onclick="HandleAddComment"
+                                                                >
+                                                            @if (_isAddingComment)
+                                                            {
+                                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <span>Comment</span>
+                                                            }
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </MudTabPanel>
+
+                            <!-- Activity Tab -->
+                            <MudTabPanel Text="Activity">
+                                <div class="tab-content">
+                                    <div class="tab-section">
+                                        <div class="activity-list">
+                                            <div class="activity-item">
+                                                <div class="activity-dot activity-dot-green"></div>
+                                                <div>
+                                                    <p class="activity-text">Task created</p>
+                                                    <p class="activity-time">@_task.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                                                </div>
+                                            </div>
+                                            <div class="activity-item">
+                                                <div class="activity-dot activity-dot-blue"></div>
+                                                <div>
+                                                    <p class="activity-text">Last updated</p>
+                                                    <p class="activity-time">@_task.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </MudTabPanel>
+                        </MudTabs>
+                    }
+                </div>
+
+                <!-- Actions -->
+                <div class="dialog-actions">
+                    <button type="button" @onclick="Cancel" class="dialog-cancel-button" disabled="@(_isDeleting || _isSubmitting)">Cancel</button>
+                    <button type="button" @onclick="Submit" class="dialog-create-button" disabled="@(_isDeleting || _isSubmitting)">
+                        @if (_isSubmitting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public long? TaskId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnTaskUpdated { get; set; }
+
+    [Parameter]
+    public EventCallback OnTaskDeleted { get; set; }
+
+    private bool _isSubmitting = false;
+    private bool _isDeleting = false;
+    private bool _isLoading = false;
+    private TaskDto? _task;
+    private EditTaskModel _model = new();
+    private int _openDropdown = 0;
+    private List<TaskCommentDto> _comments = new();
+    private string _newCommentContent = string.Empty;
+    private bool _isAddingComment = false;
+    private string? _currentUserName;
+    private Guid? _currentUserId;
+
+    private class EditTaskModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Status { get; set; } = "To Do";
+        public string Priority { get; set; } = "medium";
+        public DateTime? StartDate { get; set; }
+        public DateTime? DueDate { get; set; }
+    }
+
+    private List<StatusOption> _statusOptions = new()
+    {
+        new("To Do", "To Do"),
+        new("In Progress", "In Progress"),
+        new("Done", "Done")
+    };
+
+    private List<PriorityOption> _priorityOptions = new()
+    {
+        new("low", "Low"),
+        new("medium", "Medium"),
+        new("high", "High")
+    };
+
+    private record StatusOption(string Value, string Label);
+    private record PriorityOption(string Value, string Label);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && TaskId.HasValue && TaskId.Value > 0)
+        {
+            await LoadTask();
+        }
+    }
+
+    private async Task LoadTask()
+    {
+        if (!TaskId.HasValue || TaskId.Value <= 0)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            var foundTask = await ProjectsService.GetTaskByIdAsync(TaskId.Value, accessToken);
+
+            if (foundTask != null)
+            {
+                _task = foundTask;
+                _model = new EditTaskModel
+                {
+                    Title = foundTask.Title,
+                    Description = foundTask.Description,
+                    Status = foundTask.Status,
+                    Priority = foundTask.Priority,
+                    StartDate = foundTask.StartDate,
+                    DueDate = foundTask.DueDate
+                };
+
+                // Load comments
+                await LoadComments(accessToken);
+
+                // Load current user info
+                await LoadCurrentUser(accessToken);
+            }
+            else
+            {
+                Snackbar.Add("Task not found", Severity.Error);
+                await Cancel();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading task: {ex}");
+            Snackbar.Add("Failed to load task", Severity.Error);
+            await Cancel();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadComments(string? accessToken)
+    {
+        try
+        {
+            if (TaskId.HasValue)
+            {
+                var comments = await ProjectsService.GetTaskCommentsAsync(TaskId.Value, accessToken);
+                _comments = comments.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading comments: {ex}");
+            _comments = new List<TaskCommentDto>();
+        }
+    }
+
+    private async Task LoadCurrentUser(string? accessToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                return;
+            }
+
+            var user = await AuthService.GetUserAsync(accessToken);
+            if (user != null && !string.IsNullOrWhiteSpace(user.Id))
+            {
+                // Get team member record - we need the team_member id, not auth user id
+                var teamMember = await AuthService.GetTeamMemberByAuthUserIdAsync(user.Id, accessToken);
+                if (teamMember != null)
+                {
+                    _currentUserId = teamMember.Id; // Use team_member id
+                    if (!string.IsNullOrWhiteSpace(teamMember.DisplayName))
+                    {
+                        _currentUserName = teamMember.DisplayName;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(teamMember.Email))
+                    {
+                        var atIndex = teamMember.Email.IndexOf('@');
+                        _currentUserName = atIndex > 0 ? teamMember.Email[..atIndex] : teamMember.Email;
+                    }
+                }
+                else if (user.UserMetadata != null)
+                {
+                    // Fall back: if no team member, we can't create comments
+                    // This shouldn't happen in a properly configured system
+                    Console.WriteLine("Warning: No team member record found for current user");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading current user: {ex}");
+        }
+    }
+
+    private async Task HandleAddComment()
+    {
+        if (string.IsNullOrWhiteSpace(_newCommentContent.Trim()) || !TaskId.HasValue || !_currentUserId.HasValue)
+        {
+            return;
+        }
+
+        _isAddingComment = true;
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            await ProjectsService.CreateTaskCommentAsync(
+                TaskId.Value, 
+                _newCommentContent.Trim(), 
+                _currentUserId.Value, 
+                accessToken);
+
+            _newCommentContent = string.Empty;
+            
+            // Reload comments to get the full list with user names
+            await LoadComments(accessToken);
+            
+            // Reload task to update comment count
+            if (_task != null)
+            {
+                var updatedTask = await ProjectsService.GetTaskByIdAsync(TaskId.Value, accessToken);
+                if (updatedTask != null)
+                {
+                    _task = updatedTask;
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error adding comment: {ex}");
+            Snackbar.Add("Failed to add comment", Severity.Error);
+        }
+        finally
+        {
+            _isAddingComment = false;
+        }
+    }
+
+    private string GetUserInitial(string? userName)
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+            return "?";
+        return userName.Substring(0, 1).ToUpper();
+    }
+
+    private void ToggleDropdown(int dropdownId)
+    {
+        if (_isDeleting || _isSubmitting) return;
+        _openDropdown = _openDropdown == dropdownId ? 0 : dropdownId;
+    }
+
+    private void SelectStatus(string status)
+    {
+        _model.Status = status;
+        _openDropdown = 0;
+    }
+
+    private void SelectPriority(string priority)
+    {
+        _model.Priority = priority;
+        _openDropdown = 0;
+    }
+
+    private string GetStatusLabel(string statusValue)
+    {
+        return _statusOptions.FirstOrDefault(s => s.Value == statusValue)?.Label ?? "To Do";
+    }
+
+    private string GetPriorityLabel(string priorityValue)
+    {
+        return _priorityOptions.FirstOrDefault(p => p.Value == priorityValue)?.Label ?? "Medium";
+    }
+
+    private async Task Cancel()
+    {
+        _openDropdown = 0;
+        _task = null;
+        _model = new EditTaskModel();
+        _comments = new List<TaskCommentDto>();
+        _newCommentContent = string.Empty;
+        _currentUserName = null;
+        _currentUserId = null;
+        await OnClose.InvokeAsync();
+    }
+
+    private void OnOverlayClick()
+    {
+        if (!_isSubmitting && !_isDeleting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && !_isSubmitting && !_isDeleting)
+        {
+            _ = Cancel();
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (!TaskId.HasValue || TaskId.Value <= 0)
+        {
+            Snackbar.Add("Invalid task", Severity.Error);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.Title))
+        {
+            Snackbar.Add("Task title is required", Severity.Error);
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            
+            var request = new UpdateTaskRequest
+            {
+                Title = _model.Title,
+                Description = _model.Description,
+                Status = _model.Status,
+                Priority = _model.Priority,
+                StartDate = _model.StartDate,
+                DueDate = _model.DueDate
+            };
+
+            var updatedTask = await ProjectsService.UpdateTaskAsync(TaskId.Value, request, accessToken);
+            
+            Snackbar.Add($"Task '{updatedTask.Title}' updated successfully!", Severity.Success);
+            
+            await OnTaskUpdated.InvokeAsync(true);
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update task: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error updating task: {ex}");
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        if (!TaskId.HasValue || TaskId.Value <= 0)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+
+        try
+        {
+            var accessToken = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "sb-access-token");
+            await ProjectsService.DeleteTaskAsync(TaskId.Value, accessToken);
+            
+            Snackbar.Add("Task deleted successfully!", Severity.Success);
+            
+            await OnTaskDeleted.InvokeAsync();
+            await OnClose.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete task: {ex.Message}", Severity.Error);
+            Console.WriteLine($"Error deleting task: {ex}");
+        }
+        finally
+        {
+            _isDeleting = false;
+        }
+    }
+}
+
