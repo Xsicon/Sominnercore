@@ -337,8 +337,33 @@
                     await AddAndSendUserMessageAsync(cached, pendingMessage);
                 }
             }
-            catch (Exception)
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Supabase configuration"))
             {
+                Console.Error.WriteLine($"Chat configuration error: {ex.Message}");
+                AddSystemMessage("Chat service is not properly configured. Please contact support.");
+            }
+            catch (SupabaseChatException ex)
+            {
+                Console.Error.WriteLine($"Chat session creation failed: {ex.StatusCode} - {ex.Message}");
+                var errorMsg = ex.StatusCode switch
+                {
+                    HttpStatusCode.Unauthorized => "Authentication error. Please refresh the page and try again.",
+                    HttpStatusCode.Forbidden => "Permission denied. Please contact support.",
+                    HttpStatusCode.NotFound => "Chat service not available. Please contact support.",
+                    HttpStatusCode.BadRequest => "Invalid request. Please try again.",
+                    _ => "We ran into a problem starting the chat. Please try again in a moment."
+                };
+                AddSystemMessage(errorMsg);
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.Error.WriteLine($"Network error starting chat: {ex.Message}");
+                AddSystemMessage("Network error. Please check your connection and try again.");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Unexpected error starting chat: {ex.GetType().Name} - {ex.Message}");
+                Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
                 AddSystemMessage("We ran into a problem starting the chat. Please try again in a moment.");
             }
 
@@ -443,13 +468,32 @@
             var result = await _sessionCreationTask;
             _sessionId = result.SessionId;
             _isReturningCustomer = result.IsReturningCustomer;
-            await PersistSessionStateAsync();
+            
+            try
+            {
+                await PersistSessionStateAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to persist session state: {ex.Message}");
+                // Continue even if persistence fails
+            }
+            
             _hasInitializedMessages = false;
             
             // Skip loading previous messages for returning customers reusing a session
             if (!result.IsReusingSession)
             {
-                await RefreshMessagesAsync();
+                try
+                {
+                    await RefreshMessagesAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Failed to refresh messages: {ex.GetType().Name} - {ex.Message}");
+                    // Continue even if message refresh fails
+                    _hasInitializedMessages = true;
+                }
             }
             else
             {
@@ -463,14 +507,24 @@
                         _loadedMessageIds.Add(msg.Id);
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.Error.WriteLine($"Failed to fetch existing messages: {ex.GetType().Name} - {ex.Message}");
                     // Ignore errors when fetching existing messages
                 }
                 _hasInitializedMessages = true;
             }
             
-            StartMessagePolling();
+            try
+            {
+                StartMessagePolling();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to start message polling: {ex.GetType().Name} - {ex.Message}");
+                // Continue even if polling fails to start
+            }
+            
             return result;
         }
         finally
