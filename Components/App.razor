@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["MyBlazorApp.styles.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet />
+    <script>
+        // Apply theme immediately to prevent flash of wrong theme
+        (function() {
+            var KEY = 'sominnercore-ui-theme';
+            var saved = localStorage.getItem(KEY) || 'dark';
+            var isDark = saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) document.documentElement.classList.add('dark');
+        })();
+    </script>
+</head>
+
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+    <script>
+        (function() {
+            var KEY = 'sominnercore-ui-theme';
+            var currentMode = localStorage.getItem(KEY) || 'dark';
+
+            function resolve(mode) {
+                if (mode === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                return mode;
+            }
+
+            function apply(mode) {
+                currentMode = mode;
+                var resolved = resolve(mode);
+                localStorage.setItem(KEY, mode);
+                document.documentElement.classList.toggle('dark', resolved === 'dark');
+                updateIcon(resolved);
+                updateActive();
+            }
+
+            function updateIcon(resolved) {
+                var moon = document.getElementById('icon-moon');
+                var sun = document.getElementById('icon-sun');
+                if (!moon || !sun) return;
+                moon.style.display = resolved === 'light' ? 'none' : '';
+                sun.style.display = resolved === 'light' ? '' : 'none';
+            }
+
+            function updateActive() {
+                document.querySelectorAll('#theme-dropdown .theme-option').forEach(function(o) {
+                    o.classList.toggle('active', o.getAttribute('data-theme') === currentMode);
+                });
+            }
+
+            function toggleDD() {
+                var d = document.getElementById('theme-dropdown');
+                if (d) d.style.display = d.style.display === 'none' ? '' : 'none';
+            }
+
+            function closeDD() {
+                var d = document.getElementById('theme-dropdown');
+                if (d) d.style.display = 'none';
+            }
+
+            function init() {
+                updateIcon(resolve(currentMode));
+                updateActive();
+
+                var btn = document.getElementById('theme-toggle-btn');
+                if (btn && !btn._t) {
+                    btn._t = true;
+                    btn.addEventListener('click', function(e) { e.stopPropagation(); toggleDD(); });
+                }
+
+                document.querySelectorAll('#theme-dropdown .theme-option').forEach(function(o) {
+                    if (o._t) return;
+                    o._t = true;
+                    o.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        apply(o.getAttribute('data-theme'));
+                        closeDD();
+                    });
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                var w = document.getElementById('theme-dropdown-wrapper');
+                if (w && !w.contains(e.target)) closeDD();
+            });
+
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                if (currentMode === 'system') apply('system');
+            });
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+            new MutationObserver(function() {
+                var btn = document.getElementById('theme-toggle-btn');
+                if (btn && !btn._t) init();
+            }).observe(document.body, { childList: true, subtree: true });
+        })();
+    </script>
+    <script>
+        // Scroll-spy: highlight active nav link based on scroll position
+        (function() {
+            var sections = ['home','products','services','about','portfolio','contact'];
+            var offset = 80; // header height + buffer
+
+            function update() {
+                var scrollY = window.scrollY;
+                var active = sections[0];
+                for (var i = 0; i < sections.length; i++) {
+                    var el = document.getElementById(sections[i]);
+                    if (el && el.offsetTop - offset <= scrollY) {
+                        active = sections[i];
+                    }
+                }
+                var links = document.querySelectorAll('#main-nav a');
+                links.forEach(function(a) {
+                    var href = a.getAttribute('href');
+                    a.classList.toggle('active', href === '#' + active);
+                });
+            }
+
+            window.addEventListener('scroll', update, { passive: true });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', update);
+            } else {
+                update();
+            }
+        })();
+    </script>
+</body>
+
+</html>

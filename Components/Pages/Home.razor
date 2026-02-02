@@ -1,0 +1,534 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Sominnercore - Enterprise Software</PageTitle>
+
+<!-- ===== HERO SECTION ===== -->
+<section id="home" class="hero-section">
+    <div class="hero-bg-effects">
+        <div class="hero-blob blob-1"></div>
+        <div class="hero-blob blob-2"></div>
+        <div class="hero-blob blob-3"></div>
+    </div>
+
+    <div class="section-container hero-grid">
+        <div class="hero-content">
+            <div class="pill-badge">
+                <span class="pulse-dot green"></span>
+                <span>290K+ Downloads Worldwide</span>
+            </div>
+
+            <h1 class="hero-title">
+                <span>Enterprise Software</span>
+                <span>That Powers</span>
+                <span class="text-primary">Modern Business</span>
+            </h1>
+
+            <p class="hero-desc">
+                Discover our suite of powerful, industry-leading software solutions designed to solve real business challenges and drive digital transformation.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="#products" class="btn-primary-lg">
+                    Explore Products
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+                <a href="#contact" class="btn-outline-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Watch Demo
+                </a>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">Active Products</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">290K+</span>
+                    <span class="stat-label">Total Downloads</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">4.7&#9733;</span>
+                    <span class="stat-label">Average Rating</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-image-area">
+            <div class="hero-img-wrapper">
+                <img src="https://images.unsplash.com/photo-1623715537851-8bc15aa8c145?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB0ZWNobm9sb2d5JTIwb2ZmaWNlJTIwd29ya3NwYWNlfGVufDF8fHx8MTc1NzkxNDMxMXww&ixlib=rb-4.1.0&q=80&w=1080" alt="Modern technology workspace" />
+            </div>
+            <div class="floating-card floating-top">
+                <span class="pulse-dot green"></span>
+                <span>New Release: v3.2.1</span>
+            </div>
+            <div class="floating-card floating-bottom">
+                <span class="pulse-dot blue"></span>
+                <span>5K+ Downloads Today</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PRODUCTS SECTION ===== -->
+<section id="products" class="section-dark">
+    <div class="section-container">
+        <div class="section-header">
+            <div class="pill-badge">
+                <span class="pulse-dot blue"></span>
+                <span>Our Software Products</span>
+            </div>
+            <h2>Enterprise Software<br /><span class="text-primary">Built for Scale</span></h2>
+            <p>Discover our suite of powerful software solutions designed to solve real business challenges across various industries.</p>
+        </div>
+
+        <div class="filter-bar">
+            @foreach (var cat in productCategories)
+            {
+                <button class="@(selectedProductCategory == cat ? "filter-btn active" : "filter-btn")" @onclick="() => selectedProductCategory = cat">@cat</button>
+            }
+        </div>
+
+        <div class="products-grid">
+            @foreach (var product in FilteredProducts)
+            {
+                <div class="product-card" @onclick="() => selectedProduct = product">
+                    <div class="product-card-header @product.ColorClass">
+                        <div class="product-icon">
+                            @((MarkupString)product.IconSvg)
+                        </div>
+                        <div class="product-badges">
+                            <span class="version-badge">@product.Version</span>
+                            @if (product.Status == "new")
+                            {
+                                <span class="status-badge new">New</span>
+                            }
+                            @if (product.Status == "beta")
+                            {
+                                <span class="status-badge beta">Beta</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="product-card-header-text">
+                        <h3>@product.Name</h3>
+                        <p class="tagline">@product.Tagline</p>
+                    </div>
+                    <div class="product-card-body">
+                        <p class="product-desc">@product.Description</p>
+                        <div class="product-meta">
+                            <div class="meta-row"><span class="meta-label">Released:</span><span>@product.ReleaseDate</span></div>
+                            @if (!string.IsNullOrEmpty(product.Downloads))
+                            {
+                                <div class="meta-row"><span class="meta-label">Downloads:</span><span class="fw-600">@product.Downloads</span></div>
+                            }
+                            @if (product.Rating > 0)
+                            {
+                                <div class="meta-row"><span class="meta-label">Rating:</span><span class="fw-600">&#11088; @product.Rating/5.0</span></div>
+                            }
+                        </div>
+                        <div class="tag-list">
+                            @foreach (var ind in product.Industries.Take(3))
+                            {
+                                <span class="outline-tag">@ind</span>
+                            }
+                            @if (product.Industries.Length > 3)
+                            {
+                                <span class="outline-tag">+@(product.Industries.Length - 3)</span>
+                            }
+                        </div>
+                        <button class="btn-primary-full" @onclick="() => selectedProduct = product" @onclick:stopPropagation="true">
+                            View Details
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (selectedProduct != null)
+        {
+            <div class="modal-overlay" @onclick="() => selectedProduct = null">
+                <div class="modal-content" @onclick:stopPropagation="true">
+                    <div class="modal-header @selectedProduct.ColorClass">
+                        <div class="modal-header-info">
+                            <div class="product-icon lg">@((MarkupString)selectedProduct.IconSvg)</div>
+                            <div>
+                                <h3>@selectedProduct.Name</h3>
+                                <p>@selectedProduct.Tagline</p>
+                            </div>
+                        </div>
+                        <button class="modal-close" @onclick="() => selectedProduct = null">&#10005;</button>
+                    </div>
+                    <div class="modal-body">
+                        <h4>About</h4>
+                        <p>@selectedProduct.Description</p>
+                        <h4>Problems We Solve</h4>
+                        <div class="two-col-grid">
+                            @foreach (var p in selectedProduct.Problems)
+                            {
+                                <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>@p</span></div>
+                            }
+                        </div>
+                        <h4>Key Features</h4>
+                        <div class="two-col-grid">
+                            @foreach (var f in selectedProduct.Features)
+                            {
+                                <div class="feature-item"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>@f</span></div>
+                            }
+                        </div>
+                        <h4>Technology Stack</h4>
+                        <div class="tag-list">
+                            @foreach (var t in selectedProduct.TechStack)
+                            {
+                                <span class="filled-tag">@t</span>
+                            }
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn-primary-lg">Download Now</button>
+                            <button class="btn-outline-lg">Documentation</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="stats-cards-row">
+            <div class="stat-card"><div class="stat-card-number">6</div><div class="stat-card-label">Active Products</div></div>
+            <div class="stat-card"><div class="stat-card-number">290K+</div><div class="stat-card-label">Total Downloads</div></div>
+            <div class="stat-card"><div class="stat-card-number">4.7</div><div class="stat-card-label">Average Rating</div></div>
+            <div class="stat-card"><div class="stat-card-number">15+</div><div class="stat-card-label">Industries Served</div></div>
+        </div>
+
+        <div class="cta-card gradient-bg">
+            <h3>Looking for a Custom Solution?</h3>
+            <p>We also offer custom software development tailored to your specific business needs. Contact us to discuss your requirements.</p>
+            <a href="#contact" class="btn-primary-lg">Contact Sales <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== SERVICES SECTION ===== -->
+<section id="services" class="section-muted">
+    <div class="section-container">
+        <div class="section-header">
+            <div class="pill-badge"><span>Our Services</span></div>
+            <h2>Complete Technology<br /><span class="text-primary">Solutions</span></h2>
+            <p>We offer a comprehensive suite of technology services to help your business thrive in the digital landscape.</p>
+        </div>
+
+        <div class="filter-bar">
+            @foreach (var cat in serviceCategories)
+            {
+                <button class="@(selectedServiceCategory == cat ? "filter-btn active" : "filter-btn")" @onclick="() => { selectedServiceCategory = cat; currentServiceSlide = 0; }">@cat</button>
+            }
+        </div>
+
+        <div class="carousel-wrapper">
+            <div class="carousel-track" style="transform: translateX(-@(currentServiceSlide * 100)%)">
+                @foreach (var service in FilteredServices)
+                {
+                    <div class="carousel-slide">
+                        <div class="service-slide-card">
+                            <div class="service-visual @service.ColorClass">
+                                <div class="service-icon-large">@((MarkupString)service.IconSvg)</div>
+                                <span class="service-category-pill">@service.Category</span>
+                            </div>
+                            <div class="service-info">
+                                <h3>@service.Title</h3>
+                                <p>@service.Description</p>
+                                <div class="service-features">
+                                    @foreach (var f in service.Features)
+                                    {
+                                        <div class="service-feature-item"><span class="feature-dot"></span><span>@f</span></div>
+                                    }
+                                </div>
+                                <div class="service-actions">
+                                    <a href="#contact" class="btn-primary-lg">Learn More</a>
+                                    <a href="#contact" class="btn-outline-lg">Get Started</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            @if (FilteredServices.Count > 1)
+            {
+                <button class="carousel-arrow left" @onclick="PrevServiceSlide"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <button class="carousel-arrow right" @onclick="NextServiceSlide"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+                <div class="carousel-dots">
+                    @for (int i = 0; i < FilteredServices.Count; i++)
+                    {
+                        var idx = i;
+                        <button class="@(currentServiceSlide == idx ? "dot active" : "dot")" @onclick="() => currentServiceSlide = idx"></button>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="cta-card gradient-solid">
+            <h3>Ready to Transform Your Business?</h3>
+            <p>Let's discuss how our technology solutions can help you achieve your goals and drive growth.</p>
+            <a href="#contact" class="btn-white">Schedule a Consultation</a>
+        </div>
+    </div>
+</section>
+
+<!-- ===== ABOUT SECTION ===== -->
+<section id="about" class="section-dark">
+    <div class="section-container">
+        <div class="section-header">
+            <div class="pill-badge"><span>About Us</span></div>
+            <h2>Building the Future of<br /><span class="text-primary">Enterprise Software</span></h2>
+        </div>
+
+        <div class="about-grid">
+            <div class="about-content">
+                <p class="about-lead">At Sominnercore, we're a team of passionate software engineers and product designers dedicated to building powerful, scalable enterprise software that solves real business challenges.</p>
+                <p>Founded with a vision to democratize enterprise-grade technology, we've developed a suite of software products trusted by thousands of organizations worldwide.</p>
+                <h3>Why Choose Our Software?</h3>
+                <div class="checklist">
+                    <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Enterprise-grade reliability &amp; security</span></div>
+                    <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Intuitive user interface &amp; experience</span></div>
+                    <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Seamless integration capabilities</span></div>
+                    <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Regular updates &amp; new features</span></div>
+                    <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>Dedicated customer support</span></div>
+                </div>
+            </div>
+            <div class="about-image">
+                <img src="https://images.unsplash.com/photo-1531535807748-218331acbcb4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080" alt="Team collaboration" />
+            </div>
+        </div>
+
+        <div class="achievements-row">
+            <div class="achievement"><div class="achievement-number">290K+</div><h3>Downloads</h3><p>Active users worldwide</p></div>
+            <div class="achievement"><div class="achievement-number">6</div><h3>Software Products</h3><p>Enterprise-grade solutions</p></div>
+            <div class="achievement"><div class="achievement-number">5+</div><h3>Years Experience</h3><p>In software development</p></div>
+            <div class="achievement"><div class="achievement-number">99.9%</div><h3>Uptime</h3><p>Reliable &amp; stable performance</p></div>
+        </div>
+
+        <h3 class="values-title">Our Core Values</h3>
+        <div class="values-grid">
+            <div class="value-card"><h4>Innovation First</h4><p>We continuously push boundaries with cutting-edge technology to build software that transforms industries.</p></div>
+            <div class="value-card"><h4>User-Centric Design</h4><p>Every feature is designed with the end user in mind, ensuring intuitive interfaces and seamless experiences.</p></div>
+            <div class="value-card"><h4>Quality &amp; Reliability</h4><p>Our software undergoes rigorous testing to deliver enterprise-grade reliability and performance you can trust.</p></div>
+            <div class="value-card"><h4>Continuous Improvement</h4><p>We actively listen to user feedback and continuously update our products with new features and improvements.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== PORTFOLIO SECTION ===== -->
+<section id="portfolio" class="section-muted">
+    <div class="section-container">
+        <div class="section-header">
+            <div class="pill-badge"><span>Latest Updates</span></div>
+            <h2>Product Releases &amp;<br /><span class="text-primary">Success Stories</span></h2>
+            <p>Stay updated with our latest software releases, feature updates, and real-world success stories.</p>
+        </div>
+
+        <div class="portfolio-grid">
+            @foreach (var project in portfolioProjects)
+            {
+                <div class="portfolio-card">
+                    <div class="portfolio-image">
+                        <img src="@project.Image" alt="@project.Title" loading="lazy" />
+                        <div class="portfolio-date-badge">@project.ReleaseDate</div>
+                    </div>
+                    <div class="portfolio-body">
+                        <span class="portfolio-category-tag">@project.Category</span>
+                        <h3>@project.Title</h3>
+                        <p>@project.Description</p>
+                        <div class="tag-list sm">
+                            @foreach (var tech in project.Technologies.Take(3))
+                            {
+                                <span class="outline-tag">@tech</span>
+                            }
+                        </div>
+                        <div class="portfolio-actions">
+                            <button class="btn-primary-sm">Read More</button>
+                            <button class="btn-outline-sm">Details</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="cta-card bordered">
+            <h3>Want to See More?</h3>
+            <p>Explore our comprehensive documentation, watch demos, and read more success stories.</p>
+            <button class="btn-primary-lg">View All Updates</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CONTACT SECTION ===== -->
+<section id="contact" class="section-dark">
+    <div class="section-container">
+        <div class="section-header">
+            <div class="pill-badge"><span>Get In Touch</span></div>
+            <h2>Let's Start Building<br /><span class="text-primary">Something Amazing</span></h2>
+            <p>Ready to transform your ideas into reality? Contact us today to discuss your project.</p>
+        </div>
+
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h3>Get in Touch</h3>
+                <p>We'd love to hear from you. Whether you have a question about our services, need a custom solution, or just want to say hello, we're here to help.</p>
+                <div class="contact-cards">
+                    <div class="contact-card"><div class="contact-icon blue-cyan"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><h4>Email Us</h4><p class="sm">Send us an email and we'll respond within 24 hours</p><p class="contact-value">hello@sominnercore.com</p></div>
+                    <div class="contact-card"><div class="contact-icon green-teal"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><h4>Call Us</h4><p class="sm">Speak directly with our team</p><p class="contact-value">+1 (555) 123-4567</p></div>
+                    <div class="contact-card"><div class="contact-icon purple-pink"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><h4>Visit Us</h4><p class="sm">Come visit our office</p><p class="contact-value">123 Tech Street, Digital City</p></div>
+                    <div class="contact-card"><div class="contact-icon orange-red"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h4>Business Hours</h4><p class="sm">We're available during these times</p><p class="contact-value">Mon-Fri: 9AM-6PM EST</p></div>
+                </div>
+            </div>
+
+            <div class="contact-form-wrapper">
+                <h3>Send us a Message</h3>
+                <EditForm Model="contactForm" OnValidSubmit="HandleContactSubmit" FormName="contactForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Full Name *</label><InputText @bind-Value="contactForm.Name" placeholder="John Doe" class="form-input" /></div>
+                        <div class="form-group"><label>Email Address *</label><InputText @bind-Value="contactForm.Email" placeholder="john@company.com" class="form-input" /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Company</label><InputText @bind-Value="contactForm.Company" placeholder="Your Company" class="form-input" /></div>
+                        <div class="form-group"><label>Phone Number</label><InputText @bind-Value="contactForm.Phone" placeholder="+1 (555) 123-4567" class="form-input" /></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Service Interested In</label>
+                        <InputSelect @bind-Value="contactForm.Service" class="form-input">
+                            <option value="">Select a service</option>
+                            <option value="web-development">Web Development</option>
+                            <option value="mobile-app">Mobile App Development</option>
+                            <option value="cloud-solutions">Cloud Solutions</option>
+                            <option value="custom-software">Custom Software Development</option>
+                            <option value="uiux-design">UI/UX Design</option>
+                            <option value="data-analytics">Data Analytics</option>
+                            <option value="cybersecurity">Cybersecurity</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label>Project Details *</label>
+                        <InputTextArea @bind-Value="contactForm.Message" placeholder="Tell us about your project..." rows="5" class="form-input" />
+                    </div>
+                    <button type="submit" class="btn-primary-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        Send Message
+                    </button>
+                </EditForm>
+                <p class="form-disclaimer">We respect your privacy and will never share your information with third parties.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="site-footer">
+    <div class="section-container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <h2 class="text-primary">Sominnercore</h2>
+                <p>Transforming businesses through innovative technology solutions. We're your trusted partner in digital transformation and growth.</p>
+                <div class="footer-contact-list">
+                    <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>hello@sominnercore.com</span></div>
+                    <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>+1 (555) 123-4567</span></div>
+                    <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>123 Tech Street, Digital City</span></div>
+                </div>
+            </div>
+            <div class="footer-links"><h4>Services</h4><ul><li><a href="#services">Web Development</a></li><li><a href="#services">Mobile App Development</a></li><li><a href="#services">Cloud Solutions</a></li><li><a href="#services">Digital Marketing</a></li><li><a href="#services">E-commerce Solutions</a></li><li><a href="#services">Custom Software</a></li></ul></div>
+            <div class="footer-links"><h4>Company</h4><ul><li><a href="#about">About Us</a></li><li><a href="#about">Our Team</a></li><li><a href="#">Careers</a></li><li><a href="#portfolio">Portfolio</a></li><li><a href="#portfolio">Case Studies</a></li><li><a href="#">Blog</a></li></ul></div>
+            <div class="footer-links"><h4>Support</h4><ul><li><a href="#">Help Center</a></li><li><a href="#">Documentation</a></li><li><a href="#contact">Contact Support</a></li><li><a href="#">System Status</a></li><li><a href="#">Privacy Policy</a></li><li><a href="#">Terms of Service</a></li></ul></div>
+        </div>
+
+        <div class="footer-newsletter">
+            <h3>Stay Updated</h3>
+            <p>Subscribe to our newsletter for the latest insights, tips, and updates on technology trends.</p>
+            <div class="newsletter-form"><input type="email" placeholder="Enter your email" class="form-input" /><button class="btn-primary-lg">Subscribe</button></div>
+        </div>
+
+        <div class="footer-bottom">
+            <span>&copy; 2024 Sominnercore. All rights reserved.</span>
+            <div class="footer-bottom-links"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Cookie Policy</a><a href="#">Sitemap</a></div>
+        </div>
+    </div>
+</footer>
+
+<!-- Chat Widget -->
+<div class="chat-widget">
+    @if (!chatOpen)
+    {
+        <button class="chat-fab" @onclick="() => chatOpen = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+    }
+    else
+    {
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-header-info"><div class="chat-avatar">S</div><div><strong>Sominnercore Support</strong><br /><small>We reply instantly</small></div></div>
+                <button class="chat-close" @onclick="() => chatOpen = false"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+            <div class="chat-messages"><div class="chat-msg agent"><p>Hello! Welcome to Sominnercore. How can we help you today?</p><small>Sarah from Support</small></div></div>
+            <div class="chat-input-area"><input type="text" placeholder="Type your message..." class="form-input" /><button class="chat-send-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+        </div>
+    }
+</div>
+
+@code {
+    private string selectedProductCategory = "All";
+    private string selectedServiceCategory = "All";
+    private int currentServiceSlide = 0;
+    private ProductInfo? selectedProduct = null;
+    private bool chatOpen = false;
+    private ContactFormModel contactForm = new();
+
+    private List<ProductInfo> FilteredProducts => selectedProductCategory == "All"
+        ? products : products.Where(p => p.Category == selectedProductCategory).ToList();
+
+    private List<ServiceInfo> FilteredServices => selectedServiceCategory == "All"
+        ? services : services.Where(s => s.Category == selectedServiceCategory).ToList();
+
+    private void NextServiceSlide() => currentServiceSlide = (currentServiceSlide + 1) % FilteredServices.Count;
+    private void PrevServiceSlide() => currentServiceSlide = (currentServiceSlide - 1 + FilteredServices.Count) % FilteredServices.Count;
+
+    private async Task HandleContactSubmit() { contactForm = new ContactFormModel(); }
+
+    private static readonly string[] productCategories = { "All", "Data & Analytics", "Communication", "Project Management", "Document Management", "Collaboration", "Cloud Storage" };
+    private static readonly string[] serviceCategories = { "All", "Development", "Infrastructure", "Design", "Marketing", "Analytics", "Security" };
+
+    private static readonly List<ProductInfo> products = new()
+    {
+        new() { Name = "DataCore Pro", Tagline = "Enterprise Data Management Platform", Description = "A comprehensive data management and analytics platform that helps organizations centralize, analyze, and visualize their data in real-time with advanced AI-powered insights.", Version = "v3.2.1", ReleaseDate = "January 15, 2026", Category = "Data & Analytics", ColorClass = "grad-blue-cyan", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><ellipse cx='12' cy='5' rx='9' ry='3'/><path d='M21 12c0 1.66-4 3-9 3s-9-1.34-9-3'/><path d='M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5'/></svg>", Industries = new[] { "Finance", "Healthcare", "E-commerce", "Manufacturing" }, Problems = new[] { "Data silos across multiple systems", "Lack of real-time analytics", "Complex data integration", "Difficulty in data-driven decisions" }, Features = new[] { "Real-time data sync", "AI-powered analytics", "Custom dashboards", "Advanced visualization", "Automated reporting", "Multi-source integration" }, TechStack = new[] { "React", "Node.js", "PostgreSQL", "Redis", "TensorFlow" }, Status = "stable", Downloads = "50K+", Rating = 4.8 },
+        new() { Name = "ChatFlow Enterprise", Tagline = "Intelligent Customer Communication Suite", Description = "An all-in-one communication platform that streamlines customer interactions across multiple channels with AI-powered automation and smart routing.", Version = "v2.8.0", ReleaseDate = "January 28, 2026", Category = "Communication", ColorClass = "grad-purple-pink", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg>", Industries = new[] { "Retail", "SaaS", "Telecommunications", "Hospitality" }, Problems = new[] { "Fragmented communications", "Slow response times", "Lack of context", "Inefficient collaboration" }, Features = new[] { "Omnichannel messaging", "AI chatbot", "Smart routing", "Team tools", "Analytics", "CRM integration" }, TechStack = new[] { "React", "WebSocket", "MongoDB", "Redis", "OpenAI API" }, Status = "stable", Downloads = "35K+", Rating = 4.7 },
+        new() { Name = "ProjectPulse", Tagline = "Modern Project Management System", Description = "A next-generation project management platform designed for agile teams, featuring intelligent task automation and real-time collaboration.", Version = "v4.1.0", ReleaseDate = "February 1, 2026", Category = "Project Management", ColorClass = "grad-emerald-teal", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg>", Industries = new[] { "Software Development", "Marketing", "Construction", "Consulting" }, Problems = new[] { "Lack of visibility", "Manual tracking", "Poor coordination", "Missed deadlines" }, Features = new[] { "Kanban & Gantt views", "Auto-progress", "Resource allocation", "Budget tracking", "Time tracking", "Custom workflows" }, TechStack = new[] { "React", "TypeScript", "Node.js", "PostgreSQL", "WebSocket" }, Status = "new", Downloads = "28K+", Rating = 4.9 },
+        new() { Name = "DocuFlow", Tagline = "Intelligent Document Management System", Description = "Transform your document management with AI-powered organization, smart search, version control, and seamless collaboration.", Version = "v2.5.2", ReleaseDate = "December 20, 2025", Category = "Document Management", ColorClass = "grad-orange-red", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='16' y1='13' x2='8' y2='13'/><line x1='16' y1='17' x2='8' y2='17'/></svg>", Industries = new[] { "Legal", "Healthcare", "Education", "Government" }, Problems = new[] { "Disorganized storage", "Difficult retrieval", "Version control issues", "Compliance concerns" }, Features = new[] { "AI document tagging", "Advanced search", "Version control", "Digital signatures", "Access control", "Audit trail" }, TechStack = new[] { "React", "Python", "ElasticSearch", "AWS S3", "OCR" }, Status = "stable", Downloads = "42K+", Rating = 4.6 },
+        new() { Name = "TeamHub", Tagline = "Unified Team Collaboration Platform", Description = "Bring your team together with chat, video calls, file sharing, and integrated productivity tools in one unified workspace.", Version = "v3.0.0-beta", ReleaseDate = "January 10, 2026", Category = "Collaboration", ColorClass = "grad-indigo-purple", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>", Industries = new[] { "Technology", "Remote Teams", "Startups", "Creative Agencies" }, Problems = new[] { "Tool sprawl", "Poor remote coordination", "Lack of central comms", "Inefficient knowledge sharing" }, Features = new[] { "Real-time chat & video", "Screen sharing", "File collaboration", "Task management", "Calendar & scheduling", "App integrations" }, TechStack = new[] { "React", "WebRTC", "Socket.io", "MongoDB", "Redis" }, Status = "beta", Downloads = "15K+", Rating = 4.5 },
+        new() { Name = "CloudVault", Tagline = "Secure Cloud Storage & Backup Solution", Description = "Enterprise-grade cloud storage with military-level encryption, automated backups, disaster recovery, and seamless file sync.", Version = "v5.1.3", ReleaseDate = "November 30, 2025", Category = "Cloud Storage", ColorClass = "grad-sky-blue", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z'/></svg>", Industries = new[] { "All Industries", "SMBs", "Enterprises", "Personal Use" }, Problems = new[] { "Data loss risks", "Manual backups", "Limited storage", "Poor accessibility" }, Features = new[] { "End-to-end encryption", "Automated backups", "Disaster recovery", "Cross-device sync", "File versioning", "Compliance ready" }, TechStack = new[] { "React", "Go", "AWS", "Kubernetes", "AES-256" }, Status = "stable", Downloads = "120K+", Rating = 4.8 }
+    };
+
+    private static readonly List<ServiceInfo> services = new()
+    {
+        new() { Title = "Web Development", Description = "Custom websites and web applications built with modern technologies for optimal performance.", Features = new[] { "Responsive Design", "SEO Optimized", "Fast Loading", "Secure" }, Category = "Development", ColorClass = "grad-blue-cyan", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><circle cx='12' cy='12' r='10'/><line x1='2' y1='12' x2='22' y2='12'/><path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/></svg>" },
+        new() { Title = "Mobile App Development", Description = "Native and cross-platform mobile applications for iOS and Android.", Features = new[] { "Native iOS/Android", "Cross-Platform", "App Store Ready", "Push Notifications" }, Category = "Development", ColorClass = "grad-purple-pink", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><rect x='5' y='2' width='14' height='20' rx='2' ry='2'/><line x1='12' y1='18' x2='12.01' y2='18'/></svg>" },
+        new() { Title = "Cloud Solutions", Description = "Scalable cloud infrastructure and migration services.", Features = new[] { "AWS/Azure/GCP", "Auto Scaling", "Data Backup", "Cost Optimization" }, Category = "Infrastructure", ColorClass = "grad-emerald-teal", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z'/></svg>" },
+        new() { Title = "Digital Marketing", Description = "Comprehensive digital marketing strategies to boost your online presence.", Features = new[] { "SEO/SEM", "Social Media", "Content Marketing", "Analytics" }, Category = "Marketing", ColorClass = "grad-orange-red", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg>" },
+        new() { Title = "UI/UX Design", Description = "User-centered design solutions that create engaging digital experiences.", Features = new[] { "User Research", "Wireframing", "Prototyping", "Design Systems" }, Category = "Design", ColorClass = "grad-purple-pink", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M12 19l7-7 3 3-7 7-3-3z'/><path d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/><path d='M2 2l7.586 7.586'/><circle cx='11' cy='11' r='2'/></svg>" },
+        new() { Title = "Data Analytics", Description = "Advanced analytics and business intelligence solutions.", Features = new[] { "Data Visualization", "Predictive Analytics", "Real-time Dashboards", "Reporting" }, Category = "Analytics", ColorClass = "grad-orange-red", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg>" },
+        new() { Title = "Cybersecurity", Description = "Comprehensive security solutions to protect your digital assets.", Features = new[] { "Security Audit", "Threat Detection", "Data Encryption", "Compliance" }, Category = "Security", ColorClass = "grad-orange-red", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>" },
+        new() { Title = "DevOps & Infrastructure", Description = "Streamlined development operations and robust infrastructure.", Features = new[] { "CI/CD Pipeline", "Containers", "Monitoring", "Security" }, Category = "Infrastructure", ColorClass = "grad-gray", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><rect x='2' y='2' width='20' height='8' rx='2' ry='2'/><rect x='2' y='14' width='20' height='8' rx='2' ry='2'/><line x1='6' y1='6' x2='6.01' y2='6'/><line x1='6' y1='18' x2='6.01' y2='18'/></svg>" }
+    };
+
+    private static readonly List<PortfolioProject> portfolioProjects = new()
+    {
+        new() { Title = "DataCore Pro v3.2.1 Released", Description = "Major update with AI-powered predictive analytics and 40% faster query performance.", Image = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Product Release", Technologies = new[] { "React", "Node.js", "PostgreSQL", "TensorFlow" }, ReleaseDate = "Jan 15, 2026" },
+        new() { Title = "ChatFlow Enterprise Case Study", Description = "How RetailCorp reduced response time by 65% using ChatFlow.", Image = "https://images.unsplash.com/photo-1577563908411-5077b6dc7624?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Case Study", Technologies = new[] { "ChatFlow", "AI Integration", "Omnichannel" }, ReleaseDate = "Jan 28, 2026" },
+        new() { Title = "ProjectPulse v4.1.0 Launch", Description = "New Kanban boards, auto-progress calculation, and budget tracking.", Image = "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Product Release", Technologies = new[] { "React", "TypeScript", "WebSocket" }, ReleaseDate = "Feb 1, 2026" },
+        new() { Title = "Healthcare Success: DocuFlow", Description = "MedCare digitized 2M+ documents with 99.9% accuracy.", Image = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Case Study", Technologies = new[] { "DocuFlow", "OCR", "ElasticSearch" }, ReleaseDate = "Dec 20, 2025" },
+        new() { Title = "TeamHub Beta Program", Description = "Join the beta for our unified collaboration platform.", Image = "https://images.unsplash.com/photo-1552664730-d307ca884978?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Beta Release", Technologies = new[] { "React", "WebRTC", "Socket.io" }, ReleaseDate = "Jan 10, 2026" },
+        new() { Title = "CloudVault Enterprise Adoption", Description = "Fortune 500 migrated 500TB with zero downtime.", Image = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Case Study", Technologies = new[] { "CloudVault", "AWS", "Kubernetes" }, ReleaseDate = "Nov 30, 2025" }
+    };
+
+    public class ProductInfo { public string Name { get; set; } = ""; public string Tagline { get; set; } = ""; public string Description { get; set; } = ""; public string Version { get; set; } = ""; public string ReleaseDate { get; set; } = ""; public string Category { get; set; } = ""; public string ColorClass { get; set; } = ""; public string IconSvg { get; set; } = ""; public string[] Industries { get; set; } = Array.Empty<string>(); public string[] Problems { get; set; } = Array.Empty<string>(); public string[] Features { get; set; } = Array.Empty<string>(); public string[] TechStack { get; set; } = Array.Empty<string>(); public string Status { get; set; } = "stable"; public string Downloads { get; set; } = ""; public double Rating { get; set; } }
+    public class ServiceInfo { public string Title { get; set; } = ""; public string Description { get; set; } = ""; public string[] Features { get; set; } = Array.Empty<string>(); public string Category { get; set; } = ""; public string ColorClass { get; set; } = ""; public string IconSvg { get; set; } = ""; }
+    public class PortfolioProject { public string Title { get; set; } = ""; public string Description { get; set; } = ""; public string Image { get; set; } = ""; public string Category { get; set; } = ""; public string[] Technologies { get; set; } = Array.Empty<string>(); public string ReleaseDate { get; set; } = ""; }
+    public class ContactFormModel { public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Company { get; set; } = ""; public string Phone { get; set; } = ""; public string Service { get; set; } = ""; public string Message { get; set; } = ""; }
+}
