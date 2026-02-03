@@ -1,8 +1,12 @@
 {
   "Files": [
     {
-      "Id": "E:\\Sominnercore\\obj\\Debug\\net9.0\\scopedcss\\projectbundle\\MyBlazorApp.bundle.scp.css",
-      "PackagePath": "staticwebassets\\MyBlazorApp.r7dh72cfr4.bundle.scp.css"
+      "Id": "E:\\Sominnercore\\bin\\Debug\\net9.0\\wwwroot\\_framework\\blazor.webassembly.js",
+      "PackagePath": "staticwebassets\\_framework\\blazor.webassembly.js"
+    },
+    {
+      "Id": "E:\\Sominnercore\\obj\\Debug\\net9.0\\scopedcss\\bundle\\MyBlazorApp.styles.css",
+      "PackagePath": "staticwebassets\\MyBlazorApp.styles.css"
     },
     {
       "Id": "E:\\Sominnercore\\wwwroot\\app.css",
@@ -15,6 +19,10 @@
     {
       "Id": "E:\\Sominnercore\\wwwroot\\images\\hero-desk",
       "PackagePath": "staticwebassets\\images"
+    },
+    {
+      "Id": "E:\\Sominnercore\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
     },
     {
       "Id": "E:\\Sominnercore\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap-grid.css",

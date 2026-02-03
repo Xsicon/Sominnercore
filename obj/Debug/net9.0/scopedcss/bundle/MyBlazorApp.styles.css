@@ -1,4 +1,4 @@
-/* _content/MyBlazorApp/Components/Layout/MainLayout.razor.rz.scp.css */
+/* /Components/Layout/MainLayout.razor.rz.scp.css */
 .site-wrapper[b-8h0dmotat2] {
     min-height: 100vh;
     background-color: var(--bg-primary);
@@ -205,7 +205,7 @@
         padding: 0 1rem;
     }
 }
-/* _content/MyBlazorApp/Components/Pages/Home.razor.rz.scp.css */
+/* /Components/Pages/Home.razor.rz.scp.css */
 /* ===== GLOBAL UTILITY CLASSES ===== */
 .text-primary[b-huq88x9v2b] { color: var(--accent); }
 .fw-600[b-huq88x9v2b] { font-weight: 600; }
