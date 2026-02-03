@@ -1,0 +1,259 @@
+@page "/admin"
+@using SominnercoreNew.Services
+@inject SupabaseAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Admin Dashboard - Sominnercore</PageTitle>
+
+@if (isAuthenticated)
+{
+    <div class="admin-dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar @(isSidebarOpen ? "open" : "")">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-dot"></div>
+                    <span>Sominnercore</span>
+                </div>
+                <p class="brand-subtitle">Admin Dashboard</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetActiveTab("overview"))" @onclick:preventDefault>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="9" x="3" y="3" rx="1"/>
+                        <rect width="7" height="5" x="14" y="3" rx="1"/>
+                        <rect width="7" height="9" x="14" y="12" rx="1"/>
+                        <rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#" class="nav-item @(activeTab == "products" ? "active" : "")" @onclick="@(() => SetActiveTab("products"))" @onclick:preventDefault>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    </svg>
+                    <span>Software Products</span>
+                </a>
+                <a href="#" class="nav-item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetActiveTab("chat"))" @onclick:preventDefault>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>Customer Chat</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <span>@GetUserInitials()</span>
+                    </div>
+                    <div class="user-details">
+                        <p class="user-name">Admin User</p>
+                        <p class="user-email">@currentUser?.Email</p>
+                    </div>
+                </div>
+                <button class="logout-button" @onclick="HandleLogout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" x2="9" y1="12" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <button class="menu-toggle" @onclick="ToggleSidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="4" x2="20" y1="12" y2="12"/>
+                        <line x1="4" x2="20" y1="6" y2="6"/>
+                        <line x1="4" x2="20" y1="18" y2="18"/>
+                    </svg>
+                </button>
+                <div class="header-content">
+                    <div>
+                        <h1>@GetTabTitle()</h1>
+                        <p class="header-subtitle">@GetTabSubtitle()</p>
+                    </div>
+                    <button class="admin-access-btn" @onclick="NavigateHome">Admin Access</button>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                @if (activeTab == "overview")
+                {
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon users">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Total Active Users</p>
+                                <p class="stat-value">290,000</p>
+                                <p class="stat-change positive">+8.5% from last month</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon downloads">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" x2="12" y1="15" y2="3"/>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Total Downloads</p>
+                                <p class="stat-value">290,000+</p>
+                                <p class="stat-change positive">+12% from last month</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon products">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Active Products</p>
+                                <p class="stat-value">6</p>
+                                <p class="stat-change neutral">6 software solutions</p>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon growth">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                                    <polyline points="16 7 22 7 22 13"/>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <p class="stat-label">Average Growth</p>
+                                <p class="stat-value">+16.3%</p>
+                                <p class="stat-change positive">Across all products</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "products")
+                {
+                    <div class="content-section">
+                        <h2>Software Products Management</h2>
+                        <p>Manage your enterprise software solutions here.</p>
+                    </div>
+                }
+                else if (activeTab == "chat")
+                {
+                    <div class="content-section">
+                        <h2>Customer Chat</h2>
+                        <p>View and respond to customer inquiries.</p>
+                    </div>
+                }
+            </div>
+        </main>
+    </div>
+}
+else
+{
+    <div class="loading-container">
+        <p>Loading...</p>
+    </div>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private bool isSidebarOpen = false;
+    private string activeTab = "overview";
+    private Supabase.Gotrue.User? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CheckAuthentication();
+        }
+        catch (Exception)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+    }
+
+    private async Task CheckAuthentication()
+    {
+        try
+        {
+            currentUser = AuthService.GetCurrentUser();
+
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/admin/login");
+                return;
+            }
+
+            isAuthenticated = true;
+        }
+        catch (Exception)
+        {
+            Navigation.NavigateTo("/admin/login");
+        }
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        isSidebarOpen = false;
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarOpen = !isSidebarOpen;
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private string GetUserInitials()
+    {
+        return "AU";
+    }
+
+    private string GetTabTitle()
+    {
+        return activeTab switch
+        {
+            "overview" => "Overview",
+            "products" => "Software Products",
+            "chat" => "Customer Chat",
+            _ => "Dashboard"
+        };
+    }
+
+    private string GetTabSubtitle()
+    {
+        return activeTab switch
+        {
+            "overview" => "Dashboard analytics and insights",
+            "products" => "Manage your software solutions",
+            "chat" => "Customer support and inquiries",
+            _ => ""
+        };
+    }
+}

@@ -71,6 +71,15 @@
     text-decoration: none;
 }
 
+.main-nav a.admin-link {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.main-nav a.admin-link:hover {
+    color: var(--accent-hover);
+}
+
 /* Header Actions */
 .header-actions {
     display: flex;

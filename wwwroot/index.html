@@ -4,11 +4,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MyBlazorApp</title>
+    <title>Sominnercore - Enterprise Software</title>
     <base href="/" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
-    <link rel="stylesheet" href="MyBlazorApp.styles.css" />
+    <link rel="stylesheet" href="SominnercoreNew.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <script>
         // Apply theme immediately to prevent flash of wrong theme
@@ -40,6 +39,19 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        // Hide Blazor error UI for hot reload connection failures
+        window.addEventListener('error', function(event) {
+            if (event.message && (
+                event.message.includes('blazor') ||
+                event.message.includes('ERR_ABORTED') ||
+                event.message.includes('WebSocket')
+            )) {
+                event.preventDefault();
+                return false;
+            }
+        });
+    </script>
     <script>
         (function() {
             var KEY = 'sominnercore-ui-theme';
