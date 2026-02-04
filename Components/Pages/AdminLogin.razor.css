@@ -51,7 +51,7 @@
 .login-form {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 5rem;
 }
 
 .form-group {
@@ -130,6 +130,7 @@
 
 .error-message {
     padding: 0.75rem;
+    margin-top: 0.5rem;
     background-color: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
@@ -140,7 +141,7 @@
 .submit-button {
     width: 100%;
     padding: 0.875rem;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
     background: linear-gradient(135deg, #137fec 0%, #0b5fb8 100%);
     border: none;
     border-radius: 8px;
