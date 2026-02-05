@@ -25,5 +25,6 @@ builder.Services.AddScoped(sp =>
 });
 
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddScoped<SoftwareProductService>();
 
 await builder.Build().RunAsync();

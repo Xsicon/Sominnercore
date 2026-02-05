@@ -1,7 +1,9 @@
 @page "/admin"
 @layout Components.Layout.AdminLayout
 @using SominnercoreNew.Services
+@using SominnercoreNew.Models
 @inject SupabaseAuthService AuthService
+@inject SoftwareProductService ProductService
 @inject NavigationManager Navigation
 
 <PageTitle>Admin Dashboard - Sominnercore</PageTitle>
@@ -179,23 +181,36 @@ else
                             </svg>
                             <span>Active Users by Product</span>
                         </div>
-                        <div class="bar-chart">
-                            <div class="chart-y-axis">
+                        <div class="bar-chart-wrapper">
+                            <div class="bar-y-axis">
                                 <span>120000</span>
                                 <span>90000</span>
                                 <span>60000</span>
                                 <span>30000</span>
                                 <span>0</span>
                             </div>
-                            @foreach (var product in usersChartData)
-                            {
-                                <div class="bar-item">
-                                    <div class="bar-container">
-                                        <div class="bar" style="height: @(product.Height)%"></div>
-                                    </div>
-                                    <span class="bar-label">@product.Name</span>
+                            <div class="bar-chart-main">
+                                <div class="bar-chart-area">
+                                    <!-- Grid lines -->
+                                    <div class="bar-grid-line" style="bottom: 100%"></div>
+                                    <div class="bar-grid-line" style="bottom: 75%"></div>
+                                    <div class="bar-grid-line" style="bottom: 50%"></div>
+                                    <div class="bar-grid-line" style="bottom: 25%"></div>
+                                    <div class="bar-grid-line" style="bottom: 0%"></div>
+                                    @foreach (var product in usersChartData)
+                                    {
+                                        <div class="bar-item">
+                                            <div class="bar" style="height: @(product.Height)%"></div>
+                                        </div>
+                                    }
                                 </div>
-                            }
+                                <div class="bar-x-axis">
+                                    @foreach (var product in usersChartData)
+                                    {
+                                        <span>@product.Name</span>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -254,7 +269,7 @@ else
                             <span>0</span>
                         </div>
                         <div class="line-chart-main">
-                            <div class="line-chart-area">
+                            <div class="line-chart-area" @onmouseleave="() => hoveredPointIndex = -1">
                                 <svg viewBox="0 0 500 200" preserveAspectRatio="none">
                                     <!-- Grid lines -->
                                     <line x1="0" y1="40" x2="500" y2="40" stroke="#2a3441" stroke-dasharray="3 3"/>
@@ -262,17 +277,34 @@ else
                                     <line x1="0" y1="120" x2="500" y2="120" stroke="#2a3441" stroke-dasharray="3 3"/>
                                     <line x1="0" y1="160" x2="500" y2="160" stroke="#2a3441" stroke-dasharray="3 3"/>
                                     <!-- Area fill -->
-                                    <path d="M0,133 L100,120 L200,100 L300,80 L400,53 L500,33 L500,200 L0,200 Z" fill="rgba(19,127,236,0.15)"/>
+                                    <path d="M0,50 L100,43 L200,37 L300,27 L400,17 L500,7 L500,200 L0,200 Z" fill="rgba(19,127,236,0.08)"/>
                                     <!-- Line -->
-                                    <polyline points="0,133 100,120 200,100 300,80 400,53 500,33" fill="none" stroke="#137fec" stroke-width="3"/>
-                                    <!-- Data points -->
-                                    <circle cx="0" cy="133" r="6" fill="#137fec"/>
-                                    <circle cx="100" cy="120" r="6" fill="#137fec"/>
-                                    <circle cx="200" cy="100" r="6" fill="#137fec"/>
-                                    <circle cx="300" cy="80" r="6" fill="#137fec"/>
-                                    <circle cx="400" cy="53" r="6" fill="#137fec"/>
-                                    <circle cx="500" cy="33" r="6" fill="#137fec"/>
+                                    <polyline points="0,50 100,43 200,37 300,27 400,17 500,7" fill="none" stroke="#137fec" stroke-width="3"/>
+                                    <!-- Data points and hover areas -->
+                                    @for (int i = 0; i < lineChartPoints.Count; i++)
+                                    {
+                                        var point = lineChartPoints[i];
+                                        var idx = i;
+                                        @if (hoveredPointIndex == idx)
+                                        {
+                                            <!-- Vertical dashed line -->
+                                            <line x1="@point.X" y1="0" x2="@point.X" y2="200" stroke="#5a6d7f" stroke-width="1" stroke-dasharray="4 3"/>
+                                            <!-- Outer ring -->
+                                            <circle cx="@point.X" cy="@point.Y" r="8" fill="#101922" stroke="#137fec" stroke-width="2"/>
+                                        }
+                                        <circle cx="@point.X" cy="@point.Y" r="5" fill="#137fec"/>
+                                        <!-- Invisible larger hit area -->
+                                        <circle cx="@point.X" cy="@point.Y" r="20" fill="transparent" @onmouseenter="() => hoveredPointIndex = idx" style="cursor: pointer"/>
+                                    }
                                 </svg>
+                                @if (hoveredPointIndex >= 0 && hoveredPointIndex < lineChartPoints.Count)
+                                {
+                                    var hp = lineChartPoints[hoveredPointIndex];
+                                    <div class="chart-tooltip" style="left: @(hp.X / 5.0)%; top: @(hp.Y / 2.0 + 15)%;">
+                                        <span class="tooltip-label">@hp.Month</span>
+                                        <span class="tooltip-value">users : @hp.Users.ToString("N0")</span>
+                                    </div>
+                                }
                             </div>
                             <div class="line-chart-x-axis">
                                 <span>Aug</span>
@@ -288,73 +320,241 @@ else
             }
             else if (activeTab == "products")
             {
-                <!-- Search Bar -->
-                <div class="search-bar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/>
-                        <path d="m21 21-4.3-4.3"/>
-                    </svg>
-                    <input type="text" placeholder="Search software..." @bind="searchQuery" @bind:event="oninput" />
+                <!-- Search and Add Button -->
+                <div class="products-toolbar">
+                    <div class="search-bar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg>
+                        <input type="text" placeholder="Search software..." @bind="searchQuery" @bind:event="oninput" />
+                    </div>
+                    <button class="add-product-btn" @onclick="OpenAddModal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" x2="12" y1="5" y2="19"/>
+                            <line x1="5" x2="19" y1="12" y2="12"/>
+                        </svg>
+                        <span>Add Product</span>
+                    </button>
                 </div>
 
                 <!-- Products Grid -->
-                <div class="products-grid">
-                    @foreach (var product in FilteredProducts)
-                    {
-                        <div class="product-card">
-                            <div class="product-header">
-                                <div class="product-icon" style="background: @product.Color">
+                @if (isLoadingProducts)
+                {
+                    <div class="loading-products">
+                        <p>Loading products...</p>
+                    </div>
+                }
+                else if (!softwareProducts.Any())
+                {
+                    <div class="empty-products">
+                        <p>No products yet. Click "Add Product" to create one.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="products-grid">
+                        @foreach (var product in FilteredSoftwareProducts)
+                        {
+                            <div class="product-card">
+                                <div class="product-header">
+                                    <div class="product-icon" style="background: @product.IconColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="product-title">
+                                        <h3>@product.Name</h3>
+                                        <p>@product.Category</p>
+                                    </div>
+                                    <span class="product-status @product.Status">@product.Status</span>
+                                </div>
+                                <div class="product-stats">
+                                    <div class="product-stat">
+                                        <span class="stat-label">Version</span>
+                                        <span class="stat-value">@product.Version</span>
+                                    </div>
+                                    <div class="product-stat">
+                                        <span class="stat-label">Release Date</span>
+                                        <span class="stat-value">@FormatReleaseDate(product.ReleaseDate)</span>
+                                    </div>
+                                </div>
+                                <div class="product-stats">
+                                    <div class="product-stat">
+                                        <span class="stat-label">Active Users</span>
+                                        <span class="stat-value">@product.ActiveUsers.ToString("N0")</span>
+                                    </div>
+                                    <div class="product-stat">
+                                        <span class="stat-label">Total Downloads</span>
+                                        <span class="stat-value">@product.TotalDownloads.ToString("N0")</span>
+                                    </div>
+                                </div>
+                                <div class="product-footer">
+                                    <span class="last-update">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                                            <line x1="16" x2="16" y1="2" y2="6"/>
+                                            <line x1="8" x2="8" y1="2" y2="6"/>
+                                            <line x1="3" x2="21" y1="10" y2="10"/>
+                                        </svg>
+                                        @FormatTimeAgo(product.UpdatedAt)
+                                    </span>
+                                    <div class="product-actions">
+                                        <button class="action-btn edit" @onclick="() => OpenEditModal(product)" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                                <path d="m15 5 4 4"/>
+                                            </svg>
+                                        </button>
+                                        <button class="action-btn delete" @onclick="() => ConfirmDelete(product)" title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18"/>
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(productError))
+                {
+                    <div class="product-error">@productError</div>
+                }
+
+                <!-- Add/Edit Product Modal -->
+                @if (showProductModal)
+                {
+                    <div class="modal-overlay" @onclick="CloseProductModal">
+                        <div class="modal-card" @onclick:stopPropagation>
+                            <div class="modal-header">
+                                <h2>@(isEditingProduct ? "Edit Product" : "Add Product")</h2>
+                                <button class="modal-close" @onclick="CloseProductModal">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                        <line x1="18" x2="6" y1="6" y2="18"/>
+                                        <line x1="6" x2="18" y1="6" y2="18"/>
                                     </svg>
-                                </div>
-                                <div class="product-title">
-                                    <h3>@product.Name</h3>
-                                    <p>@product.Category</p>
-                                </div>
-                                <span class="product-status @product.Status">@product.Status</span>
+                                </button>
                             </div>
-                            <div class="product-stats">
-                                <div class="product-stat">
-                                    <span class="stat-label">Version</span>
-                                    <span class="stat-value">@product.Version</span>
+                            <div class="modal-body">
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Name *</label>
+                                        <input type="text" @bind="formName" placeholder="Product name" />
+                                    </div>
                                 </div>
-                                <div class="product-stat">
-                                    <span class="stat-label">Release Date</span>
-                                    <span class="stat-value">@product.ReleaseDate</span>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Short Description</label>
+                                        <input type="text" @bind="formShortDesc" placeholder="Brief description" />
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-field">
+                                        <label>Category</label>
+                                        <input type="text" @bind="formCategory" placeholder="e.g. Data & Analytics" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Version</label>
+                                        <input type="text" @bind="formVersion" placeholder="e.g. v1.0.0" />
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-field">
+                                        <label>Status</label>
+                                        <select @bind="formStatus">
+                                            <option value="active">Active</option>
+                                            <option value="upcoming">Upcoming</option>
+                                            <option value="deprecated">Deprecated</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Visibility</label>
+                                        <select @bind="formVisibility">
+                                            <option value="public">Public</option>
+                                            <option value="hidden">Hidden</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-field">
+                                        <label>Release Date</label>
+                                        <input type="text" @bind="formReleaseDate" placeholder="e.g. 2026-01-15" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Icon Color</label>
+                                        <div class="color-picker">
+                                            @foreach (var color in colorOptions)
+                                            {
+                                                <button type="button"
+                                                        class="color-option @(formIconColor == color ? "selected" : "")"
+                                                        style="background: @color"
+                                                        @onclick="() => formIconColor = color">
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-field">
+                                        <label>Active Users</label>
+                                        <input type="number" @bind="formActiveUsers" placeholder="0" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label>Total Downloads</label>
+                                        <input type="number" @bind="formTotalDownloads" placeholder="0" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Full Description</label>
+                                        <textarea @bind="formFullDesc" placeholder="Detailed product description..." rows="3"></textarea>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="product-stats">
-                                <div class="product-stat">
-                                    <span class="stat-label">Active Users</span>
-                                    <span class="stat-value">@product.ActiveUsers.ToString("N0")</span>
-                                </div>
-                                <div class="product-stat">
-                                    <span class="stat-label">Total Downloads</span>
-                                    <span class="stat-value">@product.TotalDownloads</span>
-                                </div>
-                            </div>
-                            <div class="product-footer">
-                                <span class="last-update">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                                        <line x1="16" x2="16" y1="2" y2="6"/>
-                                        <line x1="8" x2="8" y1="2" y2="6"/>
-                                        <line x1="3" x2="21" y1="10" y2="10"/>
-                                    </svg>
-                                    @product.LastUpdate
-                                </span>
-                                <span class="growth-badge @(product.Growth.StartsWith("+") ? "positive" : "negative")">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-                                        <polyline points="16 7 22 7 22 13"/>
-                                    </svg>
-                                    @product.Growth
-                                </span>
+                            <div class="modal-footer">
+                                <button class="modal-btn cancel" @onclick="CloseProductModal">Cancel</button>
+                                <button class="modal-btn save" @onclick="SaveProduct" disabled="@isSavingProduct">
+                                    @if (isSavingProduct)
+                                    {
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@(isEditingProduct ? "Update" : "Add Product")</span>
+                                    }
+                                </button>
                             </div>
                         </div>
-                    }
-                </div>
+                    </div>
+                }
+
+                <!-- Delete Confirmation Modal -->
+                @if (showDeleteConfirm)
+                {
+                    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+                        <div class="confirm-dialog" @onclick:stopPropagation>
+                            <div class="confirm-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"/>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                </svg>
+                            </div>
+                            <h3>Delete Product</h3>
+                            <p>Are you sure you want to delete <strong>@deletingProduct?.Name</strong>? This action cannot be undone.</p>
+                            <div class="confirm-actions">
+                                <button class="modal-btn cancel" @onclick="() => showDeleteConfirm = false">Cancel</button>
+                                <button class="modal-btn delete" @onclick="DeleteProduct" disabled="@isDeletingProduct">
+                                    @(isDeletingProduct ? "Deleting..." : "Delete")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
             }
             else if (activeTab == "chat")
             {
@@ -495,6 +695,18 @@ else
     private bool isCheckingAuth = true;
     private bool isAuthenticated = false;
     private string currentUserEmail = "";
+    private int hoveredPointIndex = -1;
+
+    // Line Chart Data Points
+    private List<LineChartPoint> lineChartPoints = new()
+    {
+        new LineChartPoint { Month = "Aug", Users = 225000, X = 0, Y = 50 },
+        new LineChartPoint { Month = "Sep", Users = 236000, X = 100, Y = 43 },
+        new LineChartPoint { Month = "Oct", Users = 245000, X = 200, Y = 37 },
+        new LineChartPoint { Month = "Nov", Users = 260000, X = 300, Y = 27 },
+        new LineChartPoint { Month = "Dec", Users = 275000, X = 400, Y = 17 },
+        new LineChartPoint { Month = "Jan", Users = 290000, X = 500, Y = 7 }
+    };
 
     // Chart Data
     private List<ChartData> usersChartData = new()
@@ -507,16 +719,37 @@ else
         new ChartData { Name = "CloudVault", Users = 103500, Height = 86 }
     };
 
-    // Software Products Data
-    private List<SoftwareProduct> products = new()
-    {
-        new SoftwareProduct { Id = 1, Name = "DataCore Pro", Version = "v3.2.1", Category = "Data & Analytics", ReleaseDate = "January 15, 2026", ActiveUsers = 52340, TotalDownloads = "50,000+", Growth = "+12%", Status = "stable", LastUpdate = "Updated 2 days ago", Color = "#3b82f6" },
-        new SoftwareProduct { Id = 2, Name = "ChatFlow Enterprise", Version = "v2.8.0", Category = "Communication", ReleaseDate = "January 28, 2026", ActiveUsers = 38620, TotalDownloads = "35,000+", Growth = "+8%", Status = "stable", LastUpdate = "Updated 1 day ago", Color = "#8b5cf6" },
-        new SoftwareProduct { Id = 3, Name = "ProjectPulse", Version = "v4.1.0", Category = "Project Management", ReleaseDate = "February 1, 2026", ActiveUsers = 31450, TotalDownloads = "28,000+", Growth = "+25%", Status = "new", LastUpdate = "Updated Today", Color = "#10b981" },
-        new SoftwareProduct { Id = 4, Name = "DocuFlow", Version = "v2.5.2", Category = "Document Management", ReleaseDate = "December 20, 2025", ActiveUsers = 45890, TotalDownloads = "42,000+", Growth = "+5%", Status = "stable", LastUpdate = "Updated 5 days ago", Color = "#f97316" },
-        new SoftwareProduct { Id = 5, Name = "TeamHub", Version = "v3.0.0-beta", Category = "Collaboration", ReleaseDate = "January 10, 2026", ActiveUsers = 18200, TotalDownloads = "15,000+", Growth = "+45%", Status = "beta", LastUpdate = "Updated 3 days ago", Color = "#6366f1" },
-        new SoftwareProduct { Id = 6, Name = "CloudVault", Version = "v5.1.3", Category = "Cloud Storage", ReleaseDate = "November 30, 2025", ActiveUsers = 103500, TotalDownloads = "120,000+", Growth = "+3%", Status = "stable", LastUpdate = "Updated 1 week ago", Color = "#0ea5e9" }
-    };
+    // Software Products (from Supabase)
+    private List<Software> softwareProducts = new();
+    private bool isLoadingProducts = true;
+    private string? productError;
+
+    // Product Modal State
+    private bool showProductModal = false;
+    private bool isEditingProduct = false;
+    private bool isSavingProduct = false;
+    private string? editingProductId;
+
+    // Delete Confirmation State
+    private bool showDeleteConfirm = false;
+    private bool isDeletingProduct = false;
+    private Software? deletingProduct;
+
+    // Form Fields
+    private string formName = "";
+    private string formShortDesc = "";
+    private string formFullDesc = "";
+    private string formVersion = "";
+    private string formCategory = "";
+    private string formStatus = "active";
+    private string formVisibility = "public";
+    private string formReleaseDate = "";
+    private string formIconColor = "#3b82f6";
+    private int formActiveUsers = 0;
+    private int formTotalDownloads = 0;
+
+    // Color Options
+    private string[] colorOptions = new[] { "#3b82f6", "#8b5cf6", "#10b981", "#f97316", "#6366f1", "#0ea5e9", "#ef4444", "#ec4899" };
 
     // Conversations Data
     private List<Conversation> conversations = new()
@@ -559,11 +792,11 @@ else
         }
     };
 
-    private IEnumerable<SoftwareProduct> FilteredProducts =>
+    private IEnumerable<Software> FilteredSoftwareProducts =>
         string.IsNullOrWhiteSpace(searchQuery)
-            ? products
-            : products.Where(p => p.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                                  p.Category.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            ? softwareProducts
+            : softwareProducts.Where(p => p.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                          (p.Category ?? "").Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -575,17 +808,38 @@ else
 
         if (user == null || session == null)
         {
-            // Not authenticated, redirect to login
             isAuthenticated = false;
             isCheckingAuth = false;
             Navigation.NavigateTo("/admin/login");
             return;
         }
 
-        // Store user email
         currentUserEmail = user.Email ?? "";
         isAuthenticated = true;
         isCheckingAuth = false;
+
+        // Load products from Supabase
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            isLoadingProducts = true;
+            productError = null;
+            softwareProducts = await ProductService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            productError = "Failed to load products. Please try again.";
+            Console.WriteLine($"Error loading products: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingProducts = false;
+            StateHasChanged();
+        }
     }
 
     private string GetUserInitials()
@@ -651,6 +905,178 @@ else
         _ => ""
     };
 
+    // Product CRUD Methods
+    private void OpenAddModal()
+    {
+        isEditingProduct = false;
+        editingProductId = null;
+        ResetForm();
+        showProductModal = true;
+    }
+
+    private void OpenEditModal(Software product)
+    {
+        isEditingProduct = true;
+        editingProductId = product.Id;
+        formName = product.Name;
+        formShortDesc = product.ShortDescription ?? "";
+        formFullDesc = product.FullDescription ?? "";
+        formVersion = product.Version;
+        formCategory = product.Category ?? "";
+        formStatus = product.Status;
+        formVisibility = product.Visibility;
+        formReleaseDate = product.ReleaseDate ?? "";
+        formIconColor = product.IconColor;
+        formActiveUsers = product.ActiveUsers;
+        formTotalDownloads = product.TotalDownloads;
+        showProductModal = true;
+    }
+
+    private void CloseProductModal()
+    {
+        showProductModal = false;
+        ResetForm();
+    }
+
+    private void ResetForm()
+    {
+        formName = "";
+        formShortDesc = "";
+        formFullDesc = "";
+        formVersion = "";
+        formCategory = "";
+        formStatus = "active";
+        formVisibility = "public";
+        formReleaseDate = "";
+        formIconColor = "#3b82f6";
+        formActiveUsers = 0;
+        formTotalDownloads = 0;
+    }
+
+    private async Task SaveProduct()
+    {
+        if (string.IsNullOrWhiteSpace(formName))
+        {
+            productError = "Product name is required.";
+            return;
+        }
+
+        isSavingProduct = true;
+        productError = null;
+        StateHasChanged();
+
+        try
+        {
+            if (isEditingProduct && editingProductId != null)
+            {
+                var software = new Software
+                {
+                    Id = editingProductId,
+                    Name = formName,
+                    ShortDescription = formShortDesc,
+                    FullDescription = formFullDesc,
+                    Version = formVersion,
+                    Category = formCategory,
+                    Status = formStatus,
+                    Visibility = formVisibility,
+                    ReleaseDate = formReleaseDate,
+                    IconColor = formIconColor,
+                    ActiveUsers = formActiveUsers,
+                    TotalDownloads = formTotalDownloads
+                };
+                await ProductService.UpdateAsync(software);
+            }
+            else
+            {
+                var software = new Software
+                {
+                    Name = formName,
+                    ShortDescription = formShortDesc,
+                    FullDescription = formFullDesc,
+                    Version = formVersion,
+                    Category = formCategory,
+                    Status = formStatus,
+                    Visibility = formVisibility,
+                    ReleaseDate = formReleaseDate,
+                    IconColor = formIconColor,
+                    ActiveUsers = formActiveUsers,
+                    TotalDownloads = formTotalDownloads
+                };
+                await ProductService.CreateAsync(software);
+            }
+
+            showProductModal = false;
+            ResetForm();
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            productError = $"Failed to save product: {ex.Message}";
+        }
+        finally
+        {
+            isSavingProduct = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmDelete(Software product)
+    {
+        deletingProduct = product;
+        showDeleteConfirm = true;
+    }
+
+    private async Task DeleteProduct()
+    {
+        if (deletingProduct == null) return;
+
+        isDeletingProduct = true;
+        productError = null;
+        StateHasChanged();
+
+        try
+        {
+            await ProductService.DeleteAsync(deletingProduct.Id);
+            showDeleteConfirm = false;
+            deletingProduct = null;
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            productError = $"Failed to delete product: {ex.Message}";
+        }
+        finally
+        {
+            isDeletingProduct = false;
+            StateHasChanged();
+        }
+    }
+
+    // Helper Methods
+    private string FormatReleaseDate(string? dateStr)
+    {
+        if (string.IsNullOrEmpty(dateStr)) return "N/A";
+        if (DateTime.TryParse(dateStr, out var date))
+        {
+            return date.ToString("MMMM d, yyyy");
+        }
+        return dateStr;
+    }
+
+    private string FormatTimeAgo(string? dateStr)
+    {
+        if (string.IsNullOrEmpty(dateStr)) return "Unknown";
+        if (DateTime.TryParse(dateStr, out var date))
+        {
+            var diff = DateTime.UtcNow - date;
+            if (diff.TotalMinutes < 60) return "Updated just now";
+            if (diff.TotalHours < 24) return $"Updated {(int)diff.TotalHours}h ago";
+            if (diff.TotalDays < 7) return $"Updated {(int)diff.TotalDays}d ago";
+            return $"Updated {date:MMM d, yyyy}";
+        }
+        return "Unknown";
+    }
+
     private void SelectConversation(Conversation conv)
     {
         selectedConversation = conv;
@@ -687,21 +1113,6 @@ else
         public int Height { get; set; }
     }
 
-    private class SoftwareProduct
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Version { get; set; } = "";
-        public string Category { get; set; } = "";
-        public string ReleaseDate { get; set; } = "";
-        public int ActiveUsers { get; set; }
-        public string TotalDownloads { get; set; } = "";
-        public string Growth { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string LastUpdate { get; set; } = "";
-        public string Color { get; set; } = "";
-    }
-
     private class Conversation
     {
         public int Id { get; set; }
@@ -720,5 +1131,13 @@ else
         public string Text { get; set; } = "";
         public bool IsFromCustomer { get; set; }
         public string Time { get; set; } = "";
+    }
+
+    private class LineChartPoint
+    {
+        public string Month { get; set; } = "";
+        public int Users { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
     }
 }
