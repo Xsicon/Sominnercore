@@ -482,7 +482,7 @@ else
                                 <div class="form-row two-col">
                                     <div class="form-field">
                                         <label>Release Date</label>
-                                        <input type="text" @bind="formReleaseDate" placeholder="e.g. 2026-01-15" />
+                                        <input type="text" @bind="formReleaseDate" placeholder="YYYY-MM-DD" />
                                     </div>
                                     <div class="form-field">
                                         <label>Icon Color</label>
@@ -969,6 +969,7 @@ else
         {
             if (isEditingProduct && editingProductId != null)
             {
+                var existingProduct = softwareProducts.FirstOrDefault(p => p.Id == editingProductId);
                 var software = new Software
                 {
                     Id = editingProductId,
@@ -982,7 +983,8 @@ else
                     ReleaseDate = formReleaseDate,
                     IconColor = formIconColor,
                     ActiveUsers = formActiveUsers,
-                    TotalDownloads = formTotalDownloads
+                    TotalDownloads = formTotalDownloads,
+                    CreatedAt = existingProduct?.CreatedAt
                 };
                 await ProductService.UpdateAsync(software);
             }

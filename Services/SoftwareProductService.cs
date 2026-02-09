@@ -1,3 +1,4 @@
+using System.Globalization;
 using SominnercoreNew.Models;
 
 namespace SominnercoreNew.Services;
@@ -30,6 +31,37 @@ public class SoftwareProductService
         return response.Models;
     }
 
+    public async Task<List<Software>> GetPublishedAsync()
+    {
+        await EnsureInitializedAsync();
+
+        var response = await _client.From<Software>()
+            .Filter("visibility", Postgrest.Constants.Operator.Equals, "public")
+            .Filter("status", Postgrest.Constants.Operator.NotEqual, "deprecated")
+            .Order("created_at", Postgrest.Constants.Ordering.Descending)
+            .Get();
+
+        var now = DateTime.UtcNow;
+
+        return response.Models
+            .Where(s => IsReleaseDatePassed(s.ReleaseDate, now))
+            .ToList();
+    }
+
+    private static bool IsReleaseDatePassed(string? releaseDate, DateTime utcNow)
+    {
+        if (string.IsNullOrWhiteSpace(releaseDate))
+            return true;
+
+        if (DateTime.TryParse(releaseDate, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsedDate))
+        {
+            return parsedDate <= utcNow;
+        }
+
+        return false;
+    }
+
     public async Task<Software?> CreateAsync(Software software)
     {
         await EnsureInitializedAsync();
@@ -44,7 +76,6 @@ public class SoftwareProductService
         await EnsureInitializedAsync();
         software.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<Software>()
-            .Where(x => x.Id == software.Id)
             .Update(software);
         return response.Models.FirstOrDefault();
     }

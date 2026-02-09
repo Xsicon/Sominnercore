@@ -1,4 +1,9 @@
 @page "/"
+@using SominnercoreNew.Models
+@using SominnercoreNew.Services
+@using System.Globalization
+@inject SoftwareProductService ProductService
+@implements IDisposable
 
 <PageTitle>Sominnercore - Enterprise Software</PageTitle>
 
@@ -40,16 +45,16 @@
 
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-number">6</span>
+                    <span class="stat-number">@publishedProducts.Count</span>
                     <span class="stat-label">Active Products</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">290K+</span>
+                    <span class="stat-number">@FormatDownloads(publishedProducts.Sum(p => p.TotalDownloads))</span>
                     <span class="stat-label">Total Downloads</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-number">4.7&#9733;</span>
-                    <span class="stat-label">Average Rating</span>
+                    <span class="stat-number">@FormatDownloads(publishedProducts.Sum(p => p.ActiveUsers))</span>
+                    <span class="stat-label">Active Users</span>
                 </div>
             </div>
         </div>
@@ -83,105 +88,108 @@
         </div>
 
         <div class="filter-bar">
-            @foreach (var cat in productCategories)
+            @foreach (var cat in DynamicProductCategories)
             {
                 <button class="@(selectedProductCategory == cat ? "filter-btn active" : "filter-btn")" @onclick="() => selectedProductCategory = cat">@cat</button>
             }
         </div>
 
         <div class="products-grid">
-            @foreach (var product in FilteredProducts)
+            @if (isLoadingProducts)
             {
-                <div class="product-card" @onclick="() => selectedProduct = product">
-                    <div class="product-card-header @product.ColorClass">
-                        <div class="product-icon">
-                            @((MarkupString)product.IconSvg)
-                        </div>
-                        <div class="product-badges">
-                            <span class="version-badge">@product.Version</span>
-                            @if (product.Status == "new")
-                            {
-                                <span class="status-badge new">New</span>
-                            }
-                            @if (product.Status == "beta")
-                            {
-                                <span class="status-badge beta">Beta</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="product-card-header-text">
-                        <h3>@product.Name</h3>
-                        <p class="tagline">@product.Tagline</p>
-                    </div>
-                    <div class="product-card-body">
-                        <p class="product-desc">@product.Description</p>
-                        <div class="product-meta">
-                            <div class="meta-row"><span class="meta-label">Released:</span><span>@product.ReleaseDate</span></div>
-                            @if (!string.IsNullOrEmpty(product.Downloads))
-                            {
-                                <div class="meta-row"><span class="meta-label">Downloads:</span><span class="fw-600">@product.Downloads</span></div>
-                            }
-                            @if (product.Rating > 0)
-                            {
-                                <div class="meta-row"><span class="meta-label">Rating:</span><span class="fw-600">&#11088; @product.Rating/5.0</span></div>
-                            }
-                        </div>
-                        <div class="tag-list">
-                            @foreach (var ind in product.Industries.Take(3))
-                            {
-                                <span class="outline-tag">@ind</span>
-                            }
-                            @if (product.Industries.Length > 3)
-                            {
-                                <span class="outline-tag">+@(product.Industries.Length - 3)</span>
-                            }
-                        </div>
-                        <button class="btn-primary-full" @onclick="() => selectedProduct = product" @onclick:stopPropagation="true">
-                            View Details
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                        </button>
-                    </div>
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <p>Loading products...</p>
                 </div>
+            }
+            else if (!string.IsNullOrEmpty(productLoadError))
+            {
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <p>@productLoadError</p>
+                </div>
+            }
+            else if (!FilteredPublishedProducts.Any())
+            {
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <p>No products available yet. Check back soon!</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var product in FilteredPublishedProducts)
+                {
+                    <div class="product-card" @onclick="() => selectedSoftware = product">
+                        <div class="product-card-header @GetGradientClass(product.IconColor)">
+                            <div class="product-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                </svg>
+                            </div>
+                            <div class="product-badges">
+                                <span class="version-badge">@product.Version</span>
+                                @if (product.Status == "upcoming")
+                                {
+                                    <span class="status-badge new">New</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="product-card-header-text">
+                            <h3>@product.Name</h3>
+                            <p class="tagline">@(product.ShortDescription ?? "")</p>
+                        </div>
+                        <div class="product-card-body">
+                            <p class="product-desc">@(product.FullDescription ?? product.ShortDescription ?? "")</p>
+                            <div class="product-meta">
+                                <div class="meta-row"><span class="meta-label">Released:</span><span>@FormatReleaseDate(product.ReleaseDate)</span></div>
+                                @if (product.TotalDownloads > 0)
+                                {
+                                    <div class="meta-row"><span class="meta-label">Downloads:</span><span class="fw-600">@FormatDownloads(product.TotalDownloads)</span></div>
+                                }
+                                @if (product.ActiveUsers > 0)
+                                {
+                                    <div class="meta-row"><span class="meta-label">Active Users:</span><span class="fw-600">@product.ActiveUsers.ToString("N0")</span></div>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(product.Category))
+                            {
+                                <div class="tag-list">
+                                    <span class="outline-tag">@product.Category</span>
+                                </div>
+                            }
+                            <button class="btn-primary-full" @onclick="() => selectedSoftware = product" @onclick:stopPropagation="true">
+                                View Details
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                }
             }
         </div>
 
-        @if (selectedProduct != null)
+        @if (selectedSoftware != null)
         {
-            <div class="modal-overlay" @onclick="() => selectedProduct = null">
+            <div class="modal-overlay" @onclick="() => selectedSoftware = null">
                 <div class="modal-content" @onclick:stopPropagation="true">
-                    <div class="modal-header @selectedProduct.ColorClass">
+                    <div class="modal-header @GetGradientClass(selectedSoftware.IconColor)">
                         <div class="modal-header-info">
-                            <div class="product-icon lg">@((MarkupString)selectedProduct.IconSvg)</div>
+                            <div class="product-icon lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            </div>
                             <div>
-                                <h3>@selectedProduct.Name</h3>
-                                <p>@selectedProduct.Tagline</p>
+                                <h3>@selectedSoftware.Name</h3>
+                                <p>@(selectedSoftware.ShortDescription ?? "")</p>
                             </div>
                         </div>
-                        <button class="modal-close" @onclick="() => selectedProduct = null">&#10005;</button>
+                        <button class="modal-close" @onclick="() => selectedSoftware = null">&#10005;</button>
                     </div>
                     <div class="modal-body">
                         <h4>About</h4>
-                        <p>@selectedProduct.Description</p>
-                        <h4>Problems We Solve</h4>
-                        <div class="two-col-grid">
-                            @foreach (var p in selectedProduct.Problems)
-                            {
-                                <div class="check-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>@p</span></div>
-                            }
-                        </div>
-                        <h4>Key Features</h4>
-                        <div class="two-col-grid">
-                            @foreach (var f in selectedProduct.Features)
-                            {
-                                <div class="feature-item"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>@f</span></div>
-                            }
-                        </div>
-                        <h4>Technology Stack</h4>
-                        <div class="tag-list">
-                            @foreach (var t in selectedProduct.TechStack)
-                            {
-                                <span class="filled-tag">@t</span>
-                            }
+                        <p>@(selectedSoftware.FullDescription ?? selectedSoftware.ShortDescription ?? "No description available.")</p>
+                        <div class="product-meta">
+                            <div class="meta-row"><span class="meta-label">Version:</span><span>@selectedSoftware.Version</span></div>
+                            <div class="meta-row"><span class="meta-label">Category:</span><span>@(selectedSoftware.Category ?? "N/A")</span></div>
+                            <div class="meta-row"><span class="meta-label">Release Date:</span><span>@FormatReleaseDate(selectedSoftware.ReleaseDate)</span></div>
+                            <div class="meta-row"><span class="meta-label">Downloads:</span><span>@FormatDownloads(selectedSoftware.TotalDownloads)</span></div>
+                            <div class="meta-row"><span class="meta-label">Active Users:</span><span>@selectedSoftware.ActiveUsers.ToString("N0")</span></div>
                         </div>
                         <div class="modal-actions">
                             <button class="btn-primary-lg">Download Now</button>
@@ -193,10 +201,10 @@
         }
 
         <div class="stats-cards-row">
-            <div class="stat-card"><div class="stat-card-number">6</div><div class="stat-card-label">Active Products</div></div>
-            <div class="stat-card"><div class="stat-card-number">290K+</div><div class="stat-card-label">Total Downloads</div></div>
-            <div class="stat-card"><div class="stat-card-number">4.7</div><div class="stat-card-label">Average Rating</div></div>
-            <div class="stat-card"><div class="stat-card-number">15+</div><div class="stat-card-label">Industries Served</div></div>
+            <div class="stat-card"><div class="stat-card-number">@publishedProducts.Count</div><div class="stat-card-label">Active Products</div></div>
+            <div class="stat-card"><div class="stat-card-number">@FormatDownloads(publishedProducts.Sum(p => p.TotalDownloads))</div><div class="stat-card-label">Total Downloads</div></div>
+            <div class="stat-card"><div class="stat-card-number">@FormatDownloads(publishedProducts.Sum(p => p.ActiveUsers))</div><div class="stat-card-label">Active Users</div></div>
+            <div class="stat-card"><div class="stat-card-number">@publishedProducts.Select(p => p.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct().Count()</div><div class="stat-card-label">Categories</div></div>
         </div>
 
         <div class="cta-card gradient-bg">
@@ -476,12 +484,71 @@
     private string selectedProductCategory = "All";
     private string selectedServiceCategory = "All";
     private int currentServiceSlide = 0;
-    private ProductInfo? selectedProduct = null;
+    private Software? selectedSoftware = null;
     private bool chatOpen = false;
     private ContactFormModel contactForm = new();
 
-    private List<ProductInfo> FilteredProducts => selectedProductCategory == "All"
-        ? products : products.Where(p => p.Category == selectedProductCategory).ToList();
+    // Dynamic product state
+    private List<Software> publishedProducts = new();
+    private bool isLoadingProducts = true;
+    private string? productLoadError;
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPublishedProducts();
+
+        // Auto-refresh every 60 seconds so products appear when release_date passes
+        _refreshTimer = new System.Threading.Timer(
+            async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadPublishedProducts();
+                    StateHasChanged();
+                });
+            },
+            null,
+            TimeSpan.FromSeconds(60),
+            TimeSpan.FromSeconds(60));
+    }
+
+    private async Task LoadPublishedProducts()
+    {
+        try
+        {
+            isLoadingProducts = true;
+            productLoadError = null;
+            publishedProducts = await ProductService.GetPublishedAsync();
+        }
+        catch (Exception ex)
+        {
+            productLoadError = "Unable to load products.";
+            Console.WriteLine($"Error loading published products: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingProducts = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+
+    private string[] DynamicProductCategories =>
+        new[] { "All" }
+            .Concat(publishedProducts
+                .Where(p => !string.IsNullOrEmpty(p.Category))
+                .Select(p => p.Category!)
+                .Distinct()
+                .OrderBy(c => c))
+            .ToArray();
+
+    private List<Software> FilteredPublishedProducts => selectedProductCategory == "All"
+        ? publishedProducts
+        : publishedProducts.Where(p => p.Category == selectedProductCategory).ToList();
 
     private List<ServiceInfo> FilteredServices => selectedServiceCategory == "All"
         ? services : services.Where(s => s.Category == selectedServiceCategory).ToList();
@@ -491,18 +558,40 @@
 
     private async Task HandleContactSubmit() { contactForm = new ContactFormModel(); }
 
-    private static readonly string[] productCategories = { "All", "Data & Analytics", "Communication", "Project Management", "Document Management", "Collaboration", "Cloud Storage" };
-    private static readonly string[] serviceCategories = { "All", "Development", "Infrastructure", "Design", "Marketing", "Analytics", "Security" };
-
-    private static readonly List<ProductInfo> products = new()
+    private static string GetGradientClass(string? iconColor)
     {
-        new() { Name = "DataCore Pro", Tagline = "Enterprise Data Management Platform", Description = "A comprehensive data management and analytics platform that helps organizations centralize, analyze, and visualize their data in real-time with advanced AI-powered insights.", Version = "v3.2.1", ReleaseDate = "January 15, 2026", Category = "Data & Analytics", ColorClass = "grad-blue-cyan", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><ellipse cx='12' cy='5' rx='9' ry='3'/><path d='M21 12c0 1.66-4 3-9 3s-9-1.34-9-3'/><path d='M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5'/></svg>", Industries = new[] { "Finance", "Healthcare", "E-commerce", "Manufacturing" }, Problems = new[] { "Data silos across multiple systems", "Lack of real-time analytics", "Complex data integration", "Difficulty in data-driven decisions" }, Features = new[] { "Real-time data sync", "AI-powered analytics", "Custom dashboards", "Advanced visualization", "Automated reporting", "Multi-source integration" }, TechStack = new[] { "React", "Node.js", "PostgreSQL", "Redis", "TensorFlow" }, Status = "stable", Downloads = "50K+", Rating = 4.8 },
-        new() { Name = "ChatFlow Enterprise", Tagline = "Intelligent Customer Communication Suite", Description = "An all-in-one communication platform that streamlines customer interactions across multiple channels with AI-powered automation and smart routing.", Version = "v2.8.0", ReleaseDate = "January 28, 2026", Category = "Communication", ColorClass = "grad-purple-pink", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg>", Industries = new[] { "Retail", "SaaS", "Telecommunications", "Hospitality" }, Problems = new[] { "Fragmented communications", "Slow response times", "Lack of context", "Inefficient collaboration" }, Features = new[] { "Omnichannel messaging", "AI chatbot", "Smart routing", "Team tools", "Analytics", "CRM integration" }, TechStack = new[] { "React", "WebSocket", "MongoDB", "Redis", "OpenAI API" }, Status = "stable", Downloads = "35K+", Rating = 4.7 },
-        new() { Name = "ProjectPulse", Tagline = "Modern Project Management System", Description = "A next-generation project management platform designed for agile teams, featuring intelligent task automation and real-time collaboration.", Version = "v4.1.0", ReleaseDate = "February 1, 2026", Category = "Project Management", ColorClass = "grad-emerald-teal", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg>", Industries = new[] { "Software Development", "Marketing", "Construction", "Consulting" }, Problems = new[] { "Lack of visibility", "Manual tracking", "Poor coordination", "Missed deadlines" }, Features = new[] { "Kanban & Gantt views", "Auto-progress", "Resource allocation", "Budget tracking", "Time tracking", "Custom workflows" }, TechStack = new[] { "React", "TypeScript", "Node.js", "PostgreSQL", "WebSocket" }, Status = "new", Downloads = "28K+", Rating = 4.9 },
-        new() { Name = "DocuFlow", Tagline = "Intelligent Document Management System", Description = "Transform your document management with AI-powered organization, smart search, version control, and seamless collaboration.", Version = "v2.5.2", ReleaseDate = "December 20, 2025", Category = "Document Management", ColorClass = "grad-orange-red", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='16' y1='13' x2='8' y2='13'/><line x1='16' y1='17' x2='8' y2='17'/></svg>", Industries = new[] { "Legal", "Healthcare", "Education", "Government" }, Problems = new[] { "Disorganized storage", "Difficult retrieval", "Version control issues", "Compliance concerns" }, Features = new[] { "AI document tagging", "Advanced search", "Version control", "Digital signatures", "Access control", "Audit trail" }, TechStack = new[] { "React", "Python", "ElasticSearch", "AWS S3", "OCR" }, Status = "stable", Downloads = "42K+", Rating = 4.6 },
-        new() { Name = "TeamHub", Tagline = "Unified Team Collaboration Platform", Description = "Bring your team together with chat, video calls, file sharing, and integrated productivity tools in one unified workspace.", Version = "v3.0.0-beta", ReleaseDate = "January 10, 2026", Category = "Collaboration", ColorClass = "grad-indigo-purple", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/><path d='M23 21v-2a4 4 0 0 0-3-3.87'/><path d='M16 3.13a4 4 0 0 1 0 7.75'/></svg>", Industries = new[] { "Technology", "Remote Teams", "Startups", "Creative Agencies" }, Problems = new[] { "Tool sprawl", "Poor remote coordination", "Lack of central comms", "Inefficient knowledge sharing" }, Features = new[] { "Real-time chat & video", "Screen sharing", "File collaboration", "Task management", "Calendar & scheduling", "App integrations" }, TechStack = new[] { "React", "WebRTC", "Socket.io", "MongoDB", "Redis" }, Status = "beta", Downloads = "15K+", Rating = 4.5 },
-        new() { Name = "CloudVault", Tagline = "Secure Cloud Storage & Backup Solution", Description = "Enterprise-grade cloud storage with military-level encryption, automated backups, disaster recovery, and seamless file sync.", Version = "v5.1.3", ReleaseDate = "November 30, 2025", Category = "Cloud Storage", ColorClass = "grad-sky-blue", IconSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><path d='M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z'/></svg>", Industries = new[] { "All Industries", "SMBs", "Enterprises", "Personal Use" }, Problems = new[] { "Data loss risks", "Manual backups", "Limited storage", "Poor accessibility" }, Features = new[] { "End-to-end encryption", "Automated backups", "Disaster recovery", "Cross-device sync", "File versioning", "Compliance ready" }, TechStack = new[] { "React", "Go", "AWS", "Kubernetes", "AES-256" }, Status = "stable", Downloads = "120K+", Rating = 4.8 }
-    };
+        return iconColor?.ToLowerInvariant() switch
+        {
+            "#3b82f6" => "grad-blue-cyan",
+            "#8b5cf6" => "grad-purple-pink",
+            "#10b981" => "grad-emerald-teal",
+            "#f97316" => "grad-orange-red",
+            "#6366f1" => "grad-indigo-purple",
+            "#0ea5e9" => "grad-sky-blue",
+            "#ef4444" => "grad-orange-red",
+            "#ec4899" => "grad-purple-pink",
+            _ => "grad-blue-cyan"
+        };
+    }
+
+    private static string FormatReleaseDate(string? dateStr)
+    {
+        if (string.IsNullOrEmpty(dateStr)) return "N/A";
+        if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            return date.ToString("MMMM d, yyyy");
+        }
+        return dateStr;
+    }
+
+    private static string FormatDownloads(int downloads)
+    {
+        if (downloads >= 1_000_000) return $"{downloads / 1_000_000.0:0.#}M+";
+        if (downloads >= 1_000) return $"{downloads / 1_000.0:0.#}K+";
+        return downloads.ToString("N0");
+    }
+
+    private static readonly string[] serviceCategories = { "All", "Development", "Infrastructure", "Design", "Marketing", "Analytics", "Security" };
 
     private static readonly List<ServiceInfo> services = new()
     {
@@ -526,7 +615,6 @@
         new() { Title = "CloudVault Enterprise Adoption", Description = "Fortune 500 migrated 500TB with zero downtime.", Image = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600", Category = "Case Study", Technologies = new[] { "CloudVault", "AWS", "Kubernetes" }, ReleaseDate = "Nov 30, 2025" }
     };
 
-    public class ProductInfo { public string Name { get; set; } = ""; public string Tagline { get; set; } = ""; public string Description { get; set; } = ""; public string Version { get; set; } = ""; public string ReleaseDate { get; set; } = ""; public string Category { get; set; } = ""; public string ColorClass { get; set; } = ""; public string IconSvg { get; set; } = ""; public string[] Industries { get; set; } = Array.Empty<string>(); public string[] Problems { get; set; } = Array.Empty<string>(); public string[] Features { get; set; } = Array.Empty<string>(); public string[] TechStack { get; set; } = Array.Empty<string>(); public string Status { get; set; } = "stable"; public string Downloads { get; set; } = ""; public double Rating { get; set; } }
     public class ServiceInfo { public string Title { get; set; } = ""; public string Description { get; set; } = ""; public string[] Features { get; set; } = Array.Empty<string>(); public string Category { get; set; } = ""; public string ColorClass { get; set; } = ""; public string IconSvg { get; set; } = ""; }
     public class PortfolioProject { public string Title { get; set; } = ""; public string Description { get; set; } = ""; public string Image { get; set; } = ""; public string Category { get; set; } = ""; public string[] Technologies { get; set; } = Array.Empty<string>(); public string ReleaseDate { get; set; } = ""; }
     public class ContactFormModel { public string Name { get; set; } = ""; public string Email { get; set; } = ""; public string Company { get; set; } = ""; public string Phone { get; set; } = ""; public string Service { get; set; } = ""; public string Message { get; set; } = ""; }
