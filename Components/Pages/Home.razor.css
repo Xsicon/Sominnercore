@@ -92,6 +92,11 @@
 .grad-sky-blue { background: linear-gradient(135deg, #0ea5e9, #3b82f6); }
 .grad-gray { background: linear-gradient(135deg, #4b5563, #1f2937); }
 
+/* ===== PRODUCT STATE CARDS (loading, error, empty) ===== */
+.products-state-card { grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 0.75rem; }
+.products-state-card h3 { font-size: 1.25rem; color: var(--text-primary); margin: 1rem 0 0.5rem; }
+.products-state-card p { font-size: 0.95rem; color: var(--text-secondary); max-width: 400px; margin: 0 auto 1.25rem; line-height: 1.6; }
+
 /* Tags */
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
 .tag-list.sm { margin-bottom: 0.75rem; }

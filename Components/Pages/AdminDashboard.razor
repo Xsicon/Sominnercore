@@ -684,6 +684,24 @@ else
         </div>
     </main>
 </div>
+
+<!-- Toast Notification -->
+@if (showToast)
+{
+    <div class="toast-container">
+        <div class="toast @toastType">
+            @if (toastType == "success")
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            }
+            <span>@toastMessage</span>
+        </div>
+    </div>
+}
 }
 
 @code {
@@ -696,6 +714,12 @@ else
     private bool isAuthenticated = false;
     private string currentUserEmail = "";
     private int hoveredPointIndex = -1;
+
+    // Toast notification state
+    private bool showToast = false;
+    private string toastMessage = "";
+    private string toastType = "success"; // "success" or "error"
+    private System.Threading.Timer? _toastTimer;
 
     // Line Chart Data Points
     private List<LineChartPoint> lineChartPoints = new()
@@ -1010,10 +1034,12 @@ else
             showProductModal = false;
             ResetForm();
             await LoadProducts();
+            ShowToast(isEditingProduct ? "Product updated successfully" : "Product created successfully");
         }
         catch (Exception ex)
         {
             productError = $"Failed to save product: {ex.Message}";
+            ShowToast($"Failed to save product: {ex.Message}", "error");
         }
         finally
         {
@@ -1042,16 +1068,38 @@ else
             showDeleteConfirm = false;
             deletingProduct = null;
             await LoadProducts();
+            ShowToast("Product deleted successfully");
         }
         catch (Exception ex)
         {
             productError = $"Failed to delete product: {ex.Message}";
+            ShowToast($"Failed to delete product: {ex.Message}", "error");
         }
         finally
         {
             isDeletingProduct = false;
             StateHasChanged();
         }
+    }
+
+    // Toast notification
+    private void ShowToast(string message, string type = "success")
+    {
+        _toastTimer?.Dispose();
+        toastMessage = message;
+        toastType = type;
+        showToast = true;
+        StateHasChanged();
+
+        _toastTimer = new System.Threading.Timer(
+            _ => InvokeAsync(() =>
+            {
+                showToast = false;
+                StateHasChanged();
+            }),
+            null,
+            TimeSpan.FromSeconds(3),
+            Timeout.InfiniteTimeSpan);
     }
 
     // Helper Methods

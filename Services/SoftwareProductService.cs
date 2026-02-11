@@ -6,11 +6,13 @@ namespace SominnercoreNew.Services;
 public class SoftwareProductService
 {
     private readonly Supabase.Client _client;
+    private readonly ProductChangeNotifier _notifier;
     private bool _initialized = false;
 
-    public SoftwareProductService(Supabase.Client client)
+    public SoftwareProductService(Supabase.Client client, ProductChangeNotifier notifier)
     {
         _client = client;
+        _notifier = notifier;
     }
 
     private async Task EnsureInitializedAsync()
@@ -68,6 +70,7 @@ public class SoftwareProductService
         software.CreatedAt = DateTime.UtcNow.ToString("o");
         software.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<Software>().Insert(software);
+        _notifier.NotifyChanged();
         return response.Models.FirstOrDefault();
     }
 
@@ -77,6 +80,7 @@ public class SoftwareProductService
         software.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<Software>()
             .Update(software);
+        _notifier.NotifyChanged();
         return response.Models.FirstOrDefault();
     }
 
@@ -86,5 +90,6 @@ public class SoftwareProductService
         await _client.From<Software>()
             .Where(x => x.Id == id)
             .Delete();
+        _notifier.NotifyChanged();
     }
 }

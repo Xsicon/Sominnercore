@@ -19,11 +19,13 @@ builder.Services.AddScoped(sp =>
     var options = new SupabaseOptions
     {
         AutoRefreshToken = true,
-        AutoConnectRealtime = false
+        AutoConnectRealtime = false,
+        Schema = "sominnercore"
     };
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
 
+builder.Services.AddSingleton<ProductChangeNotifier>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
 

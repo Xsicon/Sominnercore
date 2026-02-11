@@ -3,6 +3,7 @@
 @using SominnercoreNew.Services
 @using System.Globalization
 @inject SoftwareProductService ProductService
+@inject ProductChangeNotifier ChangeNotifier
 @implements IDisposable
 
 <PageTitle>Sominnercore - Enterprise Software</PageTitle>
@@ -97,20 +98,31 @@
         <div class="products-grid">
             @if (isLoadingProducts)
             {
-                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
-                    <p>Loading products...</p>
+                <div class="products-state-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                    <h3>Loading Products</h3>
+                    <p>Fetching the latest software products...</p>
                 </div>
             }
             else if (!string.IsNullOrEmpty(productLoadError))
             {
-                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <div class="products-state-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <h3>Unable to Load Products</h3>
                     <p>@productLoadError</p>
+                    <button class="btn-primary-lg" @onclick="RetryLoadProducts">
+                        Retry
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    </button>
                 </div>
             }
             else if (!FilteredPublishedProducts.Any())
             {
-                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-secondary);">
-                    <p>No products available yet. Check back soon!</p>
+                <div class="products-state-card">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    <h3>No Products Available Yet</h3>
+                    <p>We're preparing exciting new software products. Check back soon or contact us for more information.</p>
+                    <a href="#contact" class="btn-outline-lg">Contact Us</a>
                 </div>
             }
             else
@@ -498,7 +510,10 @@
     {
         await LoadPublishedProducts();
 
-        // Auto-refresh every 60 seconds so products appear when release_date passes
+        // Instant sync: refresh when admin creates/updates/deletes a product
+        ChangeNotifier.OnChange += OnProductsChanged;
+
+        // Fallback: auto-refresh every 60 seconds for release_date auto-publish
         _refreshTimer = new System.Threading.Timer(
             async _ =>
             {
@@ -511,6 +526,15 @@
             null,
             TimeSpan.FromSeconds(60),
             TimeSpan.FromSeconds(60));
+    }
+
+    private async void OnProductsChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadPublishedProducts();
+            StateHasChanged();
+        });
     }
 
     private async Task LoadPublishedProducts()
@@ -532,8 +556,15 @@
         }
     }
 
+    private async Task RetryLoadProducts()
+    {
+        await LoadPublishedProducts();
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
+        ChangeNotifier.OnChange -= OnProductsChanged;
         _refreshTimer?.Dispose();
     }
 
