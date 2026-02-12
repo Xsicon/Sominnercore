@@ -5,6 +5,7 @@
 @inject SupabaseAuthService AuthService
 @inject SoftwareProductService ProductService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Admin Dashboard - Sominnercore</PageTitle>
 
@@ -329,6 +330,14 @@ else
                         </svg>
                         <input type="text" placeholder="Search software..." @bind="searchQuery" @bind:event="oninput" />
                     </div>
+                    <button class="export-btn" @onclick="ExportBackup" title="Export products as JSON backup">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" x2="12" y1="15" y2="3"/>
+                        </svg>
+                        <span>Export</span>
+                    </button>
                     <button class="add-product-btn" @onclick="OpenAddModal">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" x2="12" y1="5" y2="19"/>
@@ -979,9 +988,40 @@ else
 
     private async Task SaveProduct()
     {
+        // Client-side validation
         if (string.IsNullOrWhiteSpace(formName))
         {
             productError = "Product name is required.";
+            return;
+        }
+        if (formName.Trim().Length > 100)
+        {
+            productError = "Product name must be 100 characters or less.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(formVersion))
+        {
+            productError = "Version is required.";
+            return;
+        }
+        if (formVersion.Trim().Length > 20)
+        {
+            productError = "Version must be 20 characters or less.";
+            return;
+        }
+        if (formShortDesc?.Length > 200)
+        {
+            productError = "Short description must be 200 characters or less.";
+            return;
+        }
+        if (formFullDesc?.Length > 2000)
+        {
+            productError = "Full description must be 2000 characters or less.";
+            return;
+        }
+        if (formActiveUsers < 0 || formTotalDownloads < 0)
+        {
+            productError = "Active users and downloads cannot be negative.";
             return;
         }
 
@@ -1079,6 +1119,30 @@ else
         {
             isDeletingProduct = false;
             StateHasChanged();
+        }
+    }
+
+    // Backup export
+    private async Task ExportBackup()
+    {
+        try
+        {
+            var exportData = softwareProducts.Select(p => new
+            {
+                p.Id, p.Name, p.ShortDescription, p.FullDescription, p.Version,
+                p.Status, p.Category, p.IconColor, p.ActiveUsers, p.TotalDownloads,
+                p.ReleaseDate, p.Visibility, p.CreatedAt, p.UpdatedAt
+            });
+            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var fileName = $"sominnercore-backup-{DateTime.UtcNow:yyyy-MM-dd}.json";
+            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+            await JS.InvokeVoidAsync("eval",
+                $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='{fileName}';a.click();");
+            ShowToast($"Backup exported: {fileName}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Export failed: {ex.Message}", "error");
         }
     }
 

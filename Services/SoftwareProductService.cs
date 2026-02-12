@@ -64,9 +64,21 @@ public class SoftwareProductService
         return false;
     }
 
+    private static void SanitizeFields(Software software)
+    {
+        software.Name = InputSanitizer.SanitizeRequired(software.Name, 100);
+        software.ShortDescription = InputSanitizer.SanitizeText(software.ShortDescription, 200);
+        software.FullDescription = InputSanitizer.SanitizeText(software.FullDescription, 2000);
+        software.Version = InputSanitizer.SanitizeRequired(software.Version, 20);
+        software.Category = InputSanitizer.SanitizeText(software.Category, 50);
+        software.ActiveUsers = InputSanitizer.ClampInt(software.ActiveUsers, 0, 10_000_000);
+        software.TotalDownloads = InputSanitizer.ClampInt(software.TotalDownloads, 0, 10_000_000);
+    }
+
     public async Task<Software?> CreateAsync(Software software)
     {
         await EnsureInitializedAsync();
+        SanitizeFields(software);
         software.CreatedAt = DateTime.UtcNow.ToString("o");
         software.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<Software>().Insert(software);
@@ -77,6 +89,7 @@ public class SoftwareProductService
     public async Task<Software?> UpdateAsync(Software software)
     {
         await EnsureInitializedAsync();
+        SanitizeFields(software);
         software.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<Software>()
             .Update(software);

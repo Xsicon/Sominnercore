@@ -581,6 +581,28 @@
     box-shadow: 0 6px 16px rgba(19, 127, 236, 0.4);
 }
 
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: transparent;
+    border: 1px solid #233648;
+    border-radius: 8px;
+    color: #92adc9;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.export-btn:hover {
+    background: #1c252e;
+    border-color: #137fec;
+    color: #fff;
+}
+
 /* Product Actions */
 .product-actions {
     display: flex;

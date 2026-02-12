@@ -26,6 +26,7 @@ builder.Services.AddScoped(sp =>
 });
 
 builder.Services.AddSingleton<ProductChangeNotifier>();
+builder.Services.AddSingleton<RateLimiter>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
 

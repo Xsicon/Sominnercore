@@ -3,6 +3,7 @@
 @using SominnercoreNew.Services
 @inject SupabaseAuthService AuthService
 @inject NavigationManager Navigation
+@inject RateLimiter RateLimiter
 
 <PageTitle>Admin Login - Sominnercore</PageTitle>
 
@@ -106,6 +107,16 @@
         isLoading = true;
         errorMessage = null;
         StateHasChanged();
+
+        if (!RateLimiter.IsAllowed("login"))
+        {
+            errorMessage = "Too many login attempts. Please wait 60 seconds before trying again.";
+            isLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        RateLimiter.RecordAttempt("login");
 
         try
         {
