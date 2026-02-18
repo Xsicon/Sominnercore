@@ -1,11 +1,10 @@
 .admin-login-container {
     min-height: 100vh;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     background-color: #101922;
     padding: 1rem;
-    padding-top: 230px;
 }
 
 .login-card {
@@ -51,7 +50,7 @@
 .login-form {
     display: flex;
     flex-direction: column;
-    gap: 5rem;
+    gap: 1.25rem;
 }
 
 .form-group {

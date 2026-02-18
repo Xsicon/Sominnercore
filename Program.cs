@@ -29,5 +29,6 @@ builder.Services.AddSingleton<ProductChangeNotifier>();
 builder.Services.AddSingleton<RateLimiter>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
+builder.Services.AddScoped<PageContentService>();
 
 await builder.Build().RunAsync();

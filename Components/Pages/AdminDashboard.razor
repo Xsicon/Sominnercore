@@ -6,6 +6,7 @@
 @inject SoftwareProductService ProductService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject PageContentService PageContentService
 
 <PageTitle>Admin Dashboard - Sominnercore</PageTitle>
 
@@ -49,6 +50,16 @@ else
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                 </svg>
                 <span>Software Products</span>
+            </a>
+            <a href="#" class="nav-item @(activeTab == "pages" ? "active" : "")" @onclick="@(() => SetActiveTab("pages"))" @onclick:preventDefault>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" x2="8" y1="13" y2="13"/>
+                    <line x1="16" x2="8" y1="17" y2="17"/>
+                    <line x1="10" x2="8" y1="9" y2="9"/>
+                </svg>
+                <span>Content Pages</span>
             </a>
             <a href="#" class="nav-item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetActiveTab("chat"))" @onclick:preventDefault>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -491,7 +502,7 @@ else
                                 <div class="form-row two-col">
                                     <div class="form-field">
                                         <label>Release Date</label>
-                                        <input type="text" @bind="formReleaseDate" placeholder="YYYY-MM-DD" />
+                                        <input type="date" value="@formReleaseDate" @onchange="@(e => formReleaseDate = e.Value?.ToString() ?? "")" />
                                     </div>
                                     <div class="form-field">
                                         <label>Icon Color</label>
@@ -565,6 +576,175 @@ else
                     </div>
                 }
             }
+            else if (activeTab == "pages")
+            {
+                <!-- Content Pages Management -->
+                <div class="products-toolbar">
+                    <div class="search-bar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg>
+                        <input type="text" placeholder="Search pages..." @bind="pageSearchQuery" @bind:event="oninput" />
+                    </div>
+                    <button class="add-product-btn" @onclick="OpenAddPageModal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" x2="12" y1="5" y2="19"/>
+                            <line x1="5" x2="19" y1="12" y2="12"/>
+                        </svg>
+                        <span>Add Page</span>
+                    </button>
+                </div>
+
+                @if (isLoadingPages)
+                {
+                    <div class="loading-products">
+                        <p>Loading pages...</p>
+                    </div>
+                }
+                else if (!contentPages.Any())
+                {
+                    <div class="empty-products">
+                        <p>No content pages yet. Click "Add Page" to create one.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="products-grid pages-grid">
+                        @foreach (var page in FilteredContentPages)
+                        {
+                            <div class="product-card">
+                                <div class="product-header">
+                                    <div class="product-icon" style="background: #6366f1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                        </svg>
+                                    </div>
+                                    <div class="product-title">
+                                        <h3>@(page.Title)</h3>
+                                        <p>/@(page.Slug)</p>
+                                    </div>
+                                </div>
+                                <div class="product-stats">
+                                    <div class="product-stat">
+                                        <span class="stat-label">URL</span>
+                                        <span class="stat-value">/page/@(page.Slug)</span>
+                                    </div>
+                                    <div class="product-stat">
+                                        <span class="stat-label">Updated</span>
+                                        <span class="stat-value">@FormatTimeAgo(page.UpdatedAt)</span>
+                                    </div>
+                                </div>
+                                <div class="product-footer">
+                                    <span class="last-update">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                        </svg>
+                                        @(page.Content.Length > 50 ? page.Content.Substring(0, 50) + "..." : page.Content)
+                                    </span>
+                                    <div class="product-actions">
+                                        <button class="action-btn edit" @onclick="() => OpenEditPageModal(page)" title="Edit">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                                                <path d="m15 5 4 4"/>
+                                            </svg>
+                                        </button>
+                                        <button class="action-btn delete" @onclick="() => ConfirmDeletePage(page)" title="Delete">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18"/>
+                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(pageError))
+                {
+                    <div class="product-error">@pageError</div>
+                }
+
+                <!-- Add/Edit Page Modal -->
+                @if (showPageModal)
+                {
+                    <div class="modal-overlay" @onclick="ClosePageModal">
+                        <div class="modal-card" @onclick:stopPropagation>
+                            <div class="modal-header">
+                                <h2>@(isEditingPage ? "Edit Page" : "Add Page")</h2>
+                                <button class="modal-close" @onclick="ClosePageModal">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" x2="6" y1="6" y2="18"/>
+                                        <line x1="6" x2="18" y1="6" y2="18"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Title *</label>
+                                        <input type="text" @bind="pageFormTitle" placeholder="e.g. Terms of Service" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Slug *</label>
+                                        <input type="text" @bind="pageFormSlug" placeholder="e.g. terms-of-service" disabled="@isEditingPage" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-field">
+                                        <label>Content *</label>
+                                        <textarea @bind="pageFormContent" placeholder="Write the page content here..." rows="12"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="modal-btn cancel" @onclick="ClosePageModal">Cancel</button>
+                                <button class="modal-btn save" @onclick="SavePage" disabled="@isSavingPage">
+                                    @if (isSavingPage)
+                                    {
+                                        <span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@(isEditingPage ? "Update" : "Add Page")</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- Delete Page Confirmation -->
+                @if (showDeletePageConfirm)
+                {
+                    <div class="modal-overlay" @onclick="() => showDeletePageConfirm = false">
+                        <div class="confirm-dialog" @onclick:stopPropagation>
+                            <div class="confirm-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"/>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                </svg>
+                            </div>
+                            <h3>Delete Page</h3>
+                            <p>Are you sure you want to delete <strong>@deletingPage?.Title</strong>? This action cannot be undone.</p>
+                            <div class="confirm-actions">
+                                <button class="modal-btn cancel" @onclick="() => showDeletePageConfirm = false">Cancel</button>
+                                <button class="modal-btn delete" @onclick="DeletePage" disabled="@isDeletingPage">
+                                    @(isDeletingPage ? "Deleting..." : "Delete")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
             else if (activeTab == "chat")
             {
                 <!-- Chat Header -->
@@ -583,10 +763,10 @@ else
                                 <circle cx="11" cy="11" r="8"/>
                                 <path d="m21 21-4.3-4.3"/>
                             </svg>
-                            <input type="text" placeholder="Search conversations..." />
+                            <input type="text" placeholder="Search conversations..." @bind="chatSearchQuery" @bind:event="oninput" />
                         </div>
                         <div class="conversations-list">
-                            @foreach (var conv in conversations)
+                            @foreach (var conv in FilteredConversations)
                             {
                                 <div class="conversation-item @(selectedConversation?.Id == conv.Id ? "active" : "")" @onclick="@(() => SelectConversation(conv))">
                                     <div class="conv-avatar" style="background: @conv.AvatarColor">@conv.Initials</div>
@@ -717,6 +897,7 @@ else
     private bool isSidebarOpen = false;
     private string activeTab = "overview";
     private string searchQuery = "";
+    private string chatSearchQuery = "";
     private string newMessage = "";
     private Conversation? selectedConversation;
     private bool isCheckingAuth = true;
@@ -831,6 +1012,13 @@ else
             : softwareProducts.Where(p => p.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                                           (p.Category ?? "").Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
 
+    private IEnumerable<Conversation> FilteredConversations =>
+        string.IsNullOrWhiteSpace(chatSearchQuery)
+            ? conversations
+            : conversations.Where(c => c.Name.Contains(chatSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                       c.Email.Contains(chatSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                       c.LastMessage.Contains(chatSearchQuery, StringComparison.OrdinalIgnoreCase));
+
     protected override async Task OnInitializedAsync()
     {
         selectedConversation = conversations.FirstOrDefault();
@@ -851,8 +1039,9 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
 
-        // Load products from Supabase
+        // Load products and pages from Supabase
         await LoadProducts();
+        await LoadPages();
     }
 
     private async Task LoadProducts()
@@ -926,6 +1115,7 @@ else
     {
         "overview" => "Overview",
         "products" => "Software Products",
+        "pages" => "Content Pages",
         "chat" => "Customer Chat",
         _ => "Dashboard"
     };
@@ -934,6 +1124,7 @@ else
     {
         "overview" => "Dashboard analytics and insights",
         "products" => "Manage your software products",
+        "pages" => "Manage frontend content pages",
         "chat" => "Customer support and communications",
         _ => ""
     };
@@ -1122,27 +1313,236 @@ else
         }
     }
 
-    // Backup export
+    // Excel export
     private async Task ExportBackup()
     {
         try
         {
-            var exportData = softwareProducts.Select(p => new
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            sb.AppendLine("<?mso-application progid=\"Excel.Sheet\"?>");
+            sb.AppendLine("<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\"");
+            sb.AppendLine(" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">");
+            sb.AppendLine("<Styles>");
+            sb.AppendLine("<Style ss:ID=\"header\"><Font ss:Bold=\"1\" ss:Size=\"11\"/><Interior ss:Color=\"#D9E2F3\" ss:Pattern=\"Solid\"/></Style>");
+            sb.AppendLine("</Styles>");
+            sb.AppendLine("<Worksheet ss:Name=\"Products\">");
+            sb.AppendLine("<Table>");
+
+            // Header row
+            sb.AppendLine("<Row>");
+            foreach (var h in new[] { "Name", "Category", "Version", "Status", "Visibility", "Active Users", "Total Downloads", "Release Date", "Short Description", "Full Description", "Created At", "Updated At" })
             {
-                p.Id, p.Name, p.ShortDescription, p.FullDescription, p.Version,
-                p.Status, p.Category, p.IconColor, p.ActiveUsers, p.TotalDownloads,
-                p.ReleaseDate, p.Visibility, p.CreatedAt, p.UpdatedAt
-            });
-            var json = System.Text.Json.JsonSerializer.Serialize(exportData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            var fileName = $"sominnercore-backup-{DateTime.UtcNow:yyyy-MM-dd}.json";
-            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+                sb.AppendLine($"<Cell ss:StyleID=\"header\"><Data ss:Type=\"String\">{EscapeXml(h)}</Data></Cell>");
+            }
+            sb.AppendLine("</Row>");
+
+            // Data rows
+            foreach (var p in softwareProducts)
+            {
+                sb.AppendLine("<Row>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.Name)}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.Category ?? "")}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.Version)}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.Status)}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.Visibility)}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{p.ActiveUsers}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"Number\">{p.TotalDownloads}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.ReleaseDate ?? "")}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.ShortDescription ?? "")}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.FullDescription ?? "")}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.CreatedAt ?? "")}</Data></Cell>");
+                sb.AppendLine($"<Cell><Data ss:Type=\"String\">{EscapeXml(p.UpdatedAt ?? "")}</Data></Cell>");
+                sb.AppendLine("</Row>");
+            }
+
+            sb.AppendLine("</Table>");
+            sb.AppendLine("</Worksheet>");
+            sb.AppendLine("</Workbook>");
+
+            var fileName = $"sominnercore-products-{DateTime.UtcNow:yyyy-MM-dd}.xls";
+            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
             await JS.InvokeVoidAsync("eval",
-                $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='{fileName}';a.click();");
-            ShowToast($"Backup exported: {fileName}");
+                $"var a=document.createElement('a');a.href='data:application/vnd.ms-excel;base64,{base64}';a.download='{fileName}';a.click();");
+            ShowToast($"Excel exported: {fileName}");
         }
         catch (Exception ex)
         {
             ShowToast($"Export failed: {ex.Message}", "error");
+        }
+    }
+
+    private static string EscapeXml(string text)
+    {
+        return text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;");
+    }
+
+    // ===== Content Pages State =====
+    private List<PageContent> contentPages = new();
+    private bool isLoadingPages = true;
+    private string? pageError;
+    private string pageSearchQuery = "";
+
+    // Page Modal State
+    private bool showPageModal = false;
+    private bool isEditingPage = false;
+    private bool isSavingPage = false;
+    private string? editingPageId;
+
+    // Page Delete Confirmation
+    private bool showDeletePageConfirm = false;
+    private bool isDeletingPage = false;
+    private PageContent? deletingPage;
+
+    // Page Form Fields
+    private string pageFormTitle = "";
+    private string pageFormSlug = "";
+    private string pageFormContent = "";
+
+    private IEnumerable<PageContent> FilteredContentPages =>
+        string.IsNullOrWhiteSpace(pageSearchQuery)
+            ? contentPages
+            : contentPages.Where(p => p.Title.Contains(pageSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                      p.Slug.Contains(pageSearchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private async Task LoadPages()
+    {
+        try
+        {
+            isLoadingPages = true;
+            pageError = null;
+            contentPages = await PageContentService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            pageError = "Failed to load pages. Please try again.";
+            Console.WriteLine($"Error loading pages: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingPages = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenAddPageModal()
+    {
+        isEditingPage = false;
+        editingPageId = null;
+        pageFormTitle = "";
+        pageFormSlug = "";
+        pageFormContent = "";
+        showPageModal = true;
+    }
+
+    private void OpenEditPageModal(PageContent page)
+    {
+        isEditingPage = true;
+        editingPageId = page.Id;
+        pageFormTitle = page.Title;
+        pageFormSlug = page.Slug;
+        pageFormContent = page.Content;
+        showPageModal = true;
+    }
+
+    private void ClosePageModal()
+    {
+        showPageModal = false;
+    }
+
+    private async Task SavePage()
+    {
+        if (string.IsNullOrWhiteSpace(pageFormTitle))
+        {
+            pageError = "Page title is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(pageFormSlug))
+        {
+            pageError = "Page slug is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(pageFormContent))
+        {
+            pageError = "Page content is required.";
+            return;
+        }
+
+        isSavingPage = true;
+        pageError = null;
+        StateHasChanged();
+
+        try
+        {
+            if (isEditingPage && editingPageId != null)
+            {
+                var page = new PageContent
+                {
+                    Id = editingPageId,
+                    Slug = pageFormSlug,
+                    Title = pageFormTitle,
+                    Content = pageFormContent
+                };
+                await PageContentService.UpdateAsync(page);
+            }
+            else
+            {
+                var page = new PageContent
+                {
+                    Slug = pageFormSlug.ToLowerInvariant().Replace(" ", "-"),
+                    Title = pageFormTitle,
+                    Content = pageFormContent
+                };
+                await PageContentService.CreateAsync(page);
+            }
+
+            showPageModal = false;
+            await LoadPages();
+            ShowToast(isEditingPage ? "Page updated successfully" : "Page created successfully");
+        }
+        catch (Exception ex)
+        {
+            pageError = $"Failed to save page: {ex.Message}";
+            ShowToast($"Failed to save page: {ex.Message}", "error");
+        }
+        finally
+        {
+            isSavingPage = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmDeletePage(PageContent page)
+    {
+        deletingPage = page;
+        showDeletePageConfirm = true;
+    }
+
+    private async Task DeletePage()
+    {
+        if (deletingPage == null) return;
+
+        isDeletingPage = true;
+        pageError = null;
+        StateHasChanged();
+
+        try
+        {
+            await PageContentService.DeleteAsync(deletingPage.Id);
+            showDeletePageConfirm = false;
+            deletingPage = null;
+            await LoadPages();
+            ShowToast("Page deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            pageError = $"Failed to delete page: {ex.Message}";
+            ShowToast($"Failed to delete page: {ex.Message}", "error");
+        }
+        finally
+        {
+            isDeletingPage = false;
+            StateHasChanged();
         }
     }
 
@@ -1194,6 +1594,7 @@ else
     private void SelectConversation(Conversation conv)
     {
         selectedConversation = conv;
+        conv.UnreadCount = 0;
     }
 
     private List<ChatMessage> GetMessagesForConversation(int convId)

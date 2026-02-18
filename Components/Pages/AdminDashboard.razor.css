@@ -1603,6 +1603,17 @@
     }
 }
 
+/* ===== PAGES GRID ===== */
+.pages-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .pages-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ===== TOAST NOTIFICATIONS ===== */
 .toast-container {
     position: fixed;
