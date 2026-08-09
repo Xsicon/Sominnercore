@@ -5,21 +5,15 @@ namespace SominnercoreNew.Services;
 public class PageContentService
 {
     private readonly Supabase.Client _client;
-    private bool _initialized = false;
+    private readonly SupabaseAuthService _auth;
 
-    public PageContentService(Supabase.Client client)
+    public PageContentService(Supabase.Client client, SupabaseAuthService auth)
     {
         _client = client;
+        _auth = auth;
     }
 
-    private async Task EnsureInitializedAsync()
-    {
-        if (!_initialized)
-        {
-            await _client.InitializeAsync();
-            _initialized = true;
-        }
-    }
+    private Task EnsureInitializedAsync() => _auth.EnsureInitializedAsync();
 
     public async Task<List<PageContent>> GetAllAsync()
     {
@@ -33,8 +27,9 @@ public class PageContentService
     public async Task<PageContent?> GetBySlugAsync(string slug)
     {
         await EnsureInitializedAsync();
+        var sanitizedSlug = InputSanitizer.SanitizeSlug(slug);
         var response = await _client.From<PageContent>()
-            .Filter("slug", Postgrest.Constants.Operator.Equals, slug)
+            .Filter("slug", Postgrest.Constants.Operator.Equals, sanitizedSlug)
             .Get();
         return response.Models.FirstOrDefault();
     }
@@ -42,8 +37,7 @@ public class PageContentService
     public async Task<PageContent?> CreateAsync(PageContent page)
     {
         await EnsureInitializedAsync();
-        page.Slug = InputSanitizer.SanitizeRequired(page.Slug, 100).ToLowerInvariant().Replace(" ", "-");
-        page.Title = InputSanitizer.SanitizeRequired(page.Title, 200);
+        SanitizeFields(page);
         page.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<PageContent>().Insert(page);
         return response.Models.FirstOrDefault();
@@ -52,7 +46,7 @@ public class PageContentService
     public async Task<PageContent?> UpdateAsync(PageContent page)
     {
         await EnsureInitializedAsync();
-        page.Title = InputSanitizer.SanitizeRequired(page.Title, 200);
+        SanitizeFields(page);
         page.UpdatedAt = DateTime.UtcNow.ToString("o");
         var response = await _client.From<PageContent>().Update(page);
         return response.Models.FirstOrDefault();
@@ -64,5 +58,12 @@ public class PageContentService
         await _client.From<PageContent>()
             .Where(x => x.Id == id)
             .Delete();
+    }
+
+    private static void SanitizeFields(PageContent page)
+    {
+        page.Slug = InputSanitizer.SanitizeSlug(page.Slug);
+        page.Title = InputSanitizer.SanitizeRequired(page.Title, 200);
+        page.Content = InputSanitizer.SanitizeRequired(page.Content, 50_000);
     }
 }

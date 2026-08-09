@@ -1,5 +1,8 @@
 using System.Globalization;
+using Postgrest;
+using Postgrest.Interfaces;
 using SominnercoreNew.Models;
+using static Postgrest.Constants;
 
 namespace SominnercoreNew.Services;
 
@@ -7,28 +10,25 @@ public class SoftwareProductService
 {
     private readonly Supabase.Client _client;
     private readonly ProductChangeNotifier _notifier;
-    private bool _initialized = false;
+    private readonly SupabaseAuthService _auth;
 
-    public SoftwareProductService(Supabase.Client client, ProductChangeNotifier notifier)
+    public SoftwareProductService(
+        Supabase.Client client,
+        ProductChangeNotifier notifier,
+        SupabaseAuthService auth)
     {
         _client = client;
         _notifier = notifier;
+        _auth = auth;
     }
 
-    private async Task EnsureInitializedAsync()
-    {
-        if (!_initialized)
-        {
-            await _client.InitializeAsync();
-            _initialized = true;
-        }
-    }
+    private Task EnsureInitializedAsync() => _auth.EnsureInitializedAsync();
 
     public async Task<List<Software>> GetAllAsync()
     {
         await EnsureInitializedAsync();
         var response = await _client.From<Software>()
-            .Order("created_at", Postgrest.Constants.Ordering.Descending)
+            .Order("created_at", Ordering.Descending)
             .Get();
         return response.Models;
     }
@@ -37,14 +37,24 @@ public class SoftwareProductService
     {
         await EnsureInitializedAsync();
 
+        var nowIso = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+
+        // Push release-date gating to PostgREST so unreleased rows are not returned to the client.
+        var filters = new List<IPostgrestQueryFilter>
+        {
+            new QueryFilter("release_date", Operator.Is, QueryFilter.NullVal),
+            new QueryFilter("release_date", Operator.LessThanOrEqual, nowIso)
+        };
+
         var response = await _client.From<Software>()
-            .Filter("visibility", Postgrest.Constants.Operator.Equals, "public")
-            .Filter("status", Postgrest.Constants.Operator.NotEqual, "deprecated")
-            .Order("created_at", Postgrest.Constants.Ordering.Descending)
+            .Filter("visibility", Operator.Equals, "public")
+            .Filter("status", Operator.NotEqual, "deprecated")
+            .Or(filters)
+            .Order("created_at", Ordering.Descending)
             .Get();
 
         var now = DateTime.UtcNow;
-
+        // Defense in depth if the API OR filter is unavailable / misconfigured.
         return response.Models
             .Where(s => IsReleaseDatePassed(s.ReleaseDate, now))
             .ToList();
@@ -71,6 +81,10 @@ public class SoftwareProductService
         software.FullDescription = InputSanitizer.SanitizeText(software.FullDescription, 2000);
         software.Version = InputSanitizer.SanitizeRequired(software.Version, 20);
         software.Category = InputSanitizer.SanitizeText(software.Category, 50);
+        software.Status = InputSanitizer.SanitizeStatus(software.Status);
+        software.Visibility = InputSanitizer.SanitizeVisibility(software.Visibility);
+        software.IconColor = InputSanitizer.SanitizeHexColor(software.IconColor);
+        software.ReleaseDate = InputSanitizer.SanitizeReleaseDate(software.ReleaseDate);
         software.ActiveUsers = InputSanitizer.ClampInt(software.ActiveUsers, 0, 10_000_000);
         software.TotalDownloads = InputSanitizer.ClampInt(software.TotalDownloads, 0, 10_000_000);
     }

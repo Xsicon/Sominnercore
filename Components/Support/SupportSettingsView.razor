@@ -1,0 +1,53 @@
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Support Workspace</p>
+        <h2>Settings</h2>
+        <p>Configure desks, brands, routing, and agent preferences</p>
+    </div>
+
+    <div class="sh-settings-grid">
+        <section class="sh-panel">
+            <h3>Connected Brands</h3>
+            <ul class="sh-settings-list">
+                <li><span class="dot teal"></span> Muuqwear <em>Live chat + tickets</em></li>
+                <li><span class="dot orange"></span> Salguri Customer <em>Tickets</em></li>
+                <li><span class="dot purple"></span> Salguri Business <em>Tickets + priority queue</em></li>
+                <li><span class="dot slate"></span> Internal Ops <em>Internal only</em></li>
+            </ul>
+            <button type="button" class="ghost-btn">Manage brand connections</button>
+        </section>
+
+        <section class="sh-panel">
+            <h3>Routing Defaults</h3>
+            <label class="sh-field">
+                <span>Default team for new tickets</span>
+                <select><option>General Support</option><option>Payments</option><option>Shipping</option></select>
+            </label>
+            <label class="sh-field">
+                <span>Auto-assign strategy</span>
+                <select><option>Least busy agent</option><option>Round robin</option><option>Manual only</option></select>
+            </label>
+            <label class="sh-toggle-row">
+                <span>Require internal note on End Chat</span>
+                <input type="checkbox" checked />
+            </label>
+        </section>
+
+        <section class="sh-panel">
+            <h3>Agent Preferences</h3>
+            <label class="sh-toggle-row">
+                <span>Desktop notifications</span>
+                <input type="checkbox" checked />
+            </label>
+            <label class="sh-toggle-row">
+                <span>Sound on new live chat</span>
+                <input type="checkbox" checked />
+            </label>
+            <label class="sh-toggle-row">
+                <span>Compact ticket cards</span>
+                <input type="checkbox" />
+            </label>
+            <button type="button" class="sh-primary-btn">Save preferences</button>
+        </section>
+    </div>
+</div>

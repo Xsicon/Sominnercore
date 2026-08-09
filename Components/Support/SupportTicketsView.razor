@@ -1,0 +1,127 @@
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Customer Support</p>
+        <h2>Support Tickets</h2>
+        <p>Route to a team, assign an agent, and resolve fast</p>
+    </div>
+
+    <div class="sh-stat-grid three">
+        <div class="sh-stat-card accent-blue">
+            <div class="sh-stat-icon"><span class="material-symbols-outlined">inbox</span></div>
+            <div><strong>124</strong><span>Open Tickets</span></div>
+        </div>
+        <div class="sh-stat-card accent-amber">
+            <div class="sh-stat-icon"><span class="material-symbols-outlined">pending_actions</span></div>
+            <div><strong>38</strong><span>In Progress</span></div>
+        </div>
+        <div class="sh-stat-card accent-green">
+            <div class="sh-stat-icon"><span class="material-symbols-outlined">check_circle</span></div>
+            <div><strong>892</strong><span>Resolved (30d)</span></div>
+        </div>
+    </div>
+
+    <div class="sh-toolbar">
+        <div class="sh-seg">
+            <button type="button" class="active">All</button>
+            <button type="button">Mine</button>
+            <button type="button">Unassigned</button>
+        </div>
+        <div class="sh-filters">
+            @foreach (var brand in brands)
+            {
+                <button type="button"
+                        class="sh-filter-chip @(activeBrand == brand ? "active" : "")"
+                        @onclick="() => activeBrand = brand">@brand</button>
+            }
+        </div>
+    </div>
+
+    <div class="sh-ticket-cards">
+        @foreach (var ticket in FilteredTickets)
+        {
+            <article class="sh-ticket-card @(ticket.Selected ? "selected" : "")">
+                <div class="sh-ticket-card-main">
+                    <div class="sh-ticket-card-tags">
+                        <span class="mono">@ticket.Id</span>
+                        <span class="prio @ticket.Priority.ToLowerInvariant()">@ticket.Priority</span>
+                        <span class="status @ticket.StatusKey">@ticket.Status</span>
+                        <span class="brand-pill">@ticket.Brand</span>
+                    </div>
+                    <h3>@ticket.Title</h3>
+                    <p>@ticket.Requester · @ticket.Email · @ticket.Category · @ticket.Date</p>
+                </div>
+                <div class="sh-ticket-card-side">
+                    <div class="avatar">@ticket.Assignee</div>
+                    <span class="replies"><span class="material-symbols-outlined">forum</span> @ticket.Replies</span>
+                    <button type="button" class="route-btn" @onclick="() => showRouteModal = ticket.Id">Route</button>
+                </div>
+            </article>
+        }
+    </div>
+</div>
+
+@if (showRouteModal != null)
+{
+    <div class="sh-modal-overlay" @onclick="() => showRouteModal = null">
+        <div class="sh-modal" @onclick:stopPropagation="true">
+            <div class="sh-modal-header">
+                <h3>Route Ticket</h3>
+                <button type="button" class="sh-icon-btn" @onclick="() => showRouteModal = null">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <p class="sh-modal-sub">Assign @showRouteModal to a team or agent.</p>
+            <label class="sh-field">
+                <span>Team</span>
+                <select>
+                    <option>Payments</option>
+                    <option>Shipping</option>
+                    <option>Security</option>
+                    <option>General Support</option>
+                </select>
+            </label>
+            <label class="sh-field">
+                <span>Agent</span>
+                <select>
+                    <option>Unassigned</option>
+                    <option>Admin User</option>
+                    <option>Alex Rivera</option>
+                    <option>Sam Chen</option>
+                </select>
+            </label>
+            <label class="sh-field">
+                <span>Note</span>
+                <textarea rows="3" placeholder="Optional routing note..."></textarea>
+            </label>
+            <div class="sh-modal-actions">
+                <button type="button" class="ghost" @onclick="() => showRouteModal = null">Cancel</button>
+                <button type="button" class="primary" @onclick="() => showRouteModal = null">Route Ticket</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeBrand = "All Brands";
+    private string? showRouteModal;
+
+    private readonly string[] brands = { "All Brands", "Muuqwear", "Salguri Customer", "Salguri Business", "Internal Ops" };
+
+    private readonly List<TicketItem> tickets = new()
+    {
+        new("TKT-966A2D", "Payment issue", "High", "In Progress", "in-progress", "Muuqwear", "Test 2", "gaarillc12@gmail.com", "Payments", "Jul 23, 2026", "A", 2, true),
+        new("TKT-1016A3", "Login Authentication Failure", "High", "Open", "open", "Salguri Customer", "mnbjca", "gaarillc12@gmail.com", "Security", "Jul 23, 2026", "M", 0, false),
+        new("TKT-8821B1", "Wrong size shipped", "Medium", "Open", "open", "Muuqwear", "Jamie Lee", "jamie@muuq.wear", "Shipping", "Jul 22, 2026", "?", 1, false),
+        new("TKT-4409C7", "Invoice for Q2 seats", "Low", "Waiting", "waiting", "Salguri Business", "Maria Garcia", "maria@retailcorp.com", "Billing", "Jul 21, 2026", "S", 4, false)
+    };
+
+    private IEnumerable<TicketItem> FilteredTickets =>
+        activeBrand == "All Brands"
+            ? tickets
+            : tickets.Where(t => t.Brand == activeBrand);
+
+    private sealed record TicketItem(
+        string Id, string Title, string Priority, string Status, string StatusKey,
+        string Brand, string Requester, string Email, string Category, string Date,
+        string Assignee, int Replies, bool Selected);
+}

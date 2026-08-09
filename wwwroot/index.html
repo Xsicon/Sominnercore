@@ -7,8 +7,13 @@
     <title>Sominnercore - Enterprise Software</title>
     <base href="/" />
     <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="css/support-hub-pages.css" />
     <link rel="stylesheet" href="SominnercoreNew.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap" rel="stylesheet" />
     <script>
         // Apply theme immediately to prevent flash of wrong theme
         (function() {
@@ -130,6 +135,28 @@
                 if (btn && !btn._t) init();
             }).observe(document.body, { childList: true, subtree: true });
         })();
+    </script>
+    <script>
+        window.sominnercoreStorage = {
+            get: function (key) {
+                try { return localStorage.getItem(key); } catch (e) { return null; }
+            },
+            set: function (key, value) {
+                try { localStorage.setItem(key, value); } catch (e) { }
+            },
+            remove: function (key) {
+                try { localStorage.removeItem(key); } catch (e) { }
+            }
+        };
+
+        window.downloadBase64File = function (base64, fileName, contentType) {
+            var a = document.createElement('a');
+            a.href = 'data:' + (contentType || 'application/octet-stream') + ';base64,' + base64;
+            a.download = fileName || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
     </script>
     <script>
         // Scroll-spy: highlight active nav link based on scroll position

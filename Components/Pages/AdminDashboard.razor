@@ -2,6 +2,7 @@
 @layout Components.Layout.AdminLayout
 @using SominnercoreNew.Services
 @using SominnercoreNew.Models
+@implements IDisposable
 @inject SupabaseAuthService AuthService
 @inject SoftwareProductService ProductService
 @inject NavigationManager Navigation
@@ -61,11 +62,12 @@ else
                 </svg>
                 <span>Content Pages</span>
             </a>
-            <a href="#" class="nav-item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetActiveTab("chat"))" @onclick:preventDefault>
+            <a href="/admin/support" class="nav-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    <path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/>
+                    <path d="M21 16v2a4 4 0 0 1-4 4h-5"/>
                 </svg>
-                <span>Customer Chat</span>
+                <span>Support Hub</span>
             </a>
         </nav>
 
@@ -1022,10 +1024,10 @@ else
     protected override async Task OnInitializedAsync()
     {
         selectedConversation = conversations.FirstOrDefault();
+        ApplyTabFromQuery();
 
-        // Check if user is authenticated
-        var user = AuthService.GetCurrentUser();
-        var session = AuthService.GetCurrentSession();
+        // Restore persisted session, then require an admin user
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
 
         if (user == null || session == null)
         {
@@ -1039,9 +1041,37 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
 
-        // Load products and pages from Supabase
         await LoadProducts();
         await LoadPages();
+    }
+
+    private void ApplyTabFromQuery()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrEmpty(query))
+            return;
+
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length != 2)
+                continue;
+
+            if (!string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var tab = Uri.UnescapeDataString(pair[1]);
+            if (tab is "overview" or "products" or "pages" or "chat")
+                activeTab = tab;
+            break;
+        }
+    }
+
+    public void Dispose()
+    {
+        _toastTimer?.Dispose();
+        _toastTimer = null;
     }
 
     private async Task LoadProducts()
@@ -1054,8 +1084,8 @@ else
         }
         catch (Exception ex)
         {
-            productError = "Failed to load products. Please try again.";
-            Console.WriteLine($"Error loading products: {ex.Message}");
+            productError = $"Failed to load products: {ex.Message}";
+            Console.WriteLine($"Error loading products: {ex}");
         }
         finally
         {
@@ -1362,8 +1392,7 @@ else
 
             var fileName = $"sominnercore-products-{DateTime.UtcNow:yyyy-MM-dd}.xls";
             var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
-            await JS.InvokeVoidAsync("eval",
-                $"var a=document.createElement('a');a.href='data:application/vnd.ms-excel;base64,{base64}';a.download='{fileName}';a.click();");
+            await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "application/vnd.ms-excel");
             ShowToast($"Excel exported: {fileName}");
         }
         catch (Exception ex)

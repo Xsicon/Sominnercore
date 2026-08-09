@@ -13,20 +13,25 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // Configure Supabase
 var supabaseUrl = builder.Configuration["Supabase:Url"] ?? "";
 var supabaseKey = builder.Configuration["Supabase:AnonKey"] ?? "";
+// Must match a schema listed under Project Settings → API → Exposed schemas
+var supabaseSchema = builder.Configuration["Supabase:Schema"] ?? "public";
 
+builder.Services.AddScoped<LocalStorageSessionHandler>();
+builder.Services.AddScoped<AuthSessionStore>();
 builder.Services.AddScoped(sp =>
 {
     var options = new SupabaseOptions
     {
         AutoRefreshToken = true,
         AutoConnectRealtime = false,
-        Schema = "sominnercore"
+        Schema = supabaseSchema,
+        SessionHandler = sp.GetRequiredService<LocalStorageSessionHandler>()
     };
     return new Supabase.Client(supabaseUrl, supabaseKey, options);
 });
 
 builder.Services.AddSingleton<ProductChangeNotifier>();
-builder.Services.AddSingleton<RateLimiter>();
+builder.Services.AddScoped<RateLimiter>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
 builder.Services.AddScoped<PageContentService>();

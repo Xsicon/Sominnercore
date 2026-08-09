@@ -8,6 +8,7 @@ publish/
 *.suo
 *.userosscache
 *.sln.docstates
+Properties/PublishProfiles/
 
 ## VS / VS Code
 .vs/
@@ -42,3 +43,7 @@ Desktop.ini
 ## Rider / JetBrains
 .idea/
 *.sln.iml
+
+## Local design assets (Stitch exports — not needed in repo)
+design refrence/
+design reference/

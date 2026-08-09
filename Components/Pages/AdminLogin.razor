@@ -108,7 +108,7 @@
         errorMessage = null;
         StateHasChanged();
 
-        if (!RateLimiter.IsAllowed("login"))
+        if (!await RateLimiter.IsAllowedAsync("login"))
         {
             errorMessage = "Too many login attempts. Please wait 60 seconds before trying again.";
             isLoading = false;
@@ -116,7 +116,7 @@
             return;
         }
 
-        RateLimiter.RecordAttempt("login");
+        await RateLimiter.RecordAttemptAsync("login");
 
         try
         {
@@ -126,21 +126,21 @@
             {
                 Navigation.NavigateTo("/admin");
             }
+            else if (error == "not_authorized")
+            {
+                errorMessage = "Your account is not authorized for admin access.";
+            }
+            else if (error != null && error.Contains("invalid_credentials"))
+            {
+                errorMessage = "Invalid email or password. Please try again.";
+            }
+            else if (error != null && error.Contains("Email not confirmed"))
+            {
+                errorMessage = "Please confirm your email address before signing in.";
+            }
             else
             {
-                // Show user-friendly error message instead of raw JSON
-                if (error != null && error.Contains("invalid_credentials"))
-                {
-                    errorMessage = "Invalid email or password. Please try again.";
-                }
-                else if (error != null && error.Contains("Email not confirmed"))
-                {
-                    errorMessage = "Please confirm your email address before signing in.";
-                }
-                else
-                {
-                    errorMessage = "Login failed. Please check your credentials.";
-                }
+                errorMessage = "Login failed. Please check your credentials.";
             }
         }
         catch

@@ -1,0 +1,93 @@
+<div class="sh-page">
+    <div class="sh-page-intro row">
+        <div>
+            <p class="sh-eyebrow">Customer Support</p>
+            <h2>Knowledge Base</h2>
+            <p>Manage help articles shown across all app Help Centers</p>
+        </div>
+        <button type="button" class="sh-primary-btn">
+            <span class="material-symbols-outlined">add</span>
+            New Article
+        </button>
+    </div>
+
+    <div class="sh-stat-grid four">
+        <div class="sh-stat-card compact"><strong>19</strong><span>Total Articles</span></div>
+        <div class="sh-stat-card compact"><strong>18</strong><span>Published</span></div>
+        <div class="sh-stat-card compact"><strong>1</strong><span>Drafts</span></div>
+        <div class="sh-stat-card compact"><strong>58,554</strong><span>Total Views</span></div>
+    </div>
+
+    <div class="sh-filters mb">
+        @foreach (var brand in brands)
+        {
+            <button type="button"
+                    class="sh-filter-chip @(activeBrand == brand ? "active" : "")"
+                    @onclick="() => activeBrand = brand">@brand</button>
+        }
+    </div>
+
+    <div class="sh-kb-cats">
+        @foreach (var cat in categories)
+        {
+            <button type="button"
+                    class="sh-kb-cat @(activeCategory == cat.Name ? "active" : "")"
+                    @onclick="() => activeCategory = cat.Name">
+                <span class="material-symbols-outlined">@cat.Icon</span>
+                <strong>@cat.Name</strong>
+                <span>@cat.Count</span>
+            </button>
+        }
+    </div>
+
+    <div class="sh-kb-grid">
+        @foreach (var article in FilteredArticles)
+        {
+            <article class="sh-kb-card">
+                <div class="sh-kb-card-top">
+                    <span class="sh-tag brand-@article.BrandKey">@article.Brand</span>
+                    <span class="views"><span class="material-symbols-outlined">visibility</span> @article.Views</span>
+                </div>
+                <h3>@article.Title</h3>
+                <p>@article.Snippet</p>
+                <div class="sh-kb-card-foot">
+                    <span>@article.Category</span>
+                    <span>Updated @article.Updated</span>
+                </div>
+            </article>
+        }
+    </div>
+</div>
+
+@code {
+    private string activeBrand = "All Brands";
+    private string activeCategory = "All Categories";
+
+    private readonly string[] brands = { "All Brands", "Muuqwear", "Salguri Customer", "Salguri Business", "Internal Ops" };
+
+    private readonly List<(string Name, string Icon, string Count)> categories = new()
+    {
+        ("All Categories", "dashboard", "18/19"),
+        ("Orders", "inventory_2", "3/3"),
+        ("Shipping", "local_shipping", "3/3"),
+        ("Returns", "assignment_return", "4/4"),
+        ("Payments", "payments", "5/5"),
+        ("Account", "person", "3/4")
+    };
+
+    private readonly List<KbArticle> articles = new()
+    {
+        new("How do I track my Muuqwear order?", "Use your order number to check live shipping updates.", "MUUQWEAR", "muuqwear", "Orders", "1.2k", "2d ago"),
+        new("Can I cancel my order?", "Orders can be cancelled within 60 minutes of checkout.", "MUUQWEAR", "muuqwear", "Orders", "980", "5d ago"),
+        new("Defective Item Return Process", "Steps for documenting and returning defective items.", "GENERAL", "general", "Returns", "2.4k", "1w ago"),
+        new("Salguri Business invoice FAQ", "How seats, billing cycles, and invoices work.", "BUSINESS", "salguri-business", "Payments", "640", "3d ago"),
+        new("Resetting customer passwords", "Internal runbook for secure password resets.", "INTERNAL", "internal", "Account", "210", "4d ago")
+    };
+
+    private IEnumerable<KbArticle> FilteredArticles =>
+        articles.Where(a =>
+            (activeBrand == "All Brands" || a.Brand.Contains(activeBrand.Split(' ')[0], StringComparison.OrdinalIgnoreCase) || (activeBrand == "Internal Ops" && a.BrandKey == "internal"))
+            && (activeCategory == "All Categories" || a.Category == activeCategory));
+
+    private sealed record KbArticle(string Title, string Snippet, string Brand, string BrandKey, string Category, string Views, string Updated);
+}
