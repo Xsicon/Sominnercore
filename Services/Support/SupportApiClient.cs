@@ -128,6 +128,8 @@ public class SupportApiClient
     {
         var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Support/counts");
         var body = await res.Content.ReadFromJsonAsync<ApiResponse<SupportCountsDto>>(JsonOptions);
+        if (!res.IsSuccessStatusCode || body?.Success == false)
+            throw new InvalidOperationException(body?.Message ?? $"Counts failed ({(int)res.StatusCode}).");
         return body?.Data ?? new SupportCountsDto();
     }
 
@@ -258,18 +260,11 @@ public class SupportApiClient
 
     public async Task<TicketStatsDto?> GetTicketStatsAsync()
     {
-        try
-        {
-            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Help/admin/stats");
-            var body = await res.Content.ReadFromJsonAsync<ApiResponse<TicketStatsDto>>(JsonOptions);
-            if (res.IsSuccessStatusCode && body?.Success == true && body.Data != null)
-                return body.Data;
-            return null;
-        }
-        catch
-        {
-            return null;
-        }
+        var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Help/admin/stats");
+        var body = await res.Content.ReadFromJsonAsync<ApiResponse<TicketStatsDto>>(JsonOptions);
+        if (!res.IsSuccessStatusCode || body?.Success == false)
+            throw new InvalidOperationException(body?.Message ?? $"Stats failed ({(int)res.StatusCode}).");
+        return body?.Data ?? new TicketStatsDto();
     }
 
     public async Task<ApiResponse<ApiPaginated<SupportTicketDto>>> GetTicketsPageAsync(
