@@ -155,6 +155,23 @@ public class SupabaseAuthService
     {
         await EnsureInitializedAsync();
         var session = GetCurrentSession();
+        if (session == null)
+            return null;
+
+        if (IsAccessTokenExpired(session) && !string.IsNullOrEmpty(session.RefreshToken))
+        {
+            try
+            {
+                session = await _client.Auth.RefreshSession();
+                if (session != null)
+                    await PersistSessionAsync(session);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         return session?.AccessToken;
     }
 
