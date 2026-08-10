@@ -62,7 +62,7 @@
                             </div>
                             @if (!string.IsNullOrWhiteSpace(s.ContactEmail))
                             {
-                                <a href="mailto:@s.ContactEmail" class="cs-contact-email cs-conv-item__email" @onclick:stopPropagation="true">@s.ContactEmail</a>
+                                <span class="cs-contact-email cs-conv-item__email">@s.ContactEmail</span>
                             }
                             @if (!string.IsNullOrEmpty(s.LastMessagePreview))
                             {
@@ -113,11 +113,10 @@
                             @if (!string.IsNullOrWhiteSpace(selectedSession.ContactEmail))
                             {
                                 <div class="cs-chat-panel__email-row">
-                                    <a href="mailto:@selectedSession.ContactEmail"
-                                       class="cs-contact-email cs-chat-panel__email-link"
-                                       title="@selectedSession.ContactEmail">
+                                    <span class="cs-contact-email cs-chat-panel__email-text"
+                                          title="@selectedSession.ContactEmail">
                                         @selectedSession.ContactEmail
-                                    </a>
+                                    </span>
                                     <button type="button"
                                             class="cs-chat-panel__copy-btn"
                                             title="@(emailCopied ? "Copied!" : "Copy email")"

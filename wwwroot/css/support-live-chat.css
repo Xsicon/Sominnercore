@@ -288,13 +288,12 @@
     font-size: 12px;
     color: #137fec;
     text-decoration: none;
+    cursor: default;
     margin-bottom: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
-.cs-conv-item__email:hover { text-decoration: underline; }
 
 .cs-conv-item__preview {
     font-size: 12px;
@@ -456,7 +455,7 @@
     margin-top: 4px;
 }
 
-.cs-chat-panel__email-link {
+.cs-chat-panel__email-text {
     min-width: 0;
     font-size: 12px;
     font-weight: 500;
@@ -464,10 +463,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-decoration: none;
+    cursor: default;
 }
-
-.cs-chat-panel__email-link:hover { text-decoration: underline; }
 
 .cs-chat-panel__copy-btn {
     display: inline-flex;
