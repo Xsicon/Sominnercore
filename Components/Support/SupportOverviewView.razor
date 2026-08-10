@@ -1,80 +1,81 @@
+@using SominnercoreNew.Services.Support
+@inject SupportApiClient SupportApi
+
 <div class="sh-page">
     <div class="sh-page-intro">
         <p class="sh-eyebrow">Support Workspace</p>
         <h2>Overview</h2>
-        <p>Live support analytics across all connected apps</p>
+        <p>Live support analytics for @SupportApi.DisplayName</p>
     </div>
 
-    <div class="sh-stat-grid four">
-        <div class="sh-stat-card">
-            <div class="sh-stat-top">
-                <span>Open Chats</span>
-                <span class="material-symbols-outlined">forum</span>
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="sh-empty-list">@error</p>
+    }
+    else if (loading)
+    {
+        <p class="sh-empty-list">Loading counts...</p>
+    }
+    else
+    {
+        <div class="sh-stat-grid four">
+            <div class="sh-stat-card">
+                <div class="sh-stat-top">
+                    <span>Active Chats</span>
+                    <span class="material-symbols-outlined">forum</span>
+                </div>
+                <strong>@counts.ActiveChats</strong>
+                <em>Project: @SupportApi.DisplayName</em>
             </div>
-            <strong>18</strong>
-            <em class="up">+12% from yesterday</em>
-        </div>
-        <div class="sh-stat-card">
-            <div class="sh-stat-top">
-                <span>Open Tickets</span>
-                <span class="material-symbols-outlined">confirmation_number</span>
+            <div class="sh-stat-card">
+                <div class="sh-stat-top">
+                    <span>Open Tickets</span>
+                    <span class="material-symbols-outlined">confirmation_number</span>
+                </div>
+                <strong>@counts.OpenTickets</strong>
+                <em>open + in progress</em>
             </div>
-            <strong>124</strong>
-            <em class="up">38 in progress</em>
-        </div>
-        <div class="sh-stat-card">
-            <div class="sh-stat-top">
-                <span>Avg First Reply</span>
-                <span class="material-symbols-outlined">timer</span>
+            <div class="sh-stat-card">
+                <div class="sh-stat-top">
+                    <span>Ticket Stats</span>
+                    <span class="material-symbols-outlined">inbox</span>
+                </div>
+                <strong>@stats.OpenCount</strong>
+                <em>@stats.InProgressCount in progress · @stats.TotalCount total</em>
             </div>
-            <strong>4m 12s</strong>
-            <em class="up">-18% this week</em>
-        </div>
-        <div class="sh-stat-card">
-            <div class="sh-stat-top">
-                <span>CSAT</span>
-                <span class="material-symbols-outlined">sentiment_satisfied</span>
-            </div>
-            <strong>94%</strong>
-            <em>Based on 482 ratings</em>
-        </div>
-    </div>
-
-    <div class="sh-split-grid">
-        <div class="sh-panel">
-            <h3>Volume by Brand</h3>
-            <div class="sh-bars">
-                <div class="sh-bar-row"><span>Muuqwear</span><div class="sh-bar"><i style="width:78%"></i></div><b>78</b></div>
-                <div class="sh-bar-row"><span>Salguri Customer</span><div class="sh-bar"><i style="width:54%"></i></div><b>54</b></div>
-                <div class="sh-bar-row"><span>Salguri Business</span><div class="sh-bar"><i style="width:36%"></i></div><b>36</b></div>
-                <div class="sh-bar-row"><span>Internal Ops</span><div class="sh-bar"><i style="width:18%"></i></div><b>18</b></div>
+            <div class="sh-stat-card">
+                <div class="sh-stat-top">
+                    <span>Desk</span>
+                    <span class="material-symbols-outlined">storefront</span>
+                </div>
+                <strong>@SupportApi.DisplayName</strong>
+                <em>@SupportApi.TenantId</em>
             </div>
         </div>
-        <div class="sh-panel">
-            <h3>Needs Attention</h3>
-            <ul class="sh-attention-list">
-                <li>
-                    <div>
-                        <strong>Payment issue</strong>
-                        <span>TKT-966A2D · High · Muuqwear</span>
-                    </div>
-                    <em>Waiting 2h</em>
-                </li>
-                <li>
-                    <div>
-                        <strong>Alex Thompson</strong>
-                        <span>Live chat · Order #MQ-88492</span>
-                    </div>
-                    <em class="live">LIVE</em>
-                </li>
-                <li>
-                    <div>
-                        <strong>Login Authentication Failure</strong>
-                        <span>TKT-1016A3 · High · Salguri</span>
-                    </div>
-                    <em>Unassigned</em>
-                </li>
-            </ul>
-        </div>
-    </div>
+    }
 </div>
+
+@code {
+    private bool loading = true;
+    private string? error;
+    private SupportCountsDto counts = new();
+    private TicketStatsDto stats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            counts = await SupportApi.GetCountsAsync();
+            stats = await SupportApi.GetTicketStatsAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            error = $"Unable to load Support API data. Is Sominnercore.SupportApi running? ({ex.Message})";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

@@ -1,127 +1,431 @@
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Customer Support</p>
-        <h2>Support Tickets</h2>
-        <p>Route to a team, assign an agent, and resolve fast</p>
-    </div>
+@using SominnercoreNew.Services
+@using SominnercoreNew.Services.Support
+@using Microsoft.AspNetCore.Components.Web
+@inject SupportApiClient SupportApi
+@inject SupabaseAuthService AuthService
+@implements IDisposable
 
-    <div class="sh-stat-grid three">
-        <div class="sh-stat-card accent-blue">
-            <div class="sh-stat-icon"><span class="material-symbols-outlined">inbox</span></div>
-            <div><strong>124</strong><span>Open Tickets</span></div>
+<div class="@ShellClass">
+    <div class="cs-tab-header-row">
+        <div class="cs-tab-header" style="margin-bottom:0">
+            <p class="cs-tab-eyebrow">Customer Support</p>
+            <h2 class="cs-tab-title">Support Tickets</h2>
+            <p class="cs-tab-subtitle">Route to a team, assign an agent, and resolve fast</p>
         </div>
-        <div class="sh-stat-card accent-amber">
-            <div class="sh-stat-icon"><span class="material-symbols-outlined">pending_actions</span></div>
-            <div><strong>38</strong><span>In Progress</span></div>
-        </div>
-        <div class="sh-stat-card accent-green">
-            <div class="sh-stat-icon"><span class="material-symbols-outlined">check_circle</span></div>
-            <div><strong>892</strong><span>Resolved (30d)</span></div>
+        <div class="cs-tab-actions">
+            <SupportKbButton OnClick="OpenKbPanel" />
         </div>
     </div>
 
-    <div class="sh-toolbar">
-        <div class="sh-seg">
-            <button type="button" class="active">All</button>
-            <button type="button">Mine</button>
-            <button type="button">Unassigned</button>
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="cs-error-banner">@loadError</p>
+    }
+
+    @if (!string.IsNullOrEmpty(listWarning))
+    {
+        <p class="cs-list-warning">@listWarning</p>
+    }
+
+    @if (isLoading)
+    {
+        <p class="cs-loading">Loading tickets…</p>
+    }
+
+    <div class="cs-stats cs-stats--3">
+        <div class="cs-stat-card" style="background:#DBEAFE;border-color:#3B82F630">
+            <div class="cs-stat-card__bar" style="background:#3B82F6"></div>
+            <div>
+                <p class="cs-stat-card__value">@(stats?.OpenCount ?? tickets.Count(t => t.Status == "open"))</p>
+                <p class="cs-stat-card__label">Open</p>
+            </div>
         </div>
-        <div class="sh-filters">
-            @foreach (var brand in brands)
+        <div class="cs-stat-card" style="background:#FEF3C7;border-color:#F59E0B30">
+            <div class="cs-stat-card__bar" style="background:#F59E0B"></div>
+            <div>
+                <p class="cs-stat-card__value">@(stats?.InProgressCount ?? tickets.Count(t => t.Status == "in_progress"))</p>
+                <p class="cs-stat-card__label">In Progress</p>
+            </div>
+        </div>
+        <div class="cs-stat-card" style="background:#D1FAE5;border-color:#22C55E30">
+            <div class="cs-stat-card__bar" style="background:#22C55E"></div>
+            <div>
+                <p class="cs-stat-card__value">@tickets.Count(t => t.Status == "resolved")</p>
+                <p class="cs-stat-card__label">Resolved</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="cs-kb-toolbar">
+        <div class="cs-kb-search @(searchExpanded ? "cs-kb-search--open" : "")">
+            <button type="button"
+                    class="cs-kb-search__toggle @(searchExpanded ? "cs-kb-search__toggle--active" : "")"
+                    aria-label="@(searchExpanded ? "Close search" : "Search tickets")"
+                    aria-expanded="@searchExpanded"
+                    @onclick="ToggleSearchAsync">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+            <div class="cs-kb-search__field">
+                <input @ref="searchInputRef"
+                       class="cs-kb-search__input"
+                       placeholder="Search tickets…"
+                       value="@search"
+                       @oninput="OnSearchChanged"
+                       @onkeydown="HandleSearchKeyDown" />
+                @if (!string.IsNullOrEmpty(search))
+                {
+                    <button type="button"
+                            class="cs-kb-search__clear"
+                            aria-label="Clear search"
+                            @onclick="ClearSearch">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="cs-kb-toolbar__filters">
+            <button type="button"
+                    class="cs-pill cs-pill--mine @(mineOnly ? "cs-pill--active-dark" : "")"
+                    @onclick="ToggleMineOnly">
+                Assigned to me (@MineCount)
+            </button>
+            @foreach (var s in StatusFilters)
             {
                 <button type="button"
-                        class="sh-filter-chip @(activeBrand == brand ? "active" : "")"
-                        @onclick="() => activeBrand = brand">@brand</button>
+                        class="cs-pill @(filterStatus == s.Key ? "cs-pill--active-dark" : "")"
+                        @onclick="() => filterStatus = s.Key">
+                    @s.Label
+                </button>
             }
         </div>
     </div>
 
-    <div class="sh-ticket-cards">
+    <div class="cs-list cs-list--tickets">
         @foreach (var ticket in FilteredTickets)
         {
-            <article class="sh-ticket-card @(ticket.Selected ? "selected" : "")">
-                <div class="sh-ticket-card-main">
-                    <div class="sh-ticket-card-tags">
-                        <span class="mono">@ticket.Id</span>
-                        <span class="prio @ticket.Priority.ToLowerInvariant()">@ticket.Priority</span>
-                        <span class="status @ticket.StatusKey">@ticket.Status</span>
-                        <span class="brand-pill">@ticket.Brand</span>
+            var ss = GetStatusStyle(ticket.Status);
+            var ps = GetPriorityStyle(ticket.Priority);
+            var replyCount = ticket.DisplayReplyCount;
+            <button type="button"
+                    class="cs-row cs-row--clickable @(activeTicket?.Id == ticket.Id ? "cs-row--active" : "")"
+                    @onclick="() => OpenTicketDrawerAsync(ticket)">
+                <div class="cs-row__body">
+                    <div class="cs-row__badges">
+                        <span class="cs-row__meta" style="font-family:monospace">@ticket.TicketNumber</span>
+                        <span class="cs-badge cs-badge--round" style="background:@ps.Bg;color:@ps.Text">@GetPriorityLabel(ticket.Priority)</span>
+                        <span class="cs-badge cs-badge--round" style="background:@ss.Bg;color:@ss.Text">
+                            <span class="cs-badge__dot" style="background:@ss.Dot"></span>
+                            @GetStatusLabel(ticket.Status)
+                        </span>
+                        @if (!string.IsNullOrWhiteSpace(ticket.Team) && ticket.Team != SupportTicketTeams.Unassigned)
+                        {
+                            <span class="cs-badge cs-badge--round cs-badge--team">@ticket.Team</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(ticket.AssignedToName) && ticket.AssignedToName != SupportTicketAgents.Unassigned)
+                        {
+                            <span class="cs-badge cs-badge--round cs-badge--agent">@ticket.AssignedToName</span>
+                        }
                     </div>
-                    <h3>@ticket.Title</h3>
-                    <p>@ticket.Requester · @ticket.Email · @ticket.Category · @ticket.Date</p>
+                    <p class="cs-row__title">@ticket.Subject</p>
+                    <p class="cs-row__meta">
+                        @ticket.Name
+                        @if (!string.IsNullOrWhiteSpace(ticket.Email))
+                        {
+                            <span> · </span>
+                            <span @onclick:stopPropagation="true">@ticket.Email</span>
+                        }
+                        <span> · @ticket.Category · @FormatDate(ticket.CreatedAt)</span>
+                        @if (replyCount > 0)
+                        {
+                            <span> · @replyCount repl@(replyCount == 1 ? "y" : "ies")</span>
+                        }
+                    </p>
                 </div>
-                <div class="sh-ticket-card-side">
-                    <div class="avatar">@ticket.Assignee</div>
-                    <span class="replies"><span class="material-symbols-outlined">forum</span> @ticket.Replies</span>
-                    <button type="button" class="route-btn" @onclick="() => showRouteModal = ticket.Id">Route</button>
-                </div>
-            </article>
+                <svg class="cs-row__chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+            </button>
+        }
+
+        @if (!isLoading && !FilteredTickets.Any())
+        {
+            <div class="cs-empty">
+                <svg class="cs-empty__icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                <p>@(string.IsNullOrEmpty(loadError) ? "No tickets match your filters." : "Unable to load tickets.")</p>
+            </div>
         }
     </div>
+
+    @if (!string.IsNullOrEmpty(toast))
+    {
+        <div class="cs-toast @(toastIsError ? "cs-toast--error" : "")">
+            @if (!toastIsError)
+            {
+                <svg class="cs-toast__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+            }
+            @toast
+        </div>
+    }
+
+    @if (activeTicket != null)
+    {
+        <SupportTicketDrawer Ticket="activeTicket"
+                             Shifted="showKbPanel"
+                             IsLoading="drawerLoading"
+                             OnClose="CloseTicketDrawer"
+                             OnOpenKb="OpenKbPanel"
+                             OnNotify="HandleDrawerNotify"
+                             OnTicketUpdated="HandleTicketUpdated" />
+    }
+
+    @if (showKbPanel)
+    {
+        <button type="button" class="cs-kb-backdrop" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
+        <SupportKbQuickPanel OnClose="CloseKbPanel" />
+    }
 </div>
 
-@if (showRouteModal != null)
-{
-    <div class="sh-modal-overlay" @onclick="() => showRouteModal = null">
-        <div class="sh-modal" @onclick:stopPropagation="true">
-            <div class="sh-modal-header">
-                <h3>Route Ticket</h3>
-                <button type="button" class="sh-icon-btn" @onclick="() => showRouteModal = null">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <p class="sh-modal-sub">Assign @showRouteModal to a team or agent.</p>
-            <label class="sh-field">
-                <span>Team</span>
-                <select>
-                    <option>Payments</option>
-                    <option>Shipping</option>
-                    <option>Security</option>
-                    <option>General Support</option>
-                </select>
-            </label>
-            <label class="sh-field">
-                <span>Agent</span>
-                <select>
-                    <option>Unassigned</option>
-                    <option>Admin User</option>
-                    <option>Alex Rivera</option>
-                    <option>Sam Chen</option>
-                </select>
-            </label>
-            <label class="sh-field">
-                <span>Note</span>
-                <textarea rows="3" placeholder="Optional routing note..."></textarea>
-            </label>
-            <div class="sh-modal-actions">
-                <button type="button" class="ghost" @onclick="() => showRouteModal = null">Cancel</button>
-                <button type="button" class="primary" @onclick="() => showRouteModal = null">Route Ticket</button>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
-    private string activeBrand = "All Brands";
-    private string? showRouteModal;
+    private List<SupportTicketDto> tickets = [];
+    private TicketStatsDto? stats;
+    private SupportTicketDto? activeTicket;
+    private bool isLoading = true;
+    private bool drawerLoading;
+    private string? loadError;
+    private string? listWarning;
+    private string search = string.Empty;
+    private string filterStatus = "All";
+    private bool mineOnly;
+    private bool searchExpanded;
+    private ElementReference searchInputRef;
+    private string agentName = string.Empty;
+    private string? toast;
+    private bool toastIsError;
+    private bool showKbPanel;
+    private System.Threading.Timer? toastTimer;
 
-    private readonly string[] brands = { "All Brands", "Muuqwear", "Salguri Customer", "Salguri Business", "Internal Ops" };
+    private string ShellClass =>
+        showKbPanel ? "cs-tab-shell cs-tab-shell--kb-open" : "cs-tab-shell";
 
-    private readonly List<TicketItem> tickets = new()
+    private static readonly (string Key, string Label)[] StatusFilters =
+    [
+        ("All", "All"),
+        ("open", "Open"),
+        ("in_progress", "In Progress"),
+        ("resolved", "Resolved")
+    ];
+
+    private int MineCount =>
+        string.IsNullOrWhiteSpace(agentName)
+            ? 0
+            : tickets.Count(t => t.IsAssignedTo(agentName));
+
+    private IEnumerable<SupportTicketDto> FilteredTickets
     {
-        new("TKT-966A2D", "Payment issue", "High", "In Progress", "in-progress", "Muuqwear", "Test 2", "gaarillc12@gmail.com", "Payments", "Jul 23, 2026", "A", 2, true),
-        new("TKT-1016A3", "Login Authentication Failure", "High", "Open", "open", "Salguri Customer", "mnbjca", "gaarillc12@gmail.com", "Security", "Jul 23, 2026", "M", 0, false),
-        new("TKT-8821B1", "Wrong size shipped", "Medium", "Open", "open", "Muuqwear", "Jamie Lee", "jamie@muuq.wear", "Shipping", "Jul 22, 2026", "?", 1, false),
-        new("TKT-4409C7", "Invoice for Q2 seats", "Low", "Waiting", "waiting", "Salguri Business", "Maria Garcia", "maria@retailcorp.com", "Billing", "Jul 21, 2026", "S", 4, false)
+        get
+        {
+            var q = search.Trim().ToLowerInvariant();
+            return tickets.Where(t =>
+                (string.IsNullOrEmpty(q) ||
+                 t.Subject.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                 t.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                 t.Email.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                 t.TicketNumber.Contains(q, StringComparison.OrdinalIgnoreCase)) &&
+                (filterStatus == "All" || t.Status == filterStatus) &&
+                (!mineOnly || t.IsAssignedTo(agentName)));
+        }
+    }
+
+    private async Task ToggleSearchAsync()
+    {
+        if (searchExpanded)
+        {
+            searchExpanded = false;
+            return;
+        }
+
+        searchExpanded = true;
+        await Task.Yield();
+        try
+        {
+            await searchInputRef.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+            // Input not rendered yet.
+        }
+    }
+
+    private async Task HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && string.IsNullOrWhiteSpace(search))
+        {
+            searchExpanded = false;
+            await Task.CompletedTask;
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(search))
+            searchExpanded = true;
+    }
+
+    private void ClearSearch() => search = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        agentName = await AuthService.GetAgentDisplayNameAsync();
+
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            await Task.WhenAll(LoadTickets(), LoadStats());
+        }
+        catch (Exception ex)
+        {
+            loadError = string.IsNullOrWhiteSpace(ex.Message)
+                ? "Failed to load support tickets."
+                : ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadTickets()
+    {
+        var (items, error, truncation) = await SupportPaginatedLoader.LoadAllPagesAsync(
+            (page, pageSize) => SupportApi.GetTicketsPageAsync(page, pageSize));
+
+        if (error != null && items.Count == 0)
+        {
+            tickets = [];
+            listWarning = null;
+            loadError = string.IsNullOrWhiteSpace(error)
+                ? "Failed to load support tickets."
+                : error;
+            return;
+        }
+
+        tickets = items;
+        listWarning = truncation;
+        loadError = null;
+    }
+
+    private async Task LoadStats()
+    {
+        stats = await SupportApi.GetTicketStatsAsync();
+    }
+
+    private async Task OpenTicketDrawerAsync(SupportTicketDto ticket)
+    {
+        activeTicket = ticket;
+        drawerLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SupportApi.GetTicketByIdResultAsync(ticket.Id);
+            if (result.Success && result.Data != null)
+            {
+                activeTicket = result.Data;
+                SyncTicketInList(result.Data);
+            }
+            else
+            {
+                ShowToast(
+                    string.IsNullOrWhiteSpace(result.Message)
+                        ? "Failed to load ticket details."
+                        : result.Message,
+                    isError: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowToast(ex.Message, isError: true);
+        }
+        finally
+        {
+            drawerLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseTicketDrawer() => activeTicket = null;
+
+    private Task HandleTicketUpdated(SupportTicketDto updated)
+    {
+        SyncTicketInList(updated);
+        activeTicket = updated;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDrawerNotify((string Message, bool IsError) notification)
+    {
+        ShowToast(notification.Message, notification.IsError);
+        return Task.CompletedTask;
+    }
+
+    private void SyncTicketInList(SupportTicketDto updated)
+    {
+        var index = tickets.FindIndex(t => t.Id == updated.Id);
+        if (index >= 0)
+            tickets[index] = updated;
+    }
+
+    private void ToggleMineOnly() => mineOnly = !mineOnly;
+
+    private void ShowToast(string message, bool isError = false)
+    {
+        toast = message;
+        toastIsError = isError;
+        toastTimer?.Dispose();
+        toastTimer = new System.Threading.Timer(_ =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                toast = null;
+                toastIsError = false;
+                StateHasChanged();
+            });
+        }, null, 2400, Timeout.Infinite);
+    }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "in_progress" => "In Progress",
+        "resolved" => "Resolved",
+        _ => "Open"
     };
 
-    private IEnumerable<TicketItem> FilteredTickets =>
-        activeBrand == "All Brands"
-            ? tickets
-            : tickets.Where(t => t.Brand == activeBrand);
+    private static string GetPriorityLabel(string priority) => priority switch
+    {
+        "high" => "HIGH",
+        "normal" => "MEDIUM",
+        _ => "LOW"
+    };
 
-    private sealed record TicketItem(
-        string Id, string Title, string Priority, string Status, string StatusKey,
-        string Brand, string Requester, string Email, string Category, string Date,
-        string Assignee, int Replies, bool Selected);
+    private static (string Bg, string Text, string Dot) GetStatusStyle(string status) => status switch
+    {
+        "in_progress" => ("#FEF3C7", "#92400E", "#F59E0B"),
+        "resolved" => ("#D1FAE5", "#065F46", "#22C55E"),
+        _ => ("#DBEAFE", "#1E3A8A", "#3B82F6")
+    };
+
+    private static (string Bg, string Text) GetPriorityStyle(string priority) => priority switch
+    {
+        "high" => ("#FEE2E2", "#991B1B"),
+        "normal" => ("#FEF3C7", "#92400E"),
+        _ => ("#F3F4F6", "#374151")
+    };
+
+    private static string FormatDate(DateTime? dt) =>
+        dt?.ToString("MMM d, yyyy") ?? "—";
+
+    private void OpenKbPanel() => showKbPanel = true;
+
+    private void CloseKbPanel() => showKbPanel = false;
+
+    public void Dispose() => toastTimer?.Dispose();
 }

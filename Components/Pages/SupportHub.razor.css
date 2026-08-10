@@ -1,7 +1,11 @@
 ﻿/* Support Hub uses the same admin shell colors as AdminDashboard */
 .support-hub.admin-dashboard {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
     background-color: #101922;
     font-family: Inter, system-ui, sans-serif;
 }
@@ -100,6 +104,99 @@
     border-top: 1px solid #233648;
 }
 
+.support-hub .sh-project-switcher {
+    padding: 0.85rem 1rem 0.5rem;
+    border-bottom: 1px solid #233648;
+}
+
+.support-hub .sh-project-switcher__label {
+    margin: 0 0 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #92adc9;
+}
+
+.support-hub .sh-project-switcher__hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #92adc9;
+}
+
+.support-hub .sh-project-switcher__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.support-hub .sh-project-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #92adc9;
+    border-radius: 8px;
+    padding: 0.55rem 0.65rem;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+}
+
+.support-hub .sh-project-chip:hover {
+    background: rgba(19, 127, 236, 0.08);
+    color: #fff;
+}
+
+.support-hub .sh-project-chip.active {
+    background: rgba(19, 127, 236, 0.15);
+    border-color: rgba(19, 127, 236, 0.45);
+    color: #fff;
+}
+
+.support-hub .sh-project-chip__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    background: #94a3b8;
+}
+
+.support-hub .sh-project-chip__dot.teal { background: #14b8a6; }
+.support-hub .sh-project-chip__dot.orange { background: #f97316; }
+.support-hub .sh-project-chip__dot.purple { background: #a855f7; }
+
+.support-hub .sh-project-chip__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.support-hub .sh-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.support-hub .sh-active-project {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #233648;
+    background: #1c252e;
+    color: #92adc9;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 .support-hub .user-info {
     display: flex;
     align-items: center;
@@ -194,6 +291,7 @@
     flex-direction: column;
     overflow: hidden;
     min-width: 0;
+    min-height: 0;
 }
 
 .support-hub .dashboard-header {
@@ -272,6 +370,14 @@
     overflow-y: auto;
     min-height: 0;
     background: #101922;
+}
+
+/* Live Chat: lock to viewport; internal panes scroll, composer stays put */
+.sh-scroll.sh-scroll--chat {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
 }
 
 /* Workspace content area */

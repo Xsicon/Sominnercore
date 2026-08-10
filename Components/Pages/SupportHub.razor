@@ -1,9 +1,15 @@
 @page "/admin/support"
 @layout Components.Layout.AdminLayout
+@using System.Text.Json
+@using Microsoft.JSInterop
 @using SominnercoreNew.Services
+@using SominnercoreNew.Services.Support
 @using SominnercoreNew.Components.Support
 @inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Support Hub - Sominnercore</PageTitle>
 
@@ -29,6 +35,34 @@ else
                 <span>Support Hub</span>
             </div>
             <p class="brand-subtitle">Multi-app customer support</p>
+        </div>
+
+        <div class="sh-project-switcher">
+            <p class="sh-project-switcher__label">Project</p>
+            @if (tenantsLoading)
+            {
+                <p class="sh-project-switcher__hint">Loading projects…</p>
+            }
+            else if (!string.IsNullOrEmpty(tenantsError))
+            {
+                <p class="sh-project-switcher__hint">@tenantsError</p>
+            }
+            else
+            {
+                <div class="sh-project-switcher__list" role="list">
+                    @foreach (var t in tenants)
+                    {
+                        var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
+                        <button type="button"
+                                role="listitem"
+                                class="sh-project-chip @(active ? "active" : "")"
+                                @onclick="() => SelectTenantAsync(t)">
+                            <span class="sh-project-chip__dot @DotClass(t.TenantId)"></span>
+                            <span class="sh-project-chip__name">@t.DisplayName</span>
+                        </button>
+                    }
+                </div>
+            }
         </div>
 
         <nav class="sidebar-nav">
@@ -105,249 +139,48 @@ else
                     <h1>@GetTabTitle()</h1>
                     <p class="header-subtitle">@GetTabSubtitle()</p>
                 </div>
-                <a href="/admin" class="admin-access-btn back-dashboard-btn">Back to Dashboard</a>
+                <div class="sh-header-actions">
+                    <span class="sh-active-project" title="@SupportApi.TenantKey">@SupportApi.DisplayName</span>
+                    <a href="/admin" class="admin-access-btn back-dashboard-btn">Back to Dashboard</a>
+                </div>
             </div>
         </header>
 
         @if (activeTab == "overview")
         {
-            <div class="sh-scroll">
+            <div class="sh-scroll" @key="workspaceKey">
                 <SupportOverviewView />
             </div>
         }
         else if (activeTab == "tickets")
         {
-            <div class="sh-scroll">
+            <div class="sh-scroll" @key="workspaceKey">
                 <SupportTicketsView />
             </div>
         }
         else if (activeTab == "kb")
         {
-            <div class="sh-scroll">
+            <div class="sh-scroll" @key="workspaceKey">
                 <SupportKbView />
             </div>
         }
         else if (activeTab == "internal")
         {
-            <div class="sh-scroll">
+            <div class="sh-scroll" @key="workspaceKey">
                 <SupportInternalView />
             </div>
         }
         else if (activeTab == "settings")
         {
-            <div class="sh-scroll">
-                <SupportSettingsView />
+            <div class="sh-scroll" @key="@($"settings-{workspaceKey}")">
+                <SupportSettingsView OnTenantSelected="SelectTenantAsync" />
             </div>
         }
         else
         {
-        <div class="sh-workspace">
-            <!-- Conversation list -->
-            <section class="sh-list-pane @(selectedConversation != null && showChatOnMobile ? "hidden-mobile" : "")">
-                <div class="sh-list-toolbar">
-                    <div class="sh-search">
-                        <span class="material-symbols-outlined">search</span>
-                        <input type="text"
-                               placeholder="Search conversations..."
-                               @bind="searchQuery"
-                               @bind:event="oninput" />
-                    </div>
-                    <div class="sh-filters">
-                        @foreach (var filter in brandFilters)
-                        {
-                            <button type="button"
-                                    class="sh-filter-chip @(activeBrandFilter == filter.Key ? "active" : "")"
-                                    @onclick="() => activeBrandFilter = filter.Key">
-                                @filter.Label
-                            </button>
-                        }
-                    </div>
-                </div>
-
-                <div class="sh-ticket-list">
-                    @foreach (var conv in FilteredConversations)
-                    {
-                        var isActive = selectedConversation?.Id == conv.Id;
-                        <button type="button"
-                                class="sh-ticket @(isActive ? "active" : "") brand-@conv.BrandKey"
-                                @onclick="() => SelectConversation(conv)">
-                            @if (isActive)
-                            {
-                                <span class="sh-ticket-stripe"></span>
-                            }
-                            <div class="sh-ticket-body">
-                                <div class="sh-ticket-avatar" style="background: @conv.AvatarColor">
-                                    @conv.Initials
-                                    @if (conv.IsLive)
-                                    {
-                                        <span class="sh-live-dot"></span>
-                                    }
-                                </div>
-                                <div class="sh-ticket-content">
-                                    <div class="sh-ticket-top">
-                                        <h4>@conv.Name</h4>
-                                        <span class="sh-ticket-time">@conv.LastMessageTime</span>
-                                    </div>
-                                    <p class="sh-ticket-preview">@conv.LastMessage</p>
-                                    <div class="sh-ticket-tags">
-                                        <span class="sh-tag brand-@conv.BrandKey">@conv.BrandLabel</span>
-                                        <span class="sh-tag status-@conv.Status.ToLowerInvariant()">@conv.Status</span>
-                                    </div>
-                                </div>
-                                @if (conv.UnreadCount > 0)
-                                {
-                                    <span class="sh-unread">@conv.UnreadCount</span>
-                                }
-                            </div>
-                        </button>
-                    }
-
-                    @if (!FilteredConversations.Any())
-                    {
-                        <div class="sh-empty-list">
-                            <p>No conversations match your filters.</p>
-                        </div>
-                    }
-                </div>
-            </section>
-
-            <!-- Chat detail -->
-            <section class="sh-chat-pane @(selectedConversation == null || !showChatOnMobile ? "hidden-mobile-empty" : "")">
-                @if (selectedConversation == null)
-                {
-                    <div class="sh-chat-empty">
-                        <span class="material-symbols-outlined">forum</span>
-                        <h3>Select a conversation</h3>
-                        <p>Choose a customer from the queue to view and reply.</p>
-                    </div>
-                }
-                else
-                {
-                    <div class="sh-chat-header">
-                        <button type="button" class="sh-back-mobile" @onclick="() => showChatOnMobile = false">
-                            <span class="material-symbols-outlined">arrow_back</span>
-                        </button>
-                        <div class="sh-chat-identity">
-                            <div class="sh-chat-avatar" style="background: @selectedConversation.AvatarColor">
-                                @selectedConversation.Initials
-                            </div>
-                            <div>
-                                <h3>
-                                    @selectedConversation.Name
-                                    @if (selectedConversation.IsLive)
-                                    {
-                                        <span class="sh-live-badge">
-                                            <span class="sh-live-dot-inline"></span>
-                                            LIVE
-                                        </span>
-                                    }
-                                </h3>
-                                <div class="sh-chat-meta">
-                                    @if (!string.IsNullOrEmpty(selectedConversation.Reference))
-                                    {
-                                        <span>@selectedConversation.Reference</span>
-                                        <span class="sh-meta-sep"></span>
-                                    }
-                                    <span class="sh-tag brand-@selectedConversation.BrandKey">@selectedConversation.BrandLabel</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sh-chat-actions">
-                            <button type="button" class="sh-icon-btn" title="Notes">
-                                <span class="material-symbols-outlined">sticky_note_2</span>
-                            </button>
-                            <button type="button" class="sh-icon-btn" title="Assign">
-                                <span class="material-symbols-outlined">person_add</span>
-                            </button>
-                            <button type="button" class="sh-icon-btn" title="More">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                            <button type="button" class="sh-end-chat">
-                                <span class="material-symbols-outlined">cancel</span>
-                                End Chat
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="sh-messages">
-                        @{
-                            string? lastDate = null;
-                        }
-                        @foreach (var msg in GetMessagesForConversation(selectedConversation.Id))
-                        {
-                            if (msg.DateLabel != lastDate)
-                            {
-                                lastDate = msg.DateLabel;
-                                <div class="sh-date-divider">
-                                    <span></span>
-                                    <em>@msg.DateLabel</em>
-                                    <span></span>
-                                </div>
-                            }
-
-                            @if (msg.IsInternalNote)
-                            {
-                                <div class="sh-msg note">
-                                    <span class="sh-msg-meta">Internal note • @msg.Time</span>
-                                    <div class="sh-bubble note">@msg.Text</div>
-                                </div>
-                            }
-                            else if (msg.IsFromCustomer)
-                            {
-                                <div class="sh-msg customer">
-                                    <span class="sh-msg-meta">@selectedConversation.Name • @msg.Time</span>
-                                    <div class="sh-bubble customer">@msg.Text</div>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="sh-msg agent">
-                                    <span class="sh-msg-meta">
-                                        <span class="material-symbols-outlined filled">done_all</span>
-                                        You • @msg.Time
-                                    </span>
-                                    <div class="sh-bubble agent">@msg.Text</div>
-                                </div>
-                            }
-                        }
-                    </div>
-
-                    <div class="sh-composer">
-                        <div class="sh-composer-box @(isInternalNote ? "note-mode" : "")">
-                            <div class="sh-composer-toolbar">
-                                <button type="button" class="sh-icon-btn sm" title="Attach File">
-                                    <span class="material-symbols-outlined">attach_file</span>
-                                </button>
-                                <button type="button" class="sh-icon-btn sm" title="Insert Template">
-                                    <span class="material-symbols-outlined">quick_reference_all</span>
-                                </button>
-                                <label class="sh-note-toggle">
-                                    <span>Internal Note</span>
-                                    <button type="button"
-                                            class="sh-switch @(isInternalNote ? "on" : "")"
-                                            @onclick="() => isInternalNote = !isInternalNote"
-                                            aria-pressed="@isInternalNote">
-                                        <span class="sh-switch-knob"></span>
-                                    </button>
-                                </label>
-                            </div>
-                            <div class="sh-composer-input">
-                                <textarea @bind="draftMessage"
-                                          @bind:event="oninput"
-                                          placeholder="@(isInternalNote ? "Add an internal note..." : "Type your message...")"
-                                          rows="3"></textarea>
-                                <button type="button" class="sh-send" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(draftMessage)">
-                                    <span class="material-symbols-outlined filled">send</span>
-                                </button>
-                            </div>
-                        </div>
-                        <p class="sh-composer-footer">
-                            Responding as <strong>@GetUserDisplayName()</strong>
-                        </p>
-                    </div>
-                }
-            </section>
-        </div>
+            <div class="sh-scroll sh-scroll--chat" @key="workspaceKey">
+                <SupportLiveChatView />
+            </div>
         }
     </main>
 </div>
@@ -359,137 +192,12 @@ else
     private string currentUserEmail = "";
     private bool isSidebarOpen;
     private string activeTab = "overview";
-    private bool showChatOnMobile;
-    private string searchQuery = "";
-    private string activeBrandFilter = "all";
-    private string draftMessage = "";
-    private bool isInternalNote;
-    private Conversation? selectedConversation;
+    private List<SupportTenantDto> tenants = [];
+    private bool tenantsLoading = true;
+    private string? tenantsError;
+    private int workspaceEpoch;
 
-    private readonly List<(string Key, string Label)> brandFilters = new()
-    {
-        ("all", "All"),
-        ("muuqwear", "Muuqwear"),
-        ("salguri-customer", "Salguri Customer"),
-        ("salguri-business", "Salguri Business")
-    };
-
-    private readonly List<Conversation> conversations = new()
-    {
-        new()
-        {
-            Id = 1,
-            Name = "Alex Thompson",
-            Email = "alex@example.com",
-            Initials = "AT",
-            AvatarColor = "#1e40af",
-            BrandKey = "muuqwear",
-            BrandLabel = "MUUQWEAR",
-            Status = "ACTIVE",
-            IsLive = true,
-            Reference = "Order #MQ-88492",
-            LastMessage = "Thanks for the quick response! I'm interested in...",
-            LastMessageTime = "Nov 7",
-            UnreadCount = 2
-        },
-        new()
-        {
-            Id = 2,
-            Name = "Maria Garcia",
-            Email = "maria@retailcorp.com",
-            Initials = "MG",
-            AvatarColor = "#6b21a8",
-            BrandKey = "salguri-business",
-            BrandLabel = "BUSINESS",
-            Status = "WAITING",
-            IsLive = false,
-            Reference = "Ticket #SG-2201",
-            LastMessage = "When can we schedule a call?",
-            LastMessageTime = "Nov 1",
-            UnreadCount = 1
-        },
-        new()
-        {
-            Id = 3,
-            Name = "Robert Kim",
-            Email = "robert@example.com",
-            Initials = "RK",
-            AvatarColor = "#059669",
-            BrandKey = "salguri-customer",
-            BrandLabel = "CUSTOMER",
-            Status = "RESOLVED",
-            IsLive = false,
-            Reference = "Order #SG-99102",
-            LastMessage = "Perfect, thank you for your help!",
-            LastMessageTime = "Nov 6",
-            UnreadCount = 0
-        },
-        new()
-        {
-            Id = 4,
-            Name = "Jamie Lee",
-            Email = "jamie@muuq.wear",
-            Initials = "JL",
-            AvatarColor = "#0f766e",
-            BrandKey = "muuqwear",
-            BrandLabel = "MUUQWEAR",
-            Status = "WAITING",
-            IsLive = false,
-            Reference = "Order #MQ-90112",
-            LastMessage = "Can I change the shipping address?",
-            LastMessageTime = "Nov 5",
-            UnreadCount = 3
-        }
-    };
-
-    private readonly Dictionary<int, List<ChatMessage>> messagesData = new()
-    {
-        {
-            1, new List<ChatMessage>
-            {
-                new() { Text = "Hi, I'm interested in your web development services. Can you help me build an e-commerce platform?", IsFromCustomer = true, Time = "09:15 PM", DateLabel = "Nov 7, 2023" },
-                new() { Text = "Hello Alex! Absolutely, we'd be happy to help. We have extensive experience building scalable e-commerce platforms. Could you tell me more about your requirements?", IsFromCustomer = false, Time = "09:18 PM", DateLabel = "Nov 7, 2023" },
-                new() { Text = "I need a platform that can handle around 5,000 products with payment integration, inventory management, and customer reviews.", IsFromCustomer = true, Time = "09:25 PM", DateLabel = "Nov 7, 2023" },
-                new() { Text = "Thanks for the quick response! Also, do you support multi-currency?", IsFromCustomer = true, Time = "09:30 PM", DateLabel = "Nov 7, 2023" }
-            }
-        },
-        {
-            2, new List<ChatMessage>
-            {
-                new() { Text = "Hello, I'm looking for mobile app development services.", IsFromCustomer = true, Time = "10:00 AM", DateLabel = "Nov 1, 2023" },
-                new() { Text = "Hi Maria! We'd love to help. What kind of app are you looking to build?", IsFromCustomer = false, Time = "10:05 AM", DateLabel = "Nov 1, 2023" },
-                new() { Text = "When can we schedule a call?", IsFromCustomer = true, Time = "10:15 AM", DateLabel = "Nov 1, 2023" }
-            }
-        },
-        {
-            3, new List<ChatMessage>
-            {
-                new() { Text = "We need cloud migration services for our enterprise.", IsFromCustomer = true, Time = "02:00 PM", DateLabel = "Nov 6, 2023" },
-                new() { Text = "Perfect, thank you for your help!", IsFromCustomer = true, Time = "04:30 PM", DateLabel = "Nov 6, 2023" }
-            }
-        },
-        {
-            4, new List<ChatMessage>
-            {
-                new() { Text = "Can I change the shipping address on my recent order?", IsFromCustomer = true, Time = "11:20 AM", DateLabel = "Nov 5, 2023" }
-            }
-        }
-    };
-
-    private IEnumerable<Conversation> FilteredConversations =>
-        conversations.Where(c =>
-        {
-            if (activeBrandFilter != "all" && c.BrandKey != activeBrandFilter)
-                return false;
-
-            if (string.IsNullOrWhiteSpace(searchQuery))
-                return true;
-
-            return c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-                || c.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-                || c.LastMessage.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-                || c.BrandLabel.Contains(searchQuery, StringComparison.OrdinalIgnoreCase);
-        });
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -506,8 +214,116 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
         ApplyTabFromQuery();
-        selectedConversation = conversations.FirstOrDefault();
+
+        await RestoreAndLoadTenantsAsync();
     }
+
+    private async Task RestoreAndLoadTenantsAsync()
+    {
+        tenantsLoading = true;
+        tenantsError = null;
+        try
+        {
+            await RestoreSelectedTenantAsync();
+            await SupportApi.EnsureAgentTokenAsync();
+            var result = await SupportApi.GetTenantsAsync();
+            if (!result.Success)
+            {
+                tenantsError = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Unable to load projects."
+                    : result.Message;
+                tenants = [];
+                return;
+            }
+
+            tenants = result.Data ?? [];
+            ApplyTenantIfMissingFromList();
+        }
+        catch (Exception ex)
+        {
+            tenantsError = ex.Message;
+            tenants = [];
+        }
+        finally
+        {
+            tenantsLoading = false;
+        }
+    }
+
+    private void ApplyTenantIfMissingFromList()
+    {
+        if (tenants.Count == 0)
+            return;
+
+        var current = tenants.FirstOrDefault(t =>
+            string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase));
+        if (current != null)
+        {
+            SupportApi.SetTenant(
+                current.TenantId,
+                current.PublicKey,
+                current.DisplayName,
+                current.PublicHelpCenterUrl);
+            return;
+        }
+
+        var first = tenants[0];
+        SupportApi.SetTenant(first.TenantId, first.PublicKey, first.DisplayName, first.PublicHelpCenterUrl);
+        workspaceEpoch++;
+        _ = PersistSelectedTenantAsync(first);
+    }
+
+    private async Task RestoreSelectedTenantAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", SupportApiClient.SelectedTenantStorageKey);
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            var saved = JsonSerializer.Deserialize<SupportTenantDto>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            if (saved == null || string.IsNullOrWhiteSpace(saved.TenantId) || string.IsNullOrWhiteSpace(saved.PublicKey))
+                return;
+
+            SupportApi.SetTenant(saved.TenantId, saved.PublicKey, saved.DisplayName, saved.PublicHelpCenterUrl);
+        }
+        catch
+        {
+            // Keep appsettings default.
+        }
+    }
+
+    private async Task PersistSelectedTenantAsync(SupportTenantDto tenant)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(tenant);
+            await JS.InvokeVoidAsync("localStorage.setItem", SupportApiClient.SelectedTenantStorageKey, json);
+        }
+        catch
+        {
+            // Non-fatal.
+        }
+    }
+
+    private async Task SelectTenantAsync(SupportTenantDto tenant)
+    {
+        SupportApi.SetTenant(tenant.TenantId, tenant.PublicKey, tenant.DisplayName, tenant.PublicHelpCenterUrl);
+        workspaceEpoch++;
+        await PersistSelectedTenantAsync(tenant);
+        StateHasChanged();
+    }
+
+    private static string DotClass(string tenantId) => tenantId.ToLowerInvariant() switch
+    {
+        "muuqwear" => "teal",
+        "salguri" => "orange",
+        "gaarx" => "purple",
+        _ => "teal"
+    };
 
     private void ApplyTabFromQuery()
     {
@@ -530,12 +346,13 @@ else
         }
     }
 
-    private void SetTab(string tab)
+    private Task SetTab(string tab)
     {
         activeTab = tab;
         isSidebarOpen = false;
         var url = tab == "overview" ? "/admin/support" : $"/admin/support?tab={tab}";
         Navigation.NavigateTo(url, replace: true);
+        return Task.CompletedTask;
     }
 
     private string GetTabTitle() => activeTab switch
@@ -550,53 +367,15 @@ else
 
     private string GetTabSubtitle() => activeTab switch
     {
-        "chat" => "Multi-brand customer conversations",
-        "tickets" => "Route, assign, and resolve support tickets",
-        "kb" => "Help articles and macros for every brand",
-        "internal" => "Private agent collaboration channels",
-        "settings" => "Desks, routing, and agent preferences",
-        _ => "Support analytics across all connected apps"
+        "chat" => $"Respond to {SupportApi.DisplayName} customers in real time",
+        "tickets" => $"Route and resolve {SupportApi.DisplayName} tickets",
+        "kb" => $"Help articles for {SupportApi.DisplayName}",
+        "internal" => "Coming soon",
+        "settings" => "Project desks and API connection",
+        _ => $"Support analytics for {SupportApi.DisplayName}"
     };
 
     private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
-
-    private void SelectConversation(Conversation conv)
-    {
-        selectedConversation = conv;
-        conv.UnreadCount = 0;
-        showChatOnMobile = true;
-        isSidebarOpen = false;
-    }
-
-    private List<ChatMessage> GetMessagesForConversation(int convId) =>
-        messagesData.TryGetValue(convId, out var list) ? list : new List<ChatMessage>();
-
-    private Task SendMessage()
-    {
-        if (selectedConversation == null || string.IsNullOrWhiteSpace(draftMessage))
-            return Task.CompletedTask;
-
-        if (!messagesData.ContainsKey(selectedConversation.Id))
-            messagesData[selectedConversation.Id] = new List<ChatMessage>();
-
-        messagesData[selectedConversation.Id].Add(new ChatMessage
-        {
-            Text = draftMessage.Trim(),
-            IsFromCustomer = false,
-            IsInternalNote = isInternalNote,
-            Time = DateTime.Now.ToString("hh:mm tt"),
-            DateLabel = DateTime.Now.ToString("MMM d, yyyy")
-        });
-
-        if (!isInternalNote)
-        {
-            selectedConversation.LastMessage = draftMessage.Trim();
-            selectedConversation.LastMessageTime = "Just now";
-        }
-
-        draftMessage = "";
-        return Task.CompletedTask;
-    }
 
     private async Task HandleLogout()
     {
@@ -620,29 +399,7 @@ else
         return name.Length == 0 ? "Admin User" : char.ToUpperInvariant(name[0]) + name[1..];
     }
 
-    private sealed class Conversation
+    public void Dispose()
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Initials { get; set; } = "";
-        public string AvatarColor { get; set; } = "";
-        public string BrandKey { get; set; } = "";
-        public string BrandLabel { get; set; } = "";
-        public string Status { get; set; } = "";
-        public bool IsLive { get; set; }
-        public string Reference { get; set; } = "";
-        public string LastMessage { get; set; } = "";
-        public string LastMessageTime { get; set; } = "";
-        public int UnreadCount { get; set; }
-    }
-
-    private sealed class ChatMessage
-    {
-        public string Text { get; set; } = "";
-        public bool IsFromCustomer { get; set; }
-        public bool IsInternalNote { get; set; }
-        public string Time { get; set; } = "";
-        public string DateLabel { get; set; } = "";
     }
 }

@@ -151,6 +151,51 @@ public class SupabaseAuthService
         }
     }
 
+    public async Task<string?> GetAccessTokenAsync()
+    {
+        await EnsureInitializedAsync();
+        var session = GetCurrentSession();
+        return session?.AccessToken;
+    }
+
+    /// <summary>
+    /// Display name for support agent actions (assign-to-me, agent filters).
+    /// Prefers FullName/name metadata, else email local-part, else "Admin".
+    /// </summary>
+    public async Task<string> GetAgentDisplayNameAsync()
+    {
+        await EnsureInitializedAsync();
+        var user = GetCurrentUser() ?? GetCurrentSession()?.User;
+        if (user == null)
+            return "Admin";
+
+        if (user.UserMetadata != null)
+        {
+            if (TryGetMetadataString(user.UserMetadata, "full_name", out var fullName) &&
+                !string.IsNullOrWhiteSpace(fullName))
+                return fullName.Trim();
+
+            if (TryGetMetadataString(user.UserMetadata, "FullName", out var fullNameAlt) &&
+                !string.IsNullOrWhiteSpace(fullNameAlt))
+                return fullNameAlt.Trim();
+
+            if (TryGetMetadataString(user.UserMetadata, "name", out var name) &&
+                !string.IsNullOrWhiteSpace(name))
+                return name.Trim();
+        }
+
+        var email = user.Email?.Trim();
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var at = email.IndexOf('@');
+            if (at > 0)
+                return email[..at];
+            return email;
+        }
+
+        return "Admin";
+    }
+
     /// <summary>
     /// Restores persisted session (if any) and returns the user only when they are an admin.
     /// </summary>

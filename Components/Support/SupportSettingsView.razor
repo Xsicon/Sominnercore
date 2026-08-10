@@ -1,53 +1,120 @@
+@using SominnercoreNew.Services.Support
+@inject SupportApiClient SupportApi
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
 <div class="sh-page">
     <div class="sh-page-intro">
         <p class="sh-eyebrow">Support Workspace</p>
         <h2>Settings</h2>
-        <p>Configure desks, brands, routing, and agent preferences</p>
+        <p>Select a project desk and review API connection</p>
     </div>
 
     <div class="sh-settings-grid">
         <section class="sh-panel">
-            <h3>Connected Brands</h3>
-            <ul class="sh-settings-list">
-                <li><span class="dot teal"></span> Muuqwear <em>Live chat + tickets</em></li>
-                <li><span class="dot orange"></span> Salguri Customer <em>Tickets</em></li>
-                <li><span class="dot purple"></span> Salguri Business <em>Tickets + priority queue</em></li>
-                <li><span class="dot slate"></span> Internal Ops <em>Internal only</em></li>
-            </ul>
-            <button type="button" class="ghost-btn">Manage brand connections</button>
+            <h3>Projects</h3>
+            @if (!string.IsNullOrEmpty(loadError))
+            {
+                <p class="sh-empty-list">@loadError</p>
+            }
+            else if (loading)
+            {
+                <p class="sh-empty-list">Loading projects…</p>
+            }
+            else if (tenants.Count == 0)
+            {
+                <p class="sh-empty-list">No enabled projects from Support API.</p>
+            }
+            else
+            {
+                <ul class="sh-settings-list">
+                    @foreach (var t in tenants)
+                    {
+                        var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
+                        <li>
+                            <button type="button"
+                                    class="sh-project-pick @(active ? "active" : "")"
+                                    @onclick="() => SelectTenant(t)">
+                                <span class="dot @(DotClass(t.TenantId))"></span>
+                                @t.DisplayName
+                                <em>@(active ? "Active" : "Switch") · @t.TenantId</em>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
         </section>
 
         <section class="sh-panel">
-            <h3>Routing Defaults</h3>
+            <h3>API Connection</h3>
             <label class="sh-field">
-                <span>Default team for new tickets</span>
-                <select><option>General Support</option><option>Payments</option><option>Shipping</option></select>
+                <span>Support API base URL</span>
+                <input type="text" readonly value="@Configuration["SupportApi:BaseUrl"]" />
             </label>
             <label class="sh-field">
-                <span>Auto-assign strategy</span>
-                <select><option>Least busy agent</option><option>Round robin</option><option>Manual only</option></select>
+                <span>Active project</span>
+                <input type="text" readonly value="@SupportApi.DisplayName (@SupportApi.TenantId)" />
             </label>
-            <label class="sh-toggle-row">
-                <span>Require internal note on End Chat</span>
-                <input type="checkbox" checked />
+            <label class="sh-field">
+                <span>Public tenant key</span>
+                <input type="text" readonly value="@SupportApi.TenantKey" />
             </label>
-        </section>
-
-        <section class="sh-panel">
-            <h3>Agent Preferences</h3>
-            <label class="sh-toggle-row">
-                <span>Desktop notifications</span>
-                <input type="checkbox" checked />
+            <label class="sh-field">
+                <span>Help Center URL</span>
+                <input type="text" readonly value="@(string.IsNullOrWhiteSpace(SupportApi.PublicHelpCenterUrl) ? "(not set — falls back to /help)" : SupportApi.PublicHelpCenterUrl)" />
             </label>
-            <label class="sh-toggle-row">
-                <span>Sound on new live chat</span>
-                <input type="checkbox" checked />
-            </label>
-            <label class="sh-toggle-row">
-                <span>Compact ticket cards</span>
-                <input type="checkbox" />
-            </label>
-            <button type="button" class="sh-primary-btn">Save preferences</button>
+            <p style="opacity:0.7;font-size:0.9rem;margin:0;">
+                Agent auth uses <code>POST /api/SupportAuth/exchange</code> then
+                <code>Authorization: Bearer</code> + <code>X-Tenant-Key</code>.
+                Chat, tickets, and KB are scoped to the selected project.
+            </p>
         </section>
     </div>
 </div>
+
+@code {
+    [Parameter] public EventCallback<SupportTenantDto> OnTenantSelected { get; set; }
+
+    private List<SupportTenantDto> tenants = [];
+    private bool loading = true;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            var result = await SupportApi.GetTenantsAsync();
+            if (!result.Success)
+            {
+                loadError = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Failed to load projects."
+                    : result.Message;
+                return;
+            }
+
+            tenants = result.Data ?? [];
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SelectTenant(SupportTenantDto tenant)
+    {
+        if (OnTenantSelected.HasDelegate)
+            await OnTenantSelected.InvokeAsync(tenant);
+    }
+
+    private static string DotClass(string tenantId) => tenantId.ToLowerInvariant() switch
+    {
+        "muuqwear" => "teal",
+        "salguri" => "orange",
+        "gaarx" => "purple",
+        _ => "teal"
+    };
+}

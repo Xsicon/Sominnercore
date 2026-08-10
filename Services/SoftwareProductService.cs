@@ -119,4 +119,83 @@ public class SoftwareProductService
             .Delete();
         _notifier.NotifyChanged();
     }
+
+    /// <summary>
+    /// Support Hub brands that must exist as Softwares / Projects in the admin catalog.
+    /// Matched by <see cref="Software.Name"/> (<c>softwares.id</c> is a UUID).
+    /// </summary>
+    public static IReadOnlyList<Software> DefaultSupportProjects { get; } =
+    [
+        new Software
+        {
+            Name = "MuuqWear",
+            ShortDescription = "Fashion ecommerce storefront with live chat, tickets, and help center.",
+            FullDescription = "MuuqWear customer-facing shop. Support desk tenant id: muuqwear.",
+            Version = "1.0.0",
+            Status = "active",
+            Category = "Support Project",
+            IconColor = "#14b8a6",
+            Visibility = "public"
+        },
+        new Software
+        {
+            Name = "Salguri",
+            ShortDescription = "Salguri storefront — Support Hub project desk.",
+            FullDescription = "Salguri customer support desk. Support desk tenant id: salguri.",
+            Version = "1.0.0",
+            Status = "active",
+            Category = "Support Project",
+            IconColor = "#f97316",
+            Visibility = "public"
+        },
+        new Software
+        {
+            Name = "GaarX",
+            ShortDescription = "GaarX storefront — Support Hub project desk.",
+            FullDescription = "GaarX customer support desk. Support desk tenant id: gaarx.",
+            Version = "1.0.0",
+            Status = "active",
+            Category = "Support Project",
+            IconColor = "#a855f7",
+            Visibility = "public"
+        }
+    ];
+
+    /// <summary>
+    /// Inserts missing Support Hub projects into <c>softwares</c> (matched by name).
+    /// </summary>
+    public async Task<int> EnsureSupportProjectsRegisteredAsync()
+    {
+        var existing = await GetAllAsync();
+        var created = 0;
+
+        foreach (var seed in DefaultSupportProjects)
+        {
+            var alreadyThere = existing.Any(p =>
+                string.Equals(p.Name, seed.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (alreadyThere)
+                continue;
+
+            var row = new Software
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = seed.Name,
+                ShortDescription = seed.ShortDescription,
+                FullDescription = seed.FullDescription,
+                Version = seed.Version,
+                Status = seed.Status,
+                Category = seed.Category,
+                IconColor = seed.IconColor,
+                Visibility = seed.Visibility,
+                ActiveUsers = 0,
+                TotalDownloads = 0
+            };
+
+            await CreateAsync(row);
+            created++;
+        }
+
+        return created;
+    }
 }

@@ -5,76 +5,12 @@
         <p>Private channels for agents and ops — not visible to customers</p>
     </div>
 
-    <div class="sh-internal-layout">
-        <aside class="sh-channel-list">
-            <h4>Channels</h4>
-            @foreach (var ch in channels)
-            {
-                <button type="button"
-                        class="sh-channel @(activeChannel == ch.Name ? "active" : "")"
-                        @onclick="() => activeChannel = ch.Name">
-                    <span>#</span>
-                    <div>
-                        <strong>@ch.Name</strong>
-                        <em>@ch.Unread unread</em>
-                    </div>
-                </button>
-            }
-        </aside>
-
-        <section class="sh-internal-room">
-            <header>
-                <h3># @activeChannel</h3>
-                <span>@channels.First(c => c.Name == activeChannel).Members members</span>
-            </header>
-            <div class="sh-internal-messages">
-                @foreach (var msg in roomMessages)
-                {
-                    <div class="sh-internal-msg">
-                        <div class="avatar" style="background:@msg.Color">@msg.Initials</div>
-                        <div>
-                            <strong>@msg.Author <em>@msg.Time</em></strong>
-                            <p>@msg.Text</p>
-                        </div>
-                    </div>
-                }
-            </div>
-            <div class="sh-internal-composer">
-                <input type="text" placeholder="Message #@activeChannel" @bind="draft" @bind:event="oninput" />
-                <button type="button" class="sh-send" @onclick="Send" disabled="@string.IsNullOrWhiteSpace(draft)">
-                    <span class="material-symbols-outlined filled">send</span>
-                </button>
-            </div>
-        </section>
+    <div class="sh-empty-list" style="padding: 3rem 1.5rem; text-align: center;">
+        <span class="material-symbols-outlined" style="font-size: 2.5rem; opacity: 0.5;">forum</span>
+        <h3 style="margin: 0.75rem 0 0.35rem;">Coming soon</h3>
+        <p style="margin: 0; opacity: 0.75;">
+            Internal Chat is out of scope for the Support API v1 cutover.
+            This tab is reserved for a future agent collaboration channel.
+        </p>
     </div>
 </div>
-
-@code {
-    private string activeChannel = "support-ops";
-    private string draft = "";
-
-    private readonly List<Channel> channels = new()
-    {
-        new("support-ops", 3, 12),
-        new("muuqwear-escalations", 1, 6),
-        new("salguri-business", 0, 8),
-        new("kb-updates", 2, 5)
-    };
-
-    private readonly List<RoomMessage> roomMessages = new()
-    {
-        new("AR", "#137fec", "Alex Rivera", "10:12 AM", "Can someone take the high-priority payment ticket?"),
-        new("SC", "#0d9488", "Sam Chen", "10:14 AM", "On it — routing TKT-966A2D to Payments."),
-        new("AD", "#a855f7", "Admin User", "10:16 AM", "Also drop a KB note if this becomes a pattern.")
-    };
-
-    private void Send()
-    {
-        if (string.IsNullOrWhiteSpace(draft)) return;
-        roomMessages.Add(new("AD", "#a855f7", "Admin User", DateTime.Now.ToString("hh:mm tt"), draft.Trim()));
-        draft = "";
-    }
-
-    private sealed record Channel(string Name, int Unread, int Members);
-    private sealed record RoomMessage(string Initials, string Color, string Author, string Time, string Text);
-}

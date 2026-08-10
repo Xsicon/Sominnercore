@@ -50,7 +50,7 @@ else
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                 </svg>
-                <span>Software Products</span>
+                <span>Projects</span>
             </a>
             <a href="#" class="nav-item @(activeTab == "pages" ? "active" : "")" @onclick="@(() => SetActiveTab("pages"))" @onclick:preventDefault>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -356,7 +356,7 @@ else
                             <line x1="12" x2="12" y1="5" y2="19"/>
                             <line x1="5" x2="19" y1="12" y2="12"/>
                         </svg>
-                        <span>Add Product</span>
+                        <span>Add Project</span>
                     </button>
                 </div>
 
@@ -370,7 +370,7 @@ else
                 else if (!softwareProducts.Any())
                 {
                     <div class="empty-products">
-                        <p>No products yet. Click "Add Product" to create one.</p>
+                        <p>No projects yet. Click "Add Project" to create one.</p>
                     </div>
                 }
                 else
@@ -453,7 +453,7 @@ else
                     <div class="modal-overlay" @onclick="CloseProductModal">
                         <div class="modal-card" @onclick:stopPropagation>
                             <div class="modal-header">
-                                <h2>@(isEditingProduct ? "Edit Product" : "Add Product")</h2>
+                                <h2>@(isEditingProduct ? "Edit Project" : "Add Project")</h2>
                                 <button class="modal-close" @onclick="CloseProductModal">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" x2="6" y1="6" y2="18"/>
@@ -546,7 +546,7 @@ else
                                     }
                                     else
                                     {
-                                        <span>@(isEditingProduct ? "Update" : "Add Product")</span>
+                                        <span>@(isEditingProduct ? "Update" : "Add Project")</span>
                                     }
                                 </button>
                             </div>
@@ -749,127 +749,13 @@ else
             }
             else if (activeTab == "chat")
             {
-                <!-- Chat Header -->
                 <div class="chat-section-header">
                     <h2 class="chat-title">Customer Support Chat</h2>
-                    <p class="chat-subtitle">Respond to customer inquiries in real-time</p>
-                    <span class="unread-badge">@conversations.Sum(c => c.UnreadCount) Unread</span>
+                    <p class="chat-subtitle">Live chat moved to Support Hub (MuuqWear Support API)</p>
                 </div>
-
-                <div class="chat-container">
-                    <!-- Conversations List -->
-                    <div class="conversations-panel">
-                        <h3>Conversations</h3>
-                        <div class="search-bar small">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"/>
-                                <path d="m21 21-4.3-4.3"/>
-                            </svg>
-                            <input type="text" placeholder="Search conversations..." @bind="chatSearchQuery" @bind:event="oninput" />
-                        </div>
-                        <div class="conversations-list">
-                            @foreach (var conv in FilteredConversations)
-                            {
-                                <div class="conversation-item @(selectedConversation?.Id == conv.Id ? "active" : "")" @onclick="@(() => SelectConversation(conv))">
-                                    <div class="conv-avatar" style="background: @conv.AvatarColor">@conv.Initials</div>
-                                    <div class="conv-info">
-                                        <div class="conv-header">
-                                            <span class="conv-name">@conv.Name</span>
-                                            <span class="conv-time">@conv.LastMessageTime</span>
-                                        </div>
-                                        <p class="conv-email">@conv.Email</p>
-                                        <p class="conv-preview">@conv.LastMessage</p>
-                                        <span class="conv-status @conv.Status">@conv.Status</span>
-                                    </div>
-                                    @if (conv.UnreadCount > 0)
-                                    {
-                                        <span class="unread-count">@conv.UnreadCount</span>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Chat Panel -->
-                    <div class="chat-panel">
-                        @if (selectedConversation != null)
-                        {
-                            <div class="chat-header">
-                                <div class="chat-user">
-                                    <div class="chat-avatar" style="background: @selectedConversation.AvatarColor">@selectedConversation.Initials</div>
-                                    <div class="chat-user-info">
-                                        <span class="chat-user-name">@selectedConversation.Name</span>
-                                        <span class="chat-user-email">@selectedConversation.Email</span>
-                                    </div>
-                                </div>
-                                <div class="chat-actions">
-                                    <button class="chat-action-btn">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                                        </svg>
-                                    </button>
-                                    <button class="chat-action-btn">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
-                                            <rect x="2" y="6" width="14" height="12" rx="2"/>
-                                        </svg>
-                                    </button>
-                                    <button class="chat-action-btn">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="1"/>
-                                            <circle cx="19" cy="12" r="1"/>
-                                            <circle cx="5" cy="12" r="1"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="chat-messages">
-                                <div class="message-date">@selectedConversation.LastMessageTime</div>
-                                @foreach (var msg in GetMessagesForConversation(selectedConversation.Id))
-                                {
-                                    <div class="message @(msg.IsFromCustomer ? "customer" : "agent")">
-                                        @if (msg.IsFromCustomer)
-                                        {
-                                            <span class="message-sender">@selectedConversation.Name</span>
-                                        }
-                                        <div class="message-bubble">@msg.Text</div>
-                                        <span class="message-time">@msg.Time</span>
-                                    </div>
-                                }
-                            </div>
-                            <div class="chat-input">
-                                <button class="input-action">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                                    </svg>
-                                </button>
-                                <button class="input-action">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                                        <line x1="9" x2="9.01" y1="9" y2="9"/>
-                                        <line x1="15" x2="15.01" y1="9" y2="9"/>
-                                    </svg>
-                                </button>
-                                <input type="text" placeholder="Type your message..." @bind="newMessage" />
-                                <button class="send-btn" @onclick="SendMessage">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="m22 2-7 20-4-9-9-4Z"/>
-                                        <path d="M22 2 11 13"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="responding-as">
-                                Responding as <strong>Admin User</strong> (Admin)
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="no-conversation">
-                                <p>Select a conversation to start chatting</p>
-                            </div>
-                        }
-                    </div>
+                <div style="padding: 2rem;">
+                    <p>Use the multi-tenant Support Hub for live chat, tickets, and knowledge base.</p>
+                    <a href="/admin/support?tab=chat" class="admin-access-btn">Open Support Hub</a>
                 </div>
             }
         </div>
@@ -1080,6 +966,7 @@ else
         {
             isLoadingProducts = true;
             productError = null;
+            await ProductService.EnsureSupportProjectsRegisteredAsync();
             softwareProducts = await ProductService.GetAllAsync();
         }
         catch (Exception ex)
@@ -1144,7 +1031,7 @@ else
     private string GetTabTitle() => activeTab switch
     {
         "overview" => "Overview",
-        "products" => "Software Products",
+        "products" => "Projects",
         "pages" => "Content Pages",
         "chat" => "Customer Chat",
         _ => "Dashboard"
@@ -1153,7 +1040,7 @@ else
     private string GetTabSubtitle() => activeTab switch
     {
         "overview" => "Dashboard analytics and insights",
-        "products" => "Manage your software products",
+        "products" => "Storefront projects linked to Support Hub desks",
         "pages" => "Manage frontend content pages",
         "chat" => "Customer support and communications",
         _ => ""
