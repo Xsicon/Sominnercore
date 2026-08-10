@@ -85,12 +85,14 @@ Optional per-tenant Help Center URL: `Support:Tenants:{id}:PublicHelpCenterUrl` 
 
 ```json
 "SupportApi": {
-  "BaseUrl": "https://YOUR-SUPPORT-API.onrender.com/",
+  "BaseUrl": "https://sominnercoresupportapi.onrender.com/",
   "TenantId": "muuqwear",
   "TenantKey": "pk_muuqwear_dev_public",
   "PublicHelpCenterUrl": ""
 }
 ```
+
+Local `dotnet run` still uses `wwwroot/appsettings.Development.json` → `http://localhost:5241/`.
 
 2. Render → **New → Web Service** → `Sominnercore` repo (Docker + `Dockerfile` / `nginx.conf`).
 3. Open the site → Admin → Support Hub and confirm chats/tickets/KB hit the API.
