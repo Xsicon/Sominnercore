@@ -1,4 +1,4 @@
-@using SominnercoreNew.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -41,7 +41,7 @@
                     <span class="material-symbols-outlined">inbox</span>
                 </div>
                 <strong>@stats.OpenCount</strong>
-                <em>@stats.InProgressCount in progress · @stats.TotalCount total</em>
+                <em>@stats.InProgressCount in progress Â· @stats.TotalCount total</em>
             </div>
             <div class="sh-stat-card">
                 <div class="sh-stat-top">
@@ -71,7 +71,7 @@
         }
         catch (Exception ex)
         {
-            error = $"Unable to load Support API data. Is Sominnercore.SupportApi running? ({ex.Message})";
+            error = $"Unable to load ops API data. Is KobNetiApi running? ({ex.Message})";
         }
         finally
         {

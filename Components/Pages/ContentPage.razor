@@ -1,9 +1,9 @@
-@page "/page/{Slug}"
-@using SominnercoreNew.Services
-@using SominnercoreNew.Models
+﻿@page "/page/{Slug}"
+@using KobNeti.Services
+@using KobNeti.Models
 @inject PageContentService PageContentService
 
-<PageTitle>@(pageContent?.Title ?? "Loading...") - Sominnercore</PageTitle>
+<PageTitle>@(pageContent?.Title ?? "Loading...") - KobNeti</PageTitle>
 
 <section class="content-page-section">
     <div class="content-page-container">

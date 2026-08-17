@@ -1,6 +1,6 @@
-using SominnercoreNew.Services.Support;
+using KobNeti.Services.Support;
 
-namespace SominnercoreNew.Components.Support;
+namespace KobNeti.Components.Support;
 
 public static class SupportLiveChatUnreadHelper
 {

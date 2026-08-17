@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using SominnercoreNew;
-using SominnercoreNew.Services;
+using KobNeti;
+using KobNeti.Services;
 using Supabase;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -36,12 +36,12 @@ builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
 builder.Services.AddScoped<PageContentService>();
 
-var supportApiBase = builder.Configuration["SupportApi:BaseUrl"] ?? "http://localhost:5241/";
-builder.Services.AddScoped<SominnercoreNew.Services.Support.SupportApiClient>(sp =>
+var supportApiBase = builder.Configuration["KobNetiApi:BaseUrl"] ?? "http://localhost:5241/";
+builder.Services.AddScoped<KobNeti.Services.Support.SupportApiClient>(sp =>
 {
     var auth = sp.GetRequiredService<SupabaseAuthService>();
     var http = new HttpClient { BaseAddress = new Uri(supportApiBase) };
-    return new SominnercoreNew.Services.Support.SupportApiClient(http, builder.Configuration, auth);
+    return new KobNeti.Services.Support.SupportApiClient(http, builder.Configuration, auth);
 });
 
 await builder.Build().RunAsync();

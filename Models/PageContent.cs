@@ -1,7 +1,7 @@
 using Postgrest.Attributes;
 using Postgrest.Models;
 
-namespace SominnercoreNew.Models;
+namespace KobNeti.Models;
 
 [Table("page_contents")]
 public class PageContent : BaseModel

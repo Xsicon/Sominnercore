@@ -1,10 +1,10 @@
 # Blazor WASM static site — build + nginx (Render-ready)
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY SominnercoreNew.csproj ./
-RUN dotnet restore SominnercoreNew.csproj
+COPY KobNeti.csproj ./
+RUN dotnet restore KobNeti.csproj
 COPY . ./
-RUN dotnet publish SominnercoreNew.csproj -c Release -o /app/publish
+RUN dotnet publish KobNeti.csproj -c Release -o /app/publish
 
 FROM nginx:alpine AS final
 # Render injects PORT (often 10000); default 80 for local docker run

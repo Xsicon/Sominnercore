@@ -1,17 +1,17 @@
-@page "/admin/support"
+﻿@page "/admin/support"
 @layout Components.Layout.AdminLayout
 @using System.Text.Json
 @using Microsoft.JSInterop
-@using SominnercoreNew.Services
-@using SominnercoreNew.Services.Support
-@using SominnercoreNew.Components.Support
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@using KobNeti.Components.Support
 @inject SupabaseAuthService AuthService
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>Support Hub - Sominnercore</PageTitle>
+<PageTitle>Support Hub - KobNeti</PageTitle>
 
 @if (isCheckingAuth)
 {
@@ -41,7 +41,7 @@ else
             <p class="sh-project-switcher__label">Project</p>
             @if (tenantsLoading)
             {
-                <p class="sh-project-switcher__hint">Loading projects…</p>
+                <p class="sh-project-switcher__hint">Loading projectsâ€¦</p>
             }
             else if (!string.IsNullOrEmpty(tenantsError))
             {

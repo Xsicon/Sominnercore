@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 
-namespace SominnercoreNew.Services.Support;
+namespace KobNeti.Services.Support;
 
 public class SupportApiClient
 {
@@ -30,9 +30,9 @@ public class SupportApiClient
     {
         _http = http;
         _auth = auth;
-        _defaultTenantKey = configuration["SupportApi:TenantKey"] ?? "pk_muuqwear_dev_public";
-        _defaultTenantId = configuration["SupportApi:TenantId"] ?? "muuqwear";
-        _defaultHelpCenterUrl = configuration["SupportApi:PublicHelpCenterUrl"]?.Trim() ?? "";
+        _defaultTenantKey = configuration["KobNetiApi:TenantKey"] ?? "pk_muuqwear_dev_public";
+        _defaultTenantId = configuration["KobNetiApi:TenantId"] ?? "muuqwear";
+        _defaultHelpCenterUrl = configuration["KobNetiApi:PublicHelpCenterUrl"]?.Trim() ?? "";
         _tenantKey = _defaultTenantKey;
         _tenantId = _defaultTenantId;
         _publicHelpCenterUrl = _defaultHelpCenterUrl;

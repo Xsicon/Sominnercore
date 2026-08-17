@@ -1,4 +1,4 @@
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 public class ProductChangeNotifier
 {

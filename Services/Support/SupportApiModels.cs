@@ -1,4 +1,4 @@
-namespace SominnercoreNew.Services.Support;
+namespace KobNeti.Services.Support;
 
 public class ApiResponse<T>
 {

@@ -1,12 +1,12 @@
-@page "/"
-@using SominnercoreNew.Models
-@using SominnercoreNew.Services
+﻿@page "/"
+@using KobNeti.Models
+@using KobNeti.Services
 @using System.Globalization
 @inject SoftwareProductService ProductService
 @inject ProductChangeNotifier ChangeNotifier
 @implements IDisposable
 
-<PageTitle>Sominnercore - Enterprise Software</PageTitle>
+<PageTitle>KobNeti - Enterprise Software</PageTitle>
 
 <!-- ===== HERO SECTION ===== -->
 <section id="home" class="hero-section">
@@ -303,7 +303,7 @@
 
         <div class="about-grid">
             <div class="about-content">
-                <p class="about-lead">At Sominnercore, we're a team of passionate software engineers and product designers dedicated to building powerful, scalable enterprise software that solves real business challenges.</p>
+                <p class="about-lead">At KobNeti, we're a team of passionate software engineers and product designers dedicated to building powerful, scalable enterprise software that solves real business challenges.</p>
                 <p>Founded with a vision to democratize enterprise-grade technology, we've developed a suite of software products trusted by thousands of organizations worldwide.</p>
                 <h3>Why Choose Our Software?</h3>
                 <div class="checklist">
@@ -445,7 +445,7 @@
     <div class="section-container">
         <div class="footer-grid">
             <div class="footer-brand">
-                <h2 class="text-primary">Sominnercore</h2>
+                <h2 class="text-primary">KobNeti</h2>
                 <p>Transforming businesses through innovative technology solutions. We're your trusted partner in digital transformation and growth.</p>
                 <div class="footer-contact-list">
                     <div><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#137fec" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>hello@sominnercore.com</span></div>
@@ -465,7 +465,7 @@
         </div>
 
         <div class="footer-bottom">
-            <span>&copy; 2024 Sominnercore. All rights reserved.</span>
+            <span>&copy; 2024 KobNeti. All rights reserved.</span>
             <div class="footer-bottom-links"><a href="page/privacy-policy">Privacy Policy</a><a href="page/terms-of-service">Terms of Service</a><a href="#">Cookie Policy</a><a href="#">Sitemap</a></div>
         </div>
     </div>
@@ -483,10 +483,10 @@
     {
         <div class="chat-panel">
             <div class="chat-header">
-                <div class="chat-header-info"><div class="chat-avatar">S</div><div><strong>Sominnercore Support</strong><br /><small>We reply instantly</small></div></div>
+                <div class="chat-header-info"><div class="chat-avatar">S</div><div><strong>KobNeti Support</strong><br /><small>We reply instantly</small></div></div>
                 <button class="chat-close" @onclick="() => chatOpen = false"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
-            <div class="chat-messages"><div class="chat-msg agent"><p>Hello! Welcome to Sominnercore. How can we help you today?</p><small>Sarah from Support</small></div></div>
+            <div class="chat-messages"><div class="chat-msg agent"><p>Hello! Welcome to KobNeti. How can we help you today?</p><small>Sarah from Support</small></div></div>
             <div class="chat-input-area"><input type="text" placeholder="Type your message..." class="form-input" /><button class="chat-send-btn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
         </div>
     }

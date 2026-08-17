@@ -1,4 +1,4 @@
-namespace SominnercoreNew.Components.Support;
+namespace KobNeti.Components.Support;
 
 public record CategoryMeta(string Bg, string Text, string Dot, string IconKey);
 

@@ -1,10 +1,10 @@
 using System.Globalization;
 using Postgrest;
 using Postgrest.Interfaces;
-using SominnercoreNew.Models;
+using KobNeti.Models;
 using static Postgrest.Constants;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 public class SoftwareProductService
 {

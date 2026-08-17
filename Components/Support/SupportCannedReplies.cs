@@ -1,4 +1,4 @@
-namespace SominnercoreNew.Components.Support;
+namespace KobNeti.Components.Support;
 
 public sealed record SupportCannedReply(string Label, string Text);
 

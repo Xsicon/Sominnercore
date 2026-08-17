@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Supabase.Gotrue;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 public class SupabaseAuthService
 {

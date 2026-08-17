@@ -1,6 +1,6 @@
-using SominnercoreNew.Services.Support;
+using KobNeti.Services.Support;
 
-namespace SominnercoreNew.Components.Support;
+namespace KobNeti.Components.Support;
 
 internal static class SupportPaginatedLoader
 {

@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 public static partial class InputSanitizer
 {

@@ -2,7 +2,7 @@ using Microsoft.JSInterop;
 using Newtonsoft.Json;
 using Supabase.Gotrue;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 /// <summary>
 /// Async localStorage session persistence for Blazor WASM.

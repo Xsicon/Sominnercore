@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 using Supabase.Gotrue;
 using Supabase.Gotrue.Interfaces;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 /// <summary>
 /// Sync persistence adapter required by supabase-csharp.

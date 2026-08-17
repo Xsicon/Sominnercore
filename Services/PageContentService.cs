@@ -1,6 +1,6 @@
-using SominnercoreNew.Models;
+using KobNeti.Models;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 public class PageContentService
 {

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.JSInterop;
 
-namespace SominnercoreNew.Services;
+namespace KobNeti.Services;
 
 /// <summary>
 /// Browser-persisted rate limiter. Soft client-side control only — Supabase Auth still enforces server limits.

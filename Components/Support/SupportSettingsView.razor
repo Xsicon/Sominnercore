@@ -1,4 +1,4 @@
-@using SominnercoreNew.Services.Support
+@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
@@ -48,7 +48,7 @@
             <h3>API Connection</h3>
             <label class="sh-field">
                 <span>Support API base URL</span>
-                <input type="text" readonly value="@Configuration["SupportApi:BaseUrl"]" />
+                <input type="text" readonly value="@Configuration["KobNetiApi:BaseUrl"]" />
             </label>
             <label class="sh-field">
                 <span>Active project</span>
