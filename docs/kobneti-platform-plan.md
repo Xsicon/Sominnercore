@@ -110,14 +110,11 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ## Wave W0 — Stabilize & rename
 
-- [ ] **W0.1** Confirm prod Support: schema `support_schema.sql` applied + `sominnercore` exposed (or rename schema later to `kobneti`).
-- [ ] **W0.2** Decide MuuqWear chat/tickets **home**: (A) bridge to MuuqWearApi in prod, or (B) ops-owned storage only.
-- [ ] **W0.3** If (A): set Render `Support__Tenants__muuqwear__UpstreamApiBaseUrl` + `Support__Tenants__muuqwear__JwtSecret` (= MuuqWear `Authentication__JwtSecret`).
-- [ ] **W0.4** Smoke-test Hub: Overview / Live Chat / Tickets / KB for `muuqwear`.
-- [ ] **W0.5** Execute rename Phase **R1** (branding/docs).
-- [ ] **W0.6** Execute rename Phase **R2** (GitHub repos → KobNeti / KobNetiApi).
-- [ ] **W0.7** Execute rename Phase **R3** (csproj/namespaces/config keys).
-- [ ] **W0.8** Execute rename Phase **R4** (Render/DNS) when ready.
+- [x] **W0.2** MuuqWear support data: **ops-owned by default**; optional bridge via `UpstreamApiBaseUrl` only when needed (local/dev or temporary prod).
+- [x] Rename repos/projects to KobNeti / KobNetiApi (schema `sominnercore` unchanged).
+- [ ] **W0.1** Confirm prod Support schema applied + `sominnercore` exposed; also run `products_registry.sql`.
+- [ ] **W0.3** Only if bridging: set Render upstream URL + JwtSecret for muuqwear.
+- [ ] **W0.4** Smoke-test Hub after API deploy.
 
 ---
 
@@ -139,10 +136,10 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 3 — Software / Product Registry
 
-- [ ] **W1.9** Single source of truth in **KobNetiApi** DB for products (replace env-only tenants long-term).
-- [ ] **W1.10** Fields: name, slug/`tenant_id`, type, status, support tier, `public_key`, optional `upstream_api_base_url`, help URL.
-- [ ] **W1.11** Seed MuuqWear / Salguri / GaarX; sync or retire Core-only `softwares` duplication.
-- [ ] **W1.12** `GET /api/products` (or keep `/api/Support/tenants`) for Hub switcher.
+- [x] **W1.9** Product Registry in KobNetiApi (`sominnercore.products` + config fallback).
+- [x] **W1.10** Fields: slug, display name, type, status, support tier, public_key, upstream URL, help URL.
+- [x] **W1.11** Seed MuuqWear / Salguri / GaarX (`supabase/products_registry.sql`).
+- [x] **W1.12** `GET /api/products` (+ existing `GET /api/Support/tenants` via ProductTenantResolver).
 - [ ] **W1.13** Rotate/generate embed keys per product; document widget install snippet.
 
 ### Module 23 — Navigation & UI Shell
