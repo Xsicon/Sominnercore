@@ -1,7 +1,7 @@
 # Blueprint: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: sominnercore
+    name: kobneti
     runtime: docker
     plan: free
     branch: landingpage-feature
