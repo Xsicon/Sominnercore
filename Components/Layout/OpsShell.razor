@@ -1,0 +1,236 @@
+@using System.Text.Json
+@using Microsoft.JSInterop
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="admin-dashboard ops-shell @(sidebarOpen ? "sidebar-open" : "")">
+    <aside class="sidebar @(sidebarOpen ? "open" : "")">
+        <div class="sidebar-header">
+            <div class="brand">
+                <div class="brand-dot"></div>
+                <span>KobNeti</span>
+            </div>
+            <p class="brand-subtitle">Operations</p>
+            @if (!string.IsNullOrWhiteSpace(agentRole))
+            {
+                <span class="ops-role-badge">@agentRole</span>
+            }
+        </div>
+
+        <div class="sh-project-switcher">
+            <p class="sh-project-switcher__label">Product</p>
+            @if (tenantsLoading)
+            {
+                <p class="sh-project-switcher__hint">Loading…</p>
+            }
+            else if (!string.IsNullOrEmpty(tenantsError))
+            {
+                <p class="sh-project-switcher__hint">@tenantsError</p>
+            }
+            else
+            {
+                <div class="sh-project-switcher__list" role="list">
+                    @foreach (var t in tenants)
+                    {
+                        var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
+                        <button type="button"
+                                role="listitem"
+                                class="sh-project-chip @(active ? "active" : "")"
+                                @onclick="() => SelectTenantAsync(t)">
+                            <span class="sh-project-chip__name">@t.DisplayName</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/admin" class="nav-item @(IsActive("/admin") && !IsActive("/admin/support") && !IsActive("/admin/staff") && !IsActive("/admin/teams") ? "active" : "")">
+                <span>Overview</span>
+            </a>
+            <a href="/admin/support" class="nav-item @(IsActive("/admin/support") ? "active" : "")">
+                <span>Support Hub</span>
+            </a>
+            @if (isPlatformAdmin)
+            {
+                <a href="/admin/staff" class="nav-item @(IsActive("/admin/staff") ? "active" : "")">
+                    <span>Staff</span>
+                </a>
+                <a href="/admin/teams" class="nav-item @(IsActive("/admin/teams") ? "active" : "")">
+                    <span>Teams</span>
+                </a>
+            }
+
+            <p class="ops-nav-section">Coming later</p>
+            <span class="nav-item nav-item--disabled" title="Wave W4">Engineering</span>
+            <span class="nav-item nav-item--disabled" title="Wave W5">Time &amp; Approvals</span>
+            <span class="nav-item nav-item--disabled" title="Wave W5">People Ops</span>
+            <span class="nav-item nav-item--disabled" title="Wave W6">Calendar</span>
+            <span class="nav-item nav-item--disabled" title="Wave W7">Insights</span>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar"><span>@GetUserInitials()</span></div>
+                <div class="user-details">
+                    <p class="user-name">@GetUserDisplayName()</p>
+                    <p class="user-email">@currentUserEmail</p>
+                </div>
+            </div>
+            <button class="logout-button" @onclick="HandleLogout" type="button">
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    @if (sidebarOpen)
+    {
+        <div class="sh-overlay" @onclick="ToggleSidebar"></div>
+    }
+
+    <div class="ops-shell-main">
+        <button class="menu-toggle ops-shell-menu" @onclick="ToggleSidebar" type="button" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool sidebarOpen;
+    private bool tenantsLoading = true;
+    private string? tenantsError;
+    private List<SupportTenantDto> tenants = [];
+    private string currentUserEmail = "";
+    private string agentRole = "";
+    private bool isPlatformAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        currentUserEmail = user.Email ?? "";
+        SupportApi.TenantChanged += OnTenantChanged;
+
+        try
+        {
+            await RestoreSelectedTenantAsync();
+            await SupportApi.EnsureAgentTokenAsync();
+            agentRole = SupportApi.AgentRole;
+            isPlatformAdmin = SupportApi.IsPlatformAdmin;
+
+            var result = await SupportApi.GetTenantsAsync();
+            if (!result.Success)
+            {
+                tenantsError = result.Message;
+                tenants = [];
+            }
+            else
+            {
+                tenants = result.Data ?? [];
+                ApplyTenantIfMissingFromList();
+            }
+        }
+        catch (Exception ex)
+        {
+            tenantsError = ex.Message;
+        }
+        finally
+        {
+            tenantsLoading = false;
+        }
+    }
+
+    private void OnTenantChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsActive(string path)
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
+        var target = path.Trim('/');
+        if (string.Equals(target, "admin", StringComparison.OrdinalIgnoreCase))
+            return string.Equals(relative, "admin", StringComparison.OrdinalIgnoreCase);
+        return relative.StartsWith(target, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyTenantIfMissingFromList()
+    {
+        if (tenants.Count == 0) return;
+        var current = tenants.FirstOrDefault(t =>
+            string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase));
+        if (current != null)
+        {
+            SupportApi.SetTenant(current.TenantId, current.PublicKey, current.DisplayName, current.PublicHelpCenterUrl);
+            return;
+        }
+
+        var first = tenants[0];
+        SupportApi.SetTenant(first.TenantId, first.PublicKey, first.DisplayName, first.PublicHelpCenterUrl);
+        _ = PersistSelectedTenantAsync(first);
+    }
+
+    private async Task RestoreSelectedTenantAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", SupportApiClient.SelectedTenantStorageKey);
+            if (string.IsNullOrWhiteSpace(json)) return;
+            var saved = JsonSerializer.Deserialize<SupportTenantDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (saved == null || string.IsNullOrWhiteSpace(saved.TenantId) || string.IsNullOrWhiteSpace(saved.PublicKey))
+                return;
+            SupportApi.SetTenant(saved.TenantId, saved.PublicKey, saved.DisplayName, saved.PublicHelpCenterUrl);
+        }
+        catch { /* keep default */ }
+    }
+
+    private async Task PersistSelectedTenantAsync(SupportTenantDto tenant)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", SupportApiClient.SelectedTenantStorageKey, JsonSerializer.Serialize(tenant));
+        }
+        catch { /* non-fatal */ }
+    }
+
+    private async Task SelectTenantAsync(SupportTenantDto tenant)
+    {
+        SupportApi.SetTenant(tenant.TenantId, tenant.PublicKey, tenant.DisplayName, tenant.PublicHelpCenterUrl);
+        await PersistSelectedTenantAsync(tenant);
+        sidebarOpen = false;
+    }
+
+    private void ToggleSidebar() => sidebarOpen = !sidebarOpen;
+
+    private async Task HandleLogout()
+    {
+        await AuthService.SignOutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private string GetUserInitials()
+    {
+        if (string.IsNullOrEmpty(currentUserEmail)) return "?";
+        var name = currentUserEmail.Split('@')[0];
+        return name.Length >= 2 ? (name[0].ToString() + name[1]).ToUpperInvariant() : name.ToUpperInvariant();
+    }
+
+    private string GetUserDisplayName()
+    {
+        if (string.IsNullOrEmpty(currentUserEmail)) return "User";
+        var name = currentUserEmail.Split('@')[0];
+        return name.Length == 0 ? "User" : char.ToUpperInvariant(name[0]) + name[1..];
+    }
+
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+}

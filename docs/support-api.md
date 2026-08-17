@@ -28,7 +28,9 @@ Support Hub config: `KobNetiApi:BaseUrl` in `wwwroot/appsettings.json`.
 JwtSecret for the bridge must match MuuqWear `Authentication:JwtSecret` (Support API user-secrets / Render env `Support__Tenants__muuqwear__JwtSecret`).
 
 Cutover notes: `../Sominnercore-SupportApi/docs/support-muuqwear-cutover.md`  
-Schema SQL: `../Sominnercore-SupportApi/supabase/support_schema.sql` (schema name remains `sominnercore`)
+Schema SQL: `../Sominnercore-SupportApi/supabase/support_schema.sql` (schema name remains `sominnercore`)  
+Also apply: `products_registry.sql`, `staff_access.sql`, `teams.sql`.  
+Widget embed: `../Sominnercore-SupportApi/docs/widget-embed.md`
 
 ## Multi-project Support Hub
 

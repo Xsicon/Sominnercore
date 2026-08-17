@@ -130,8 +130,8 @@ Do **one task checkbox** (or one small PR) at a time.
 ### Module 2 — User & Team Management
 
 - [x] **W1.5** `staff_profiles` table (+ config `Support:Staff` fallback).
-- [ ] **W1.6** Teams table + membership.
-- [ ] **W1.7** Admin UI: list/invite/deactivate staff (minimal).
+- [x] **W1.6** Teams table + membership.
+- [x] **W1.7** Admin UI: list/invite/deactivate staff (minimal).
 - [x] **W1.8** Assign staff ↔ products (`staff_product_access` / `Support:Staff:ProductSlugs`).
 
 ### Module 3 — Software / Product Registry
@@ -140,12 +140,12 @@ Do **one task checkbox** (or one small PR) at a time.
 - [x] **W1.10** Fields: slug, display name, type, status, support tier, public_key, upstream URL, help URL.
 - [x] **W1.11** Seed MuuqWear / Salguri / GaarX (`supabase/products_registry.sql`).
 - [x] **W1.12** `GET /api/products` (+ existing `GET /api/Support/tenants` via ProductTenantResolver).
-- [ ] **W1.13** Rotate/generate embed keys per product; document widget install snippet.
+- [x] **W1.13** Rotate/generate embed keys per product; document widget install snippet.
 
 ### Module 23 — Navigation & UI Shell
 
-- [ ] **W1.14** Treat KobNeti WASM as the shell: sidebar, product switcher, role-aware nav stubs.
-- [ ] **W1.15** Add placeholder nav items for future modules (disabled until built).
+- [x] **W1.14** Treat KobNeti WASM as the shell: sidebar, product switcher, role-aware nav stubs.
+- [x] **W1.15** Add placeholder nav items for future modules (disabled until built).
 
 **Exit criteria:** One login, product switcher from API registry, Support still works for at least one product.
 

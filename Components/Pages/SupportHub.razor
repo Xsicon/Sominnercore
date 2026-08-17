@@ -1,14 +1,11 @@
 ﻿@page "/admin/support"
 @layout Components.Layout.AdminLayout
-@using System.Text.Json
-@using Microsoft.JSInterop
 @using KobNeti.Services
 @using KobNeti.Services.Support
 @using KobNeti.Components.Support
 @inject SupabaseAuthService AuthService
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Support Hub - KobNeti</PageTitle>
@@ -27,113 +24,9 @@ else if (!isAuthenticated)
 }
 else
 {
-<div class="admin-dashboard support-hub @(isSidebarOpen ? "sidebar-open" : "")">
-    <aside class="sidebar @(isSidebarOpen ? "open" : "")">
-        <div class="sidebar-header">
-            <div class="brand">
-                <div class="brand-dot"></div>
-                <span>Support Hub</span>
-            </div>
-            <p class="brand-subtitle">Multi-app customer support</p>
-        </div>
-
-        <div class="sh-project-switcher">
-            <p class="sh-project-switcher__label">Project</p>
-            @if (tenantsLoading)
-            {
-                <p class="sh-project-switcher__hint">Loading projectsâ€¦</p>
-            }
-            else if (!string.IsNullOrEmpty(tenantsError))
-            {
-                <p class="sh-project-switcher__hint">@tenantsError</p>
-            }
-            else
-            {
-                <div class="sh-project-switcher__list" role="list">
-                    @foreach (var t in tenants)
-                    {
-                        var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
-                        <button type="button"
-                                role="listitem"
-                                class="sh-project-chip @(active ? "active" : "")"
-                                @onclick="() => SelectTenantAsync(t)">
-                            <span class="sh-project-chip__dot @DotClass(t.TenantId)"></span>
-                            <span class="sh-project-chip__name">@t.DisplayName</span>
-                        </button>
-                    }
-                </div>
-            }
-        </div>
-
-        <nav class="sidebar-nav">
-            <a href="#" class="nav-item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetTab("overview"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">dashboard</span>
-                <span>Overview</span>
-            </a>
-            <a href="#" class="nav-item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetTab("chat"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">support_agent</span>
-                <span>Live Chat</span>
-            </a>
-            <a href="#" class="nav-item @(activeTab == "tickets" ? "active" : "")" @onclick="@(() => SetTab("tickets"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">confirmation_number</span>
-                <span>Tickets</span>
-            </a>
-            <a href="#" class="nav-item @(activeTab == "kb" ? "active" : "")" @onclick="@(() => SetTab("kb"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">menu_book</span>
-                <span>Knowledge Base</span>
-            </a>
-            <a href="#" class="nav-item @(activeTab == "internal" ? "active" : "")" @onclick="@(() => SetTab("internal"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">forum</span>
-                <span>Internal Chat</span>
-            </a>
-            <a href="#" class="nav-item @(activeTab == "settings" ? "active" : "")" @onclick="@(() => SetTab("settings"))" @onclick:preventDefault>
-                <span class="material-symbols-outlined">settings</span>
-                <span>Settings</span>
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-info">
-                <div class="user-avatar">
-                    <span>@GetUserInitials()</span>
-                </div>
-                <div class="user-details">
-                    <p class="user-name">@GetUserDisplayName()</p>
-                    <p class="user-email">@currentUserEmail</p>
-                </div>
-            </div>
-            <a href="/admin" class="settings-link back-dashboard-link">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m12 19-7-7 7-7"/>
-                    <path d="M19 12H5"/>
-                </svg>
-                <span>Back to Dashboard</span>
-            </a>
-            <button class="logout-button" @onclick="HandleLogout">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" x2="9" y1="12" y2="12"/>
-                </svg>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
-
-    @if (isSidebarOpen)
-    {
-        <div class="sh-overlay" @onclick="ToggleSidebar"></div>
-    }
-
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
     <main class="main-content">
         <header class="dashboard-header">
-            <button class="menu-toggle" @onclick="ToggleSidebar" type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="4" x2="20" y1="12" y2="12"/>
-                    <line x1="4" x2="20" y1="6" y2="6"/>
-                    <line x1="4" x2="20" y1="18" y2="18"/>
-                </svg>
-            </button>
             <div class="header-content">
                 <div>
                     <h1>@GetTabTitle()</h1>
@@ -141,10 +34,18 @@ else
                 </div>
                 <div class="sh-header-actions">
                     <span class="sh-active-project" title="@SupportApi.TenantKey">@SupportApi.DisplayName</span>
-                    <a href="/admin" class="admin-access-btn back-dashboard-btn">Back to Dashboard</a>
                 </div>
             </div>
         </header>
+
+        <nav class="ops-subnav">
+            <button type="button" class="ops-subnav__item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetTab("chat"))">Live Chat</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "tickets" ? "active" : "")" @onclick="@(() => SetTab("tickets"))">Tickets</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "kb" ? "active" : "")" @onclick="@(() => SetTab("kb"))">Knowledge Base</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "internal" ? "active" : "")" @onclick="@(() => SetTab("internal"))">Internal Chat</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "settings" ? "active" : "")" @onclick="@(() => SetTab("settings"))">Settings</button>
+        </nav>
 
         @if (activeTab == "overview")
         {
@@ -189,12 +90,7 @@ else
 @code {
     private bool isCheckingAuth = true;
     private bool isAuthenticated;
-    private string currentUserEmail = "";
-    private bool isSidebarOpen;
     private string activeTab = "overview";
-    private List<SupportTenantDto> tenants = [];
-    private bool tenantsLoading = true;
-    private string? tenantsError;
     private int workspaceEpoch;
 
     private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
@@ -210,120 +106,33 @@ else
             return;
         }
 
-        currentUserEmail = user.Email ?? "";
         isAuthenticated = true;
         isCheckingAuth = false;
         ApplyTabFromQuery();
+        SupportApi.TenantChanged += OnTenantChanged;
 
-        await RestoreAndLoadTenantsAsync();
-    }
-
-    private async Task RestoreAndLoadTenantsAsync()
-    {
-        tenantsLoading = true;
-        tenantsError = null;
         try
         {
-            await RestoreSelectedTenantAsync();
             await SupportApi.EnsureAgentTokenAsync();
-            var result = await SupportApi.GetTenantsAsync();
-            if (!result.Success)
-            {
-                tenantsError = string.IsNullOrWhiteSpace(result.Message)
-                    ? "Unable to load projects."
-                    : result.Message;
-                tenants = [];
-                return;
-            }
-
-            tenants = result.Data ?? [];
-            ApplyTenantIfMissingFromList();
         }
-        catch (Exception ex)
+        catch
         {
-            tenantsError = ex.Message;
-            tenants = [];
-        }
-        finally
-        {
-            tenantsLoading = false;
+            // OpsShell also exchanges; page views will surface errors.
         }
     }
 
-    private void ApplyTenantIfMissingFromList()
+    private void OnTenantChanged()
     {
-        if (tenants.Count == 0)
-            return;
-
-        var current = tenants.FirstOrDefault(t =>
-            string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase));
-        if (current != null)
-        {
-            SupportApi.SetTenant(
-                current.TenantId,
-                current.PublicKey,
-                current.DisplayName,
-                current.PublicHelpCenterUrl);
-            return;
-        }
-
-        var first = tenants[0];
-        SupportApi.SetTenant(first.TenantId, first.PublicKey, first.DisplayName, first.PublicHelpCenterUrl);
         workspaceEpoch++;
-        _ = PersistSelectedTenantAsync(first);
+        _ = InvokeAsync(StateHasChanged);
     }
 
-    private async Task RestoreSelectedTenantAsync()
-    {
-        try
-        {
-            var json = await JS.InvokeAsync<string?>("localStorage.getItem", SupportApiClient.SelectedTenantStorageKey);
-            if (string.IsNullOrWhiteSpace(json))
-                return;
-
-            var saved = JsonSerializer.Deserialize<SupportTenantDto>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            if (saved == null || string.IsNullOrWhiteSpace(saved.TenantId) || string.IsNullOrWhiteSpace(saved.PublicKey))
-                return;
-
-            SupportApi.SetTenant(saved.TenantId, saved.PublicKey, saved.DisplayName, saved.PublicHelpCenterUrl);
-        }
-        catch
-        {
-            // Keep appsettings default.
-        }
-    }
-
-    private async Task PersistSelectedTenantAsync(SupportTenantDto tenant)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(tenant);
-            await JS.InvokeVoidAsync("localStorage.setItem", SupportApiClient.SelectedTenantStorageKey, json);
-        }
-        catch
-        {
-            // Non-fatal.
-        }
-    }
-
-    private async Task SelectTenantAsync(SupportTenantDto tenant)
+    private Task SelectTenantAsync(SupportTenantDto tenant)
     {
         SupportApi.SetTenant(tenant.TenantId, tenant.PublicKey, tenant.DisplayName, tenant.PublicHelpCenterUrl);
         workspaceEpoch++;
-        await PersistSelectedTenantAsync(tenant);
-        StateHasChanged();
+        return Task.CompletedTask;
     }
-
-    private static string DotClass(string tenantId) => tenantId.ToLowerInvariant() switch
-    {
-        "muuqwear" => "teal",
-        "salguri" => "orange",
-        "gaarx" => "purple",
-        _ => "teal"
-    };
 
     private void ApplyTabFromQuery()
     {
@@ -349,7 +158,6 @@ else
     private Task SetTab(string tab)
     {
         activeTab = tab;
-        isSidebarOpen = false;
         var url = tab == "overview" ? "/admin/support" : $"/admin/support?tab={tab}";
         Navigation.NavigateTo(url, replace: true);
         return Task.CompletedTask;
@@ -375,31 +183,5 @@ else
         _ => $"Support analytics for {SupportApi.DisplayName}"
     };
 
-    private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
-
-    private async Task HandleLogout()
-    {
-        await AuthService.SignOutAsync();
-        Navigation.NavigateTo("/");
-    }
-
-    private string GetUserInitials()
-    {
-        if (string.IsNullOrEmpty(currentUserEmail)) return "?";
-        var name = currentUserEmail.Split('@')[0];
-        return name.Length >= 2
-            ? (name[0].ToString() + name[1]).ToUpperInvariant()
-            : name.ToUpperInvariant();
-    }
-
-    private string GetUserDisplayName()
-    {
-        if (string.IsNullOrEmpty(currentUserEmail)) return "Admin User";
-        var name = currentUserEmail.Split('@')[0];
-        return name.Length == 0 ? "Admin User" : char.ToUpperInvariant(name[0]) + name[1..];
-    }
-
-    public void Dispose()
-    {
-    }
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
 }

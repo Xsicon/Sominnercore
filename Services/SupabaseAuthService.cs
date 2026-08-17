@@ -272,15 +272,20 @@ public class SupabaseAuthService
 
     public bool IsAdmin(User user, Session? session = null)
     {
-        if (HasAdminAppMetadata(user))
+        if (HasOpsAppMetadata(user))
             return true;
 
-        if (session != null && HasAdminRoleInAccessToken(session.AccessToken))
+        if (session != null && HasOpsRoleInAccessToken(session.AccessToken))
             return true;
 
         var email = user.Email?.Trim();
         return !string.IsNullOrEmpty(email) && _adminEmails.Contains(email);
     }
+
+    private static readonly HashSet<string> OpsRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "admin", "manager", "engineer", "support", "support_team"
+    };
 
     private static bool IsAccessTokenExpired(Session session)
     {
@@ -295,13 +300,14 @@ public class SupabaseAuthService
         }
     }
 
-    private static bool HasAdminAppMetadata(User user)
+    private static bool HasOpsAppMetadata(User user)
     {
         if (user.AppMetadata == null || user.AppMetadata.Count == 0)
             return false;
 
         if (TryGetMetadataString(user.AppMetadata, "role", out var role) &&
-            string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase))
+            !string.IsNullOrWhiteSpace(role) &&
+            OpsRoles.Contains(role))
         {
             return true;
         }
@@ -336,7 +342,7 @@ public class SupabaseAuthService
         return !string.IsNullOrWhiteSpace(value);
     }
 
-    private static bool HasAdminRoleInAccessToken(string? accessToken)
+    private static bool HasOpsRoleInAccessToken(string? accessToken)
     {
         if (string.IsNullOrWhiteSpace(accessToken))
             return false;
@@ -362,10 +368,11 @@ public class SupabaseAuthService
             if (!doc.RootElement.TryGetProperty("app_metadata", out var appMeta))
                 return false;
 
-            if (appMeta.TryGetProperty("role", out var role) &&
-                string.Equals(role.GetString(), "admin", StringComparison.OrdinalIgnoreCase))
+            if (appMeta.TryGetProperty("role", out var roleEl))
             {
-                return true;
+                var role = roleEl.GetString();
+                if (!string.IsNullOrWhiteSpace(role) && OpsRoles.Contains(role))
+                    return true;
             }
 
             if (appMeta.TryGetProperty("is_admin", out var isAdmin))

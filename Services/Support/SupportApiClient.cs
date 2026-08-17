@@ -20,6 +20,7 @@ public class SupportApiClient
     private string _displayName = "";
     private string? _agentToken;
     private DateTime _agentTokenExpires = DateTime.MinValue;
+    private string? _agentRole;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -43,6 +44,9 @@ public class SupportApiClient
     public string TenantKey => _tenantKey;
     public string PublicHelpCenterUrl => _publicHelpCenterUrl;
     public string DisplayName => string.IsNullOrWhiteSpace(_displayName) ? _tenantId : _displayName;
+    public string AgentRole => _agentRole ?? "";
+    public bool IsPlatformAdmin =>
+        string.Equals(_agentRole, "admin", StringComparison.OrdinalIgnoreCase);
 
     public event Action? TenantChanged;
 
@@ -122,6 +126,165 @@ public class SupportApiClient
 
         _agentToken = body.Data.AccessToken;
         _agentTokenExpires = body.Data.ExpiresAt.ToUniversalTime();
+        _agentRole = ReadJwtClaim(_agentToken, "app_role");
+    }
+
+    public async Task<ApiResponse<List<StaffMemberDto>>> GetStaffAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Staff");
+            return await ReadEnvelopeAsync<List<StaffMemberDto>>(res, "Failed to load staff.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<StaffMemberDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<StaffMemberDto>> InviteStaffAsync(
+        string email, string? displayName, string role, IEnumerable<string> productSlugs)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Staff/invite", new
+            {
+                email,
+                displayName,
+                role,
+                productSlugs = productSlugs.ToList()
+            });
+            return await ReadEnvelopeAsync<StaffMemberDto>(res, "Failed to invite staff.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<StaffMemberDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<StaffMemberDto>> DeactivateStaffAsync(Guid staffId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Staff/{staffId}/deactivate");
+            return await ReadEnvelopeAsync<StaffMemberDto>(res, "Failed to deactivate staff.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<StaffMemberDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<StaffMemberDto>> ActivateStaffAsync(Guid staffId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Staff/{staffId}/activate");
+            return await ReadEnvelopeAsync<StaffMemberDto>(res, "Failed to activate staff.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<StaffMemberDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<TeamDto>>> GetTeamsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Teams");
+            return await ReadEnvelopeAsync<List<TeamDto>>(res, "Failed to load teams.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<TeamDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<TeamDto>> CreateTeamAsync(string name, string? productSlug, string? description = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Teams", new
+            {
+                name,
+                productSlug,
+                description
+            });
+            return await ReadEnvelopeAsync<TeamDto>(res, "Failed to create team.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<TeamDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<RotateEmbedKeyDto>> RotateEmbedKeyAsync(string slug)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/products/{Uri.EscapeDataString(slug)}/rotate-key");
+            return await ReadEnvelopeAsync<RotateEmbedKeyDto>(res, "Failed to rotate embed key.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<RotateEmbedKeyDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<RotateEmbedKeyDto>> GetWidgetSnippetAsync(string slug)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/products/{Uri.EscapeDataString(slug)}/widget-snippet");
+            return await ReadEnvelopeAsync<RotateEmbedKeyDto>(res, "Failed to load widget snippet.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<RotateEmbedKeyDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    private static async Task<ApiResponse<T>> ReadEnvelopeAsync<T>(HttpResponseMessage res, string fallback)
+    {
+        var body = await res.Content.ReadFromJsonAsync<ApiResponse<T>>(JsonOptions)
+                   ?? new ApiResponse<T>();
+        if (!res.IsSuccessStatusCode)
+        {
+            body.Success = false;
+            if (string.IsNullOrWhiteSpace(body.Message))
+                body.Message = fallback;
+        }
+        else
+        {
+            body.Success = true;
+        }
+
+        return body;
+    }
+
+    private static string? ReadJwtClaim(string jwt, string claim)
+    {
+        try
+        {
+            var parts = jwt.Split('.');
+            if (parts.Length < 2)
+                return null;
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            using var doc = System.Text.Json.JsonDocument.Parse(
+                System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(payload)));
+            return doc.RootElement.TryGetProperty(claim, out var el) ? el.GetString() : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<SupportCountsDto> GetCountsAsync()

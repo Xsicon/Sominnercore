@@ -1,0 +1,132 @@
+@page "/admin/teams"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+
+<PageTitle>Teams - KobNeti</PageTitle>
+
+<div class="ops-page">
+    <header class="ops-page-header">
+        <div>
+            <h1>Teams</h1>
+            <p>Group staff for routing and ownership.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="ops-error">@error</p>
+    }
+
+    @if (!SupportApi.IsPlatformAdmin)
+    {
+        <p class="ops-error">Platform admin role required.</p>
+    }
+    else
+    {
+        <section class="ops-card">
+            <h2>Create team</h2>
+            <div class="ops-form-row">
+                <input @bind="teamName" placeholder="Team name" />
+                <input @bind="teamProduct" placeholder="Product slug (optional)" />
+                <button type="button" class="ops-btn" @onclick="CreateAsync" disabled="@busy">Create</button>
+            </div>
+        </section>
+
+        <section class="ops-card">
+            <h2>Teams</h2>
+            @if (loading)
+            {
+                <p>Loading…</p>
+            }
+            else if (teams.Count == 0)
+            {
+                <p class="ops-muted">No teams yet.</p>
+            }
+            else
+            {
+                <ul class="ops-list">
+                    @foreach (var t in teams)
+                    {
+                        <li>
+                            <strong>@t.Name</strong>
+                            <span class="ops-muted">@t.Slug</span>
+                            @if (!string.IsNullOrWhiteSpace(t.ProductSlug))
+                            {
+                                <span class="ops-pill">@t.ProductSlug</span>
+                            }
+                            <span class="ops-muted">@t.Members.Count member(s)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private List<TeamDto> teams = [];
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private string teamName = "";
+    private string teamProduct = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            if (!SupportApi.IsPlatformAdmin)
+            {
+                loading = false;
+                return;
+            }
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            loading = false;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        loading = true;
+        var result = await SupportApi.GetTeamsAsync();
+        teams = result.Success ? result.Data ?? [] : [];
+        if (!result.Success) error = result.Message;
+        loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        busy = true;
+        error = null;
+        var result = await SupportApi.CreateTeamAsync(
+            teamName,
+            string.IsNullOrWhiteSpace(teamProduct) ? null : teamProduct.Trim());
+        busy = false;
+        if (!result.Success)
+        {
+            error = result.Message;
+            return;
+        }
+
+        teamName = "";
+        teamProduct = "";
+        await ReloadAsync();
+    }
+}

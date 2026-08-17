@@ -1,0 +1,233 @@
+@page "/admin/staff"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+
+<PageTitle>Staff - KobNeti</PageTitle>
+
+<div class="ops-page">
+    <header class="ops-page-header">
+        <div>
+            <h1>Staff</h1>
+            <p>Invite, deactivate, and assign product access.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="ops-error">@error</p>
+    }
+
+    @if (!SupportApi.IsPlatformAdmin)
+    {
+        <p class="ops-error">Platform admin role required.</p>
+    }
+    else
+    {
+        <section class="ops-card">
+            <h2>Embed key (@SupportApi.DisplayName)</h2>
+            <p class="ops-muted">Public key used by storefront widgets (`X-Tenant-Key`).</p>
+            <div class="ops-form-row">
+                <code class="ops-code">@SupportApi.TenantKey</code>
+                <button type="button" class="ops-btn ops-btn--ghost" @onclick="LoadSnippetAsync" disabled="@busy">Show snippet</button>
+                <button type="button" class="ops-btn" @onclick="RotateKeyAsync" disabled="@busy">Rotate key</button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(widgetSnippet))
+            {
+                <pre class="ops-pre">@widgetSnippet</pre>
+            }
+        </section>
+
+        <section class="ops-card">
+            <h2>Invite staff</h2>
+            <div class="ops-form-row">
+                <input @bind="inviteEmail" placeholder="email@company.com" />
+                <input @bind="inviteName" placeholder="Display name" />
+                <select @bind="inviteRole">
+                    <option value="support">support</option>
+                    <option value="manager">manager</option>
+                    <option value="engineer">engineer</option>
+                    <option value="admin">admin</option>
+                </select>
+                <input @bind="inviteProducts" placeholder="products (comma: muuqwear,salguri)" />
+                <button type="button" class="ops-btn" @onclick="InviteAsync" disabled="@busy">Invite</button>
+            </div>
+        </section>
+
+        <section class="ops-card">
+            <h2>Directory</h2>
+            @if (loading)
+            {
+                <p>Loading…</p>
+            }
+            else if (staff.Count == 0)
+            {
+                <p class="ops-muted">No staff profiles yet.</p>
+            }
+            else
+            {
+                <table class="ops-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Products</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in staff)
+                        {
+                            <tr>
+                                <td>@s.Email</td>
+                                <td>@(s.DisplayName ?? "—")</td>
+                                <td>@s.Role</td>
+                                <td>@(s.ProductSlugs.Count == 0 ? "—" : string.Join(", ", s.ProductSlugs))</td>
+                                <td>@(s.Active ? "active" : "inactive")</td>
+                                <td>
+                                    @if (s.Active)
+                                    {
+                                        <button type="button" class="ops-btn ops-btn--ghost" @onclick="() => DeactivateAsync(s.Id)" disabled="@busy">Deactivate</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="ops-btn ops-btn--ghost" @onclick="() => ActivateAsync(s.Id)" disabled="@busy">Activate</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private List<StaffMemberDto> staff = [];
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private string inviteEmail = "";
+    private string inviteName = "";
+    private string inviteRole = "support";
+    private string inviteProducts = "muuqwear";
+    private string? widgetSnippet;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            if (!SupportApi.IsPlatformAdmin)
+            {
+                loading = false;
+                return;
+            }
+
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            loading = false;
+        }
+    }
+
+    private async Task LoadSnippetAsync()
+    {
+        busy = true;
+        error = null;
+        var result = await SupportApi.GetWidgetSnippetAsync(SupportApi.TenantId);
+        busy = false;
+        if (!result.Success)
+        {
+            error = result.Message;
+            return;
+        }
+
+        widgetSnippet = result.Data?.WidgetSnippet;
+    }
+
+    private async Task RotateKeyAsync()
+    {
+        busy = true;
+        error = null;
+        var result = await SupportApi.RotateEmbedKeyAsync(SupportApi.TenantId);
+        busy = false;
+        if (!result.Success)
+        {
+            error = result.Message;
+            return;
+        }
+
+        widgetSnippet = result.Data?.WidgetSnippet;
+        if (result.Data is not null)
+        {
+            SupportApi.SetTenant(
+                SupportApi.TenantId,
+                result.Data.PublicKey,
+                SupportApi.DisplayName,
+                SupportApi.PublicHelpCenterUrl);
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        loading = true;
+        error = null;
+        var result = await SupportApi.GetStaffAsync();
+        staff = result.Success ? result.Data ?? [] : [];
+        if (!result.Success)
+            error = result.Message;
+        loading = false;
+    }
+
+    private async Task InviteAsync()
+    {
+        busy = true;
+        error = null;
+        var slugs = inviteProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var result = await SupportApi.InviteStaffAsync(inviteEmail, inviteName, inviteRole, slugs);
+        busy = false;
+        if (!result.Success)
+        {
+            error = result.Message;
+            return;
+        }
+
+        inviteEmail = "";
+        inviteName = "";
+        await ReloadAsync();
+    }
+
+    private async Task DeactivateAsync(Guid id)
+    {
+        busy = true;
+        var result = await SupportApi.DeactivateStaffAsync(id);
+        busy = false;
+        if (!result.Success) error = result.Message;
+        await ReloadAsync();
+    }
+
+    private async Task ActivateAsync(Guid id)
+    {
+        busy = true;
+        var result = await SupportApi.ActivateStaffAsync(id);
+        busy = false;
+        if (!result.Success) error = result.Message;
+        await ReloadAsync();
+    }
+}

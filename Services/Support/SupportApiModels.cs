@@ -233,3 +233,38 @@ public class SupportTenantDto
     public string PublicKey { get; set; } = "";
     public string PublicHelpCenterUrl { get; set; } = "";
 }
+
+public class StaffMemberDto
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = "";
+    public string? DisplayName { get; set; }
+    public string Role { get; set; } = "";
+    public bool Active { get; set; }
+    public List<string> ProductSlugs { get; set; } = [];
+}
+
+public class TeamDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Slug { get; set; } = "";
+    public string? Description { get; set; }
+    public string? ProductSlug { get; set; }
+    public bool Active { get; set; }
+    public List<TeamMemberDto> Members { get; set; } = [];
+}
+
+public class TeamMemberDto
+{
+    public Guid StaffId { get; set; }
+    public string Email { get; set; } = "";
+    public string? DisplayName { get; set; }
+    public string MemberRole { get; set; } = "member";
+}
+
+public class RotateEmbedKeyDto
+{
+    public string PublicKey { get; set; } = "";
+    public string WidgetSnippet { get; set; } = "";
+}
