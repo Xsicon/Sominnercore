@@ -122,17 +122,17 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 1 — Identity & Access
 
-- [ ] **W1.1** Document staff roles: `admin`, `manager`, `engineer`, `support` (map from today’s `admin` / `support_team`).
-- [ ] **W1.2** Keep Supabase Auth as staff IdP for v1; formalize `app_metadata.role` + allowlist emails.
-- [ ] **W1.3** Harden `POST /api/SupportAuth/exchange` (or `/api/auth/exchange`) → ops agent JWT with role claims.
-- [ ] **W1.4** Add product-scoped permission model (user may access only assigned products).
+- [x] **W1.1** Staff roles documented: `admin`, `manager`, `engineer`, `support` (+ legacy `support_team`).
+- [x] **W1.2** Supabase Auth remains staff IdP; `app_metadata.role=admin` / CoreAdminEmails still work.
+- [x] **W1.3** Exchange issues agent JWT with `app_role` + `product` claims.
+- [x] **W1.4** Product-scoped access enforced (`ProductAccessMiddleware` + filtered tenants/products lists).
 
 ### Module 2 — User & Team Management
 
-- [ ] **W1.5** Staff profile table (user id, display name, role, active).
+- [x] **W1.5** `staff_profiles` table (+ config `Support:Staff` fallback).
 - [ ] **W1.6** Teams table + membership.
 - [ ] **W1.7** Admin UI: list/invite/deactivate staff (minimal).
-- [ ] **W1.8** Assign staff ↔ products (powers switcher visibility).
+- [x] **W1.8** Assign staff ↔ products (`staff_product_access` / `Support:Staff:ProductSlugs`).
 
 ### Module 3 — Software / Product Registry
 
