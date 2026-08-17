@@ -47,3 +47,8 @@ Desktop.ini
 ## Local design assets (Stitch exports — not needed in repo)
 design refrence/
 design reference/
+
+## Generated Blazor scoped CSS (do not place empty stubs in wwwroot — they shadow the real bundle)
+wwwroot/*.styles.css
+wwwroot/*.styles.css.br
+wwwroot/*.styles.css.gz
