@@ -200,8 +200,26 @@
         }
         SupportApi.TenantChanged += OnTenantChanged;
         workspaceKey = SupportApi.TenantId;
+        ApplyTabFromQuery();
         ready = true;
         await LoadTab();
+    }
+
+    private void ApplyTabFromQuery()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrEmpty(query)) return;
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
+            {
+                var t = Uri.UnescapeDataString(pair[1]);
+                if (t is "overview" or "cross" or "reports" or "help" or "assets")
+                    tab = t;
+            }
+        }
     }
 
     private void OnTenantChanged()
@@ -215,6 +233,7 @@
         tab = t;
         csvPreview = null;
         msg = null;
+        Navigation.NavigateTo(t == "overview" ? "/admin/insights" : $"/admin/insights?tab={t}", replace: true);
         await LoadTab();
     }
 

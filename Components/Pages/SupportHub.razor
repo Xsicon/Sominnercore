@@ -156,8 +156,8 @@ else
                 continue;
 
             var tab = Uri.UnescapeDataString(pair[1]);
-            if (tab is "overview" or "chat" or "tickets" or "kb" or "internal" or "settings")
-                activeTab = tab;
+            if (tab is "overview" or "chat" or "live" or "tickets" or "incidents" or "kb" or "internal" or "settings")
+                activeTab = tab == "live" ? "chat" : tab;
             break;
         }
     }

@@ -7,6 +7,8 @@
 - **1 ops API** — one internal backend for staff to manage support and (later) all ops modules across products.
 - **1 ops UI** — Som Inner Core / KobNeti admin shell (WASM) is the pane of glass.
 
+**UI redesign:** See [kobneti-redesign-plan.md](./kobneti-redesign-plan.md) (waves RD0–RD7; Studio reference in `kobneti-design/`).
+
 This document turns the PRD into **ordered, do-one-at-a-time tasks**. Check boxes as you go.
 
 ---
@@ -345,5 +347,6 @@ A task is done when:
 | Version | Date | Notes |
 |---------|------|--------|
 | 1.0 | 2026-08-17 | Initial plan from KobNeti PRD + N product APIs + 1 ops API stance; rename playbook |
+| 1.1 | 2026-08-24 | Link to UI redesign plan (RD0–RD7) |
 
 *When Phase 2 contracts (schemas/endpoints) are needed for a wave, create `docs/kobneti-wave-WX-spec.md` per wave rather than expanding this file unboundedly.*

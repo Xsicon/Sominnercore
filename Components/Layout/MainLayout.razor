@@ -1,81 +1,252 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject PublicUiState PublicUi
+@inject IJSRuntime JS
 
-<div class="site-wrapper">
-    <header class="site-header">
-        <div class="header-container">
-            <a href="#home" class="brand">
-                <span class="brand-dot"></span>
-                <span class="brand-name">KobNeti</span>
+<div class="pub-root">
+    <header class="pub-header" id="public-website-header">
+        <div class="pub-header__inner">
+            <a class="pub-brand" href="/" id="kobneti-public-brand-logo">
+                <span class="pub-brand__mark">K</span>
+                <span class="pub-brand__name">KobNeti</span>
             </a>
 
-            <nav class="main-nav" id="main-nav">
-                <a href="#home" class="nav-link active">Home</a>
-                <a href="#products" class="nav-link">Products</a>
-                <a href="#services" class="nav-link">Services</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#portfolio" class="nav-link">Portfolio</a>
-                <a href="#contact" class="nav-link">Contact</a>
+            <nav class="pub-nav" aria-label="Primary">
+                @foreach (var link in NavLinks)
+                {
+                    <a class="pub-nav__link @(IsActive(link.Href) ? "is-active" : "")"
+                       href="@link.Href"
+                       id="public-nav-link-@link.Id">@link.Label</a>
+                }
             </nav>
 
-            <div class="header-actions">
-                <div class="theme-dropdown-wrapper" id="theme-dropdown-wrapper">
-                    <button class="theme-toggle" id="theme-toggle-btn" title="Toggle theme">
-                        <!-- Moon icon (default/dark) -->
-                        <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                        </svg>
-                        <!-- Sun icon (light) -->
-                        <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </button>
+            <div class="pub-header__actions">
+                <button type="button" class="pub-icon-btn" id="public-dark-mode-toggle" title="Toggle theme" @onclick="ToggleTheme">
+                    <span class="material-symbols-outlined" style="font-size:1.15rem;">@(isDark ? "light_mode" : "dark_mode")</span>
+                </button>
+                <a class="pub-signin" href="/admin/login" id="public-header-admin-link">
+                    <span class="material-symbols-outlined" style="font-size:1rem;color:#4F46E5;">shield</span>
+                    Sign In
+                </a>
+                <button type="button" class="pub-cta" id="public-header-get-started-btn" @onclick="PublicUi.OpenGetStarted">
+                    Get Started
+                </button>
+            </div>
 
-                    <div class="theme-dropdown" id="theme-dropdown" style="display:none;">
-                        <button class="theme-option" data-theme="light">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="5"></circle>
-                                <line x1="12" y1="1" x2="12" y2="3"></line>
-                                <line x1="12" y1="21" x2="12" y2="23"></line>
-                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                                <line x1="1" y1="12" x2="3" y2="12"></line>
-                                <line x1="21" y1="12" x2="23" y2="12"></line>
-                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                            </svg>
-                            <span>Light</span>
-                        </button>
-                        <button class="theme-option" data-theme="dark">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                            </svg>
-                            <span>Dark</span>
-                        </button>
-                        <button class="theme-option" data-theme="system">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                                <line x1="8" y1="21" x2="16" y2="21"></line>
-                                <line x1="12" y1="17" x2="12" y2="21"></line>
-                            </svg>
-                            <span>System</span>
-                        </button>
-                    </div>
-                </div>
-                <a href="admin" class="admin-link">Admin</a>
-                <a href="#contact" class="btn-get-started">Get Started</a>
+            <div class="pub-mobile-toggle">
+                <button type="button" class="pub-icon-btn" @onclick="ToggleTheme" aria-label="Toggle theme">
+                    <span class="material-symbols-outlined" style="font-size:1.1rem;">@(isDark ? "light_mode" : "dark_mode")</span>
+                </button>
+                <button type="button" class="pub-icon-btn" id="public-mobile-menu-toggle" @onclick="() => mobileOpen = !mobileOpen" aria-label="Menu">
+                    <span class="material-symbols-outlined">@(mobileOpen ? "close" : "menu")</span>
+                </button>
             </div>
         </div>
+
+        @if (mobileOpen)
+        {
+            <div class="pub-mobile-drawer">
+                @foreach (var link in NavLinks)
+                {
+                    <a class="@(IsActive(link.Href) ? "is-active" : "")" href="@link.Href" @onclick="() => mobileOpen = false">@link.Label</a>
+                }
+                <div style="padding-top:0.75rem;border-top:1px solid #E2E8F0;display:flex;flex-direction:column;gap:0.5rem;">
+                    <a class="pub-signin" href="/admin/login" style="justify-content:center;border:1px solid #E2E8F0;">Operations Admin Portal</a>
+                    <button type="button" class="pub-cta" style="width:100%;justify-content:center;" @onclick="OpenGetStartedMobile">Get Started</button>
+                </div>
+            </div>
+        }
     </header>
 
-    <main>
+    <main class="pub-main">
         @Body
     </main>
+
+    <footer class="pub-footer" id="public-website-footer">
+        <div class="pub-footer__inner">
+            <div class="pub-footer__grid">
+                <div>
+                    <a class="pub-brand" href="/">
+                        <span class="pub-brand__mark" style="width:1.75rem;height:1.75rem;font-size:0.65rem;">K</span>
+                        <span class="pub-footer__brand-name">KobNeti</span>
+                    </a>
+                    <p class="pub-footer__blurb">
+                        Elevating enterprise solutions with modern aesthetics. We engineer comprehensive technical operations solutions, blending data-centric precision with modern, forward-thinking strategy.
+                    </p>
+                    <p class="pub-footer__blurb" style="padding-top:0.5rem;">© 2024 KobNeti. All rights reserved.</p>
+                </div>
+                <div>
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="/about">About Us</a></li>
+                        <li><a href="/about">Careers</a></li>
+                        <li><a href="/portfolio">Newsroom</a></li>
+                        <li><a href="/about">Press</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="/contact">Help Center</a></li>
+                        <li><a href="/services">Documentation</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
+                        <li><a href="/products">Status <span style="display:inline-block;width:6px;height:6px;border-radius:999px;background:#10B981;margin-left:4px;"></span></a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Social</h4>
+                    <ul>
+                        <li><a href="#">LinkedIn</a></li>
+                        <li><a href="#">Twitter</a></li>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Instagram</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pub-footer__bottom">
+                <p>© 2024 KobNeti Inc. All rights reserved.</p>
+                <div class="pub-footer__legal">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Cookie Settings</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <button type="button" class="pub-fab-chat" id="public-floating-chat-trigger" aria-label="Open KobNeti Live Support" @onclick="PublicUi.ToggleChat">
+        <span class="material-symbols-outlined">chat</span>
+    </button>
+
+    @if (PublicUi.ChatOpen)
+    {
+        <PublicLiveChatModal />
+    }
+
+    @if (PublicUi.GetStartedOpen)
+    {
+        <div class="pub-modal-backdrop" @onclick="PublicUi.CloseGetStarted">
+            <div class="pub-modal" @onclick:stopPropagation="true">
+                <div class="pub-modal__head">
+                    <h3>Get Started with KobNeti</h3>
+                    <button type="button" class="pub-modal__close" @onclick="PublicUi.CloseGetStarted">✕</button>
+                </div>
+                @if (PublicUi.GetStartedSubmitted)
+                {
+                    <div style="text-align:center;padding:1.5rem 0;">
+                        <div style="width:3rem;height:3rem;border-radius:999px;background:#D1FAE5;color:#059669;display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;">
+                            <span class="material-symbols-outlined">check_circle</span>
+                        </div>
+                        <h4 style="margin:0 0 0.5rem;">Welcome to KobNeti!</h4>
+                        <p style="font-size:0.75rem;color:#475569;">We've sent an invitation to <b>@PublicUi.GetStartedEmail</b>.</p>
+                        <a class="pub-btn-primary" style="margin-top:1rem;width:100%;justify-content:center;" href="/admin/login">Launch Operations Dashboard</a>
+                    </div>
+                }
+                else
+                {
+                    <EditForm Model="getStartedModel" OnValidSubmit="SubmitGetStarted">
+                        <p style="font-size:0.75rem;color:#475569;line-height:1.55;margin:0 0 1rem;">
+                            Join enterprise engineering and operations teams deploying with KobNeti across commerce, payments, and infrastructure.
+                        </p>
+                        <div class="pub-form">
+                            <label>
+                                Work Email Address
+                                <InputText @bind-Value="getStartedModel.Email" type="email" required placeholder="name@company.com" />
+                            </label>
+                            <label>
+                                Primary Interest
+                                <InputSelect @bind-Value="getStartedModel.Interest">
+                                    <option>MuuqWear E-Commerce Platform</option>
+                                    <option>SomPay Payment Ledger &amp; Orchestration</option>
+                                    <option>GaarX IoT Telematics &amp; Mobility</option>
+                                    <option>Salguri Enterprise Supply Chain</option>
+                                    <option>Cloud Infrastructure Migration</option>
+                                    <option>Internal Operations Admin Portal</option>
+                                </InputSelect>
+                            </label>
+                            <button type="submit" class="pub-btn-primary" style="width:100%;justify-content:center;">Create Organization Account</button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    }
 </div>
+
+@code {
+    private bool mobileOpen;
+    private bool isDark;
+    private GetStartedModel getStartedModel = new();
+
+    private sealed record NavItem(string Id, string Label, string Href);
+
+    private static readonly NavItem[] NavLinks =
+    [
+        new("home", "Home", "/"),
+        new("products", "Products", "/products"),
+        new("services", "Services", "/services"),
+        new("about", "About", "/about"),
+        new("portfolio", "Portfolio", "/portfolio"),
+        new("contact", "Contact", "/contact"),
+    ];
+
+    private class GetStartedModel
+    {
+        public string Email { get; set; } = "";
+        public string Interest { get; set; } = "MuuqWear E-Commerce Platform";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var mode = await JS.InvokeAsync<string?>("eval", "localStorage.getItem('sominnercore-ui-theme')");
+            isDark = mode == "dark" || (mode == "system" && false);
+            isDark = await JS.InvokeAsync<bool>("eval", "document.documentElement.classList.contains('dark')");
+            StateHasChanged();
+        }
+        catch { /* ignore */ }
+    }
+
+    protected override void OnInitialized()
+    {
+        PublicUi.Changed += OnPublicUiChanged;
+    }
+
+    private void OnPublicUiChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsActive(string href)
+    {
+        var path = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
+        if (href == "/") return path == "/" || path == "";
+        return path.Equals(href, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            const string script =
+                "(function(){var KEY='sominnercore-ui-theme';var cur=localStorage.getItem(KEY)||'light';var next=cur==='dark'?'light':'dark';localStorage.setItem(KEY,next);document.documentElement.classList.toggle('dark', next==='dark');})();";
+            await JS.InvokeVoidAsync("eval", script);
+            isDark = !isDark;
+        }
+        catch { /* ignore */ }
+    }
+
+    private void OpenGetStartedMobile()
+    {
+        mobileOpen = false;
+        PublicUi.OpenGetStarted();
+    }
+
+    private void SubmitGetStarted()
+    {
+        PublicUi.GetStartedEmail = getStartedModel.Email;
+        PublicUi.MarkGetStartedSubmitted();
+    }
+
+    public void Dispose() => PublicUi.Changed -= OnPublicUiChanged;
+}

@@ -1,0 +1,59 @@
+@page "/contact"
+@inject PublicUiState PublicUi
+
+<PageTitle>Contact - KobNeti</PageTitle>
+
+<div class="pub-page">
+    <div class="pub-page__hero">
+        <div class="pub-eyebrow">Contact</div>
+        <h1>Talk to the KobNeti team</h1>
+        <p>Sales, partnerships, or support — reach us here or open live chat for a quick answer.</p>
+    </div>
+
+    <div style="display:grid;gap:2rem;grid-template-columns:1fr;">
+        <style>
+            @@media (min-width: 900px) {
+                .pub-contact-grid { grid-template-columns: 1.2fr 0.8fr !important; }
+            }
+        </style>
+        <div class="pub-contact-grid" style="display:grid;gap:2rem;grid-template-columns:1fr;">
+            <EditForm Model="form" OnValidSubmit="Submit" class="pub-card">
+                <div class="pub-form">
+                    <label>Name <InputText @bind-Value="form.Name" required /></label>
+                    <label>Work email <InputText @bind-Value="form.Email" type="email" required /></label>
+                    <label>Company <InputText @bind-Value="form.Company" /></label>
+                    <label>Message <InputTextArea @bind-Value="form.Message" rows="5" required /></label>
+                    <button type="submit" class="pub-btn-primary" style="width:fit-content;" disabled="@sent">@(sent ? "Sent" : "Send message")</button>
+                    @if (sent)
+                    {
+                        <p style="font-size:0.8rem;color:#059669;margin:0;">Thanks — we’ll reply shortly.</p>
+                    }
+                </div>
+            </EditForm>
+
+            <div class="pub-card">
+                <h3>Prefer live chat?</h3>
+                <p style="margin-bottom:1rem;">Our assistant can help with product questions while you wait.</p>
+                <button type="button" class="pub-btn-primary" @onclick="PublicUi.OpenChat">Open live chat</button>
+                <p style="margin-top:1.5rem;font-size:0.8rem;color:#64748B;">
+                    Staff already on KobNeti? <a href="/admin/login" style="color:#4F46E5;font-weight:600;">Sign in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly ContactForm form = new();
+    private bool sent;
+
+    private class ContactForm
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Company { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+
+    private void Submit() => sent = true;
+}

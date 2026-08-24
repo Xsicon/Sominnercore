@@ -44,9 +44,11 @@ Desktop.ini
 .idea/
 *.sln.iml
 
-## Local design assets (Stitch exports — not needed in repo)
+## Local design assets (Stitch / AI Studio — reference only)
 design refrence/
 design reference/
+kobneti-design/node_modules/
+kobneti-design/dist/
 
 ## Generated Blazor scoped CSS (do not place empty stubs in wwwroot — they shadow the real bundle)
 wwwroot/*.styles.css

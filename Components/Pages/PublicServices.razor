@@ -1,0 +1,41 @@
+@page "/services"
+@inject PublicUiState PublicUi
+
+<PageTitle>Services - KobNeti</PageTitle>
+
+<div class="pub-page">
+    <div class="pub-page__hero">
+        <div class="pub-eyebrow">Services</div>
+        <h1>Implementation, migration, and ops excellence</h1>
+        <p>Partner with KobNeti to stand up multi-product operations without bolting together ad-hoc admin tools.</p>
+    </div>
+
+    <div class="pub-card-grid cols-3">
+        <article class="pub-card">
+            <div class="pub-value-card__icon"><span class="material-symbols-outlined">rocket_launch</span></div>
+            <h3>Platform launch</h3>
+            <p>Product registry, embed keys, support widgets, and staff access configured for your first brand in days—not months.</p>
+        </article>
+        <article class="pub-card">
+            <div class="pub-value-card__icon" style="background:#ECFDF5;color:#059669;"><span class="material-symbols-outlined">sync_alt</span></div>
+            <h3>Cutover &amp; migration</h3>
+            <p>Move chat and tickets onto ops-owned stores with tenant isolation, SLAs, and audited workflows.</p>
+        </article>
+        <article class="pub-card">
+            <div class="pub-value-card__icon" style="background:#EFF6FF;color:#2563EB;"><span class="material-symbols-outlined">support_agent</span></div>
+            <h3>Managed ops enablement</h3>
+            <p>Playbooks for support, engineering boards, time &amp; payroll approvals, and platform integrations.</p>
+        </article>
+    </div>
+
+    <div class="pub-banner" style="margin-top:2.5rem;">
+        <div>
+            <h3>Need a scoped engagement?</h3>
+            <p>Tell us which products you run — we’ll map the KobNeti modules that matter.</p>
+        </div>
+        <div class="pub-banner__actions">
+            <button type="button" class="on-white" @onclick="PublicUi.OpenGetStarted">Get Started</button>
+            <a class="ghost" href="/contact" style="text-decoration:none;">Contact Sales</a>
+        </div>
+    </div>
+</div>

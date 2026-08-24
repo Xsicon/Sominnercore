@@ -1,0 +1,6 @@
+{
+  "name": "KobNeti Operations Platform",
+  "description": "Internal operations backend interface for managing support tickets, engineering tasks, SLA compliance, time & payroll, and team access across products.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

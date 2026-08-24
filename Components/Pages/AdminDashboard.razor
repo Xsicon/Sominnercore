@@ -1,6 +1,7 @@
 ﻿@page "/admin"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
+@using KobNeti.Services.Support
 @using KobNeti.Models
 @implements IDisposable
 @inject SupabaseAuthService AuthService
@@ -8,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject PageContentService PageContentService
+@inject SupportApiClient SupportApi
 
 <PageTitle>Admin Dashboard - KobNeti</PageTitle>
 
@@ -48,7 +50,25 @@ else
         <div class="dashboard-content">
             @if (activeTab == "overview")
             {
-                <!-- Stats Cards -->
+                <KnPageHeader Title="Overview" Subtitle="@($"Live ops for {SupportApi.DisplayName}")" />
+                <div class="kn-metric-grid" style="margin-bottom:1.5rem;">
+                    <KnMetric Label="Active chats" Value="@($"{overview?.ActiveChats ?? 0}")" />
+                    <KnMetric Label="Open tickets" Value="@($"{overview?.OpenTickets ?? 0}")" />
+                    <KnMetric Label="Open incidents" Value="@($"{overview?.OpenIncidents ?? 0}")" />
+                    <KnMetric Label="Eng in progress" Value="@($"{overview?.EngTasksInProgress ?? 0}")" />
+                    <KnMetric Label="Pending approvals" Value="@($"{overview?.PendingApprovals ?? 0}")" />
+                    <KnMetric Label="Unread alerts" Value="@($"{overview?.UnreadNotifications ?? 0}")" />
+                </div>
+                <div class="kn-card" style="margin-bottom:1.5rem;">
+                    <strong>Quick links</strong>
+                    <div class="kn-row" style="margin-top:0.75rem;">
+                        <a class="kn-btn kn-btn--primary kn-btn--sm" href="/admin/support">Support Hub</a>
+                        <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/engineering">Engineering</a>
+                        <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/insights">Insights</a>
+                        <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/platform">Platform</a>
+                    </div>
+                </div>
+                <!-- Legacy marketing stats (projects catalog) -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -63,7 +83,7 @@ else
                             </div>
                         </div>
                         <p class="stat-value">290,000</p>
-                        <p class="stat-change positive">â†‘ 8.5% from last month</p>
+                        <p class="stat-change positive">↑ 8.5% from last month</p>
                     </div>
 
                     <div class="stat-card">
@@ -719,6 +739,7 @@ else
     private bool isAuthenticated = false;
     private string currentUserEmail = "";
     private int hoveredPointIndex = -1;
+    private OverviewDto? overview;
 
     // Toast notification state
     private bool showToast = false;
@@ -853,6 +874,18 @@ else
         currentUserEmail = user.Email ?? "";
         isAuthenticated = true;
         isCheckingAuth = false;
+
+        try
+        {
+            await SupportApi.EnsureAgentTokenAsync();
+            var ov = await SupportApi.GetOverviewAsync();
+            if (ov.Success)
+                overview = ov.Data;
+        }
+        catch
+        {
+            // Overview metrics optional on dashboard load
+        }
 
         await LoadProducts();
         await LoadPages();

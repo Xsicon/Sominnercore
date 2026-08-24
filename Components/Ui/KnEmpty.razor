@@ -1,0 +1,20 @@
+<div class="kn-empty">
+    @if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="material-symbols-outlined" style="font-size:2rem;opacity:0.55;">@Icon</span>
+    }
+    @if (!string.IsNullOrWhiteSpace(Title))
+    {
+        <h3>@Title</h3>
+    }
+    @if (ChildContent is not null)
+    {
+        <div>@ChildContent</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

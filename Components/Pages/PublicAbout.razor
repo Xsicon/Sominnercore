@@ -1,0 +1,38 @@
+@page "/about"
+@inject PublicUiState PublicUi
+
+<PageTitle>About - KobNeti</PageTitle>
+
+<div class="pub-page">
+    <div class="pub-page__hero">
+        <div class="pub-eyebrow">About</div>
+        <h1>One ops pane for every product you ship</h1>
+        <p>
+            KobNeti is the unified operations platform behind brands like MuuqWear, Salguri, GaarX, and SomPay —
+            so staff work in one shell while each product keeps its own customer API.
+        </p>
+    </div>
+
+    <div class="pub-card-grid">
+        <article class="pub-card">
+            <h3>N product APIs</h3>
+            <p>Commerce and domain logic stay in product backends. KobNeti never replaces your storefront API.</p>
+        </article>
+        <article class="pub-card">
+            <h3>1 ops API + UI</h3>
+            <p>Support, engineering, people ops, calendar, files, and insights share one authenticated operations surface.</p>
+        </article>
+        <article class="pub-card">
+            <h3>Tenant isolation</h3>
+            <p>Every brand is a product in the registry — staff switch context without mixing customer data.</p>
+        </article>
+        <article class="pub-card">
+            <h3>Built for operators</h3>
+            <p>Tickets, live chat, incidents, boards, time, payroll, and audit trails designed for daily use—not demos.</p>
+        </article>
+    </div>
+
+    <div style="margin-top:2rem;">
+        <button type="button" class="pub-btn-primary" @onclick="PublicUi.OpenChat">Chat with us</button>
+    </div>
+</div>

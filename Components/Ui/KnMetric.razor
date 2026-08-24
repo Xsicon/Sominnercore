@@ -1,0 +1,9 @@
+<div class="kn-metric">
+    <div class="kn-metric__value">@Value</div>
+    <div class="kn-metric__label">@Label</div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "0";
+}

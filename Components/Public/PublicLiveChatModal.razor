@@ -1,0 +1,52 @@
+@inject PublicUiState PublicUi
+
+<div class="pub-modal-backdrop" @onclick="PublicUi.CloseChat">
+    <div class="pub-modal" style="width:min(24rem,100%);" @onclick:stopPropagation="true">
+        <div class="pub-modal__head">
+            <h3>KobNeti Support</h3>
+            <button type="button" class="pub-modal__close" @onclick="PublicUi.CloseChat">✕</button>
+        </div>
+        <div class="pub-chat-panel">
+            <div class="pub-chat-msgs">
+                @foreach (var m in messages)
+                {
+                    <div class="pub-chat-bubble @(m.FromAi ? "ai" : "user")">@m.Text</div>
+                }
+            </div>
+            <form class="pub-chat-form" @onsubmit="Send" @onsubmit:preventDefault>
+                <input @bind="draft" placeholder="Ask about MuuqWear, SomPay…" />
+                <button type="submit" class="pub-btn-primary" style="padding:0.65rem 0.9rem;">Send</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string draft = "";
+    private readonly List<ChatMsg> messages =
+    [
+        new(true, "Hello! Welcome to KobNeti. I am your assistant. How can I help you today with MuuqWear, SomPay, GaarX, or our Enterprise Cloud Services?")
+    ];
+
+    private sealed record ChatMsg(bool FromAi, string Text);
+
+    private async Task Send()
+    {
+        if (string.IsNullOrWhiteSpace(draft)) return;
+        var q = draft.Trim();
+        messages.Add(new(false, q));
+        draft = "";
+        await Task.Delay(450);
+        var reply = "Thank you for your question. A KobNeti solutions architect has been notified and can also follow up via email or phone.";
+        var lower = q.ToLowerInvariant();
+        if (lower.Contains("muuqwear") || lower.Contains("order") || lower.Contains("wear"))
+            reply = "MuuqWear is our flagship activewear and lifestyle line! Zenith Seamless sets are currently in stock with 2-day express global dispatch.";
+        else if (lower.Contains("sompay") || lower.Contains("payment"))
+            reply = "SomPay provides automated checkout, sub-second transaction routing, and multi-currency merchant ledger APIs. Would you like a demo sandbox key?";
+        else if (lower.Contains("gaarx") || lower.Contains("fleet") || lower.Contains("iot"))
+            reply = "GaarX connects fleets with real-time telemetry, predictive maintenance, and dispatch routing — ask us for a pilot.";
+        else if (lower.Contains("salguri") || lower.Contains("supply"))
+            reply = "Salguri handles wholesale procurement, batch tracking, and inventory sync for enterprise supply chains.";
+        messages.Add(new(true, reply));
+    }
+}

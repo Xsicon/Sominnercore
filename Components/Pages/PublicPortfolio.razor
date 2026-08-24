@@ -1,0 +1,45 @@
+@page "/portfolio"
+@inject PublicUiState PublicUi
+
+<PageTitle>Portfolio - KobNeti</PageTitle>
+
+<div class="pub-page">
+    <div class="pub-page__hero">
+        <div class="pub-eyebrow">Portfolio</div>
+        <h1>Selected work across the ecosystem</h1>
+        <p>Highlight reels from products operated on KobNeti — commerce, payments, mobility, and supply chain.</p>
+    </div>
+
+    <div class="pub-card-grid">
+        <article class="pub-card">
+            <span class="pub-badge pub-badge--rose">Commerce</span>
+            <h3 style="margin-top:0.75rem;">MuuqWear fulfillment</h3>
+            <p>99.4% fulfillment with support widgets and ops-owned tickets across storefront launches.</p>
+        </article>
+        <article class="pub-card">
+            <span class="pub-badge pub-badge--emerald">Fintech</span>
+            <h3 style="margin-top:0.75rem;">SomPay ledger</h3>
+            <p>Multi-currency merchant orchestration with escalations and engineering task linkage.</p>
+        </article>
+        <article class="pub-card">
+            <span class="pub-badge pub-badge--blue">Mobility</span>
+            <h3 style="margin-top:0.75rem;">GaarX fleets</h3>
+            <p>Telemetry-backed ops with incident commander workflows and GitHub-linked fixes.</p>
+        </article>
+        <article class="pub-card">
+            <span class="pub-badge pub-badge--amber">Supply</span>
+            <h3 style="margin-top:0.75rem;">Salguri inventory</h3>
+            <p>Wholesale accuracy with time-approved payroll for field and warehouse teams.</p>
+        </article>
+    </div>
+
+    <div class="pub-banner" style="margin-top:2.5rem;">
+        <div>
+            <h3>Want your brand in the suite?</h3>
+            <p>We onboard new products with registry keys, widgets, and staff permissions.</p>
+        </div>
+        <div class="pub-banner__actions">
+            <button type="button" class="on-white" @onclick="PublicUi.OpenGetStarted">Get Started Free</button>
+        </div>
+    </div>
+</div>

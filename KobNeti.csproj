@@ -12,4 +12,11 @@
     <PackageReference Include="supabase-csharp" Version="0.16.2" />
   </ItemGroup>
 
+  <!-- Design reference (Google AI Studio) — never publish -->
+  <ItemGroup>
+    <Content Remove="kobneti-design\**" />
+    <None Remove="kobneti-design\**" />
+    <None Include="kobneti-design\**" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

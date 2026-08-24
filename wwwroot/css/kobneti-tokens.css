@@ -1,0 +1,87 @@
+/* KobNeti tokens — regenerated from kobneti-design/src/index.css (S0.2) */
+:root {
+  /* Studio names */
+  --color-background-page: #F8F9FA;
+  --color-background-card: #FFFFFF;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-primary-accent: #6366F1;
+  --color-success: #12B76A;
+  --color-warning: #F79009;
+  --color-danger: #F04438;
+  --color-border: #E2E8F0;
+
+  /* Kn aliases (Blazor) */
+  --kn-bg-page: var(--color-background-page);
+  --kn-bg-card: var(--color-background-card);
+  --kn-bg-sidebar: #0F172A;
+  --kn-bg-sidebar-hover: #1E293B;
+  --kn-text-primary: var(--color-text-primary);
+  --kn-text-secondary: var(--color-text-secondary);
+  --kn-text-muted: var(--color-text-muted);
+  --kn-text-on-dark: #F8FAFC;
+  --kn-text-on-dark-muted: #94A3B8;
+  --kn-accent: var(--color-primary-accent);
+  --kn-accent-hover: #4F46E5;
+  --kn-accent-soft: #EEF2FF;
+  --kn-success: var(--color-success);
+  --kn-warning: var(--color-warning);
+  --kn-danger: var(--color-danger);
+  --kn-border: var(--color-border);
+  --kn-border-dark: #1E293B;
+  --kn-radius-sm: 6px;
+  --kn-radius: 10px;
+  --kn-radius-lg: 14px;
+  --kn-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --kn-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --kn-font-display: 'Source Serif 4', Georgia, Cambria, 'Times New Roman', serif;
+  --kn-sidebar-width: 280px;
+  --kn-sidebar-collapsed: 72px;
+  --kn-header-height: 64px;
+}
+
+html.dark {
+  --color-background-page: #0B0F19;
+  --color-background-card: #111827;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+  --color-border: #1E293B;
+}
+
+body {
+  margin: 0;
+  font-family: var(--kn-font);
+  font-weight: 450;
+  background-color: var(--kn-bg-page);
+  color: var(--kn-text-primary);
+}
+
+.kn-font-display,
+.font-serif-warm {
+  font-family: var(--kn-font-display);
+}
+
+.kn-tracking-display,
+.tracking-display {
+  letter-spacing: -0.025em;
+}
+
+.kn-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.kn-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kn-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+.kn-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}

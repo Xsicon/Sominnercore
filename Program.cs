@@ -35,6 +35,7 @@ builder.Services.AddScoped<RateLimiter>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<SoftwareProductService>();
 builder.Services.AddScoped<PageContentService>();
+builder.Services.AddScoped<KobNeti.Services.PublicUiState>();
 
 var supportApiBase = builder.Configuration["KobNetiApi:BaseUrl"] ?? "http://localhost:5241/";
 builder.Services.AddScoped<KobNeti.Services.Support.SupportApiClient>(sp =>

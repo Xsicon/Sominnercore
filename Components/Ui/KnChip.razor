@@ -1,0 +1,8 @@
+<span class="@Css">@ChildContent</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Tone { get; set; } = "";
+
+    private string Css => string.IsNullOrEmpty(Tone) ? "kn-chip" : $"kn-chip kn-chip--{Tone}";
+}

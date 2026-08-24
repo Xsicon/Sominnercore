@@ -1,0 +1,12 @@
+<div class="kn-card">
+    @if (!string.IsNullOrWhiteSpace(Title))
+    {
+        <h3 class="kn-card__title">@Title</h3>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

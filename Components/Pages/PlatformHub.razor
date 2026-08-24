@@ -129,14 +129,33 @@
     {
         var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
         if (user == null || session == null) { Navigation.NavigateTo("/admin/login"); return; }
+        ApplyTabFromQuery();
         ready = true;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
         await ReloadTab();
     }
 
+    private void ApplyTabFromQuery()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrEmpty(query)) return;
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
+            {
+                var t = Uri.UnescapeDataString(pair[1]);
+                if (t is "audit" or "notifications" or "files" or "integrations")
+                    tab = t;
+            }
+        }
+    }
+
     private async Task SetTab(string next)
     {
         tab = next;
+        Navigation.NavigateTo($"/admin/platform?tab={next}", replace: true);
         await ReloadTab();
     }
 

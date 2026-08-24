@@ -1,0 +1,22 @@
+<button type="@(Type)" class="@Css" disabled="@Disabled" @onclick="OnClick">
+    @ChildContent
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string Variant { get; set; } = "primary"; // primary | outline | ghost | danger
+    [Parameter] public string Size { get; set; } = ""; // sm
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private string Css
+    {
+        get
+        {
+            var c = $"kn-btn kn-btn--{Variant}";
+            if (Size == "sm") c += " kn-btn--sm";
+            return c;
+        }
+    }
+}

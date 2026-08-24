@@ -1,0 +1,53 @@
+@page "/products"
+@inject PublicUiState PublicUi
+
+<PageTitle>Products - KobNeti</PageTitle>
+
+<div class="pub-page">
+    <div class="pub-page__hero">
+        <div class="pub-eyebrow">Product Suite</div>
+        <h1>Products engineered for real operations</h1>
+        <p>From lifestyle commerce to payments, mobility, and supply chain — each brand runs on KobNeti ops.</p>
+    </div>
+
+    <div class="pub-card-grid">
+        @foreach (var p in Products)
+        {
+            <article class="pub-card">
+                <span class="pub-badge @p.BadgeClass">@p.Badge</span>
+                <h3 style="margin-top:0.75rem;">@p.Name</h3>
+                <p>@p.Blurb</p>
+                <ul class="pub-features" style="margin-top:1rem;">
+                    @foreach (var f in p.Features)
+                    {
+                        <li>@f</li>
+                    }
+                </ul>
+                <div style="margin-top:1.25rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <button type="button" class="pub-btn-primary" style="padding:0.55rem 1rem;font-size:0.75rem;" @onclick="PublicUi.OpenChat">Talk to sales</button>
+                    <a class="pub-btn-secondary" style="padding:0.55rem 1rem;font-size:0.75rem;text-decoration:none;" href="/contact">Contact</a>
+                </div>
+            </article>
+        }
+    </div>
+</div>
+
+@code {
+    private sealed record ProductCard(string Name, string Badge, string BadgeClass, string Blurb, string[] Features);
+
+    private static readonly ProductCard[] Products =
+    [
+        new("MuuqWear", "Flagship Lifestyle", "pub-badge--rose",
+            "Elevating comfort to an art form. Premium activewear with automated warehouse dispatch.",
+            ["Orders & returns help", "Global express shipping", "Storefront widgets"]),
+        new("SomPay", "Fintech Core", "pub-badge--emerald",
+            "Merchant ledger, checkout orchestration, and multi-currency payouts.",
+            ["3DS security", "Sub-second settlement", "KYC & AML tooling"]),
+        new("GaarX", "IoT Mobility", "pub-badge--blue",
+            "Fleet telemetry, predictive maintenance, and dispatch routing.",
+            ["Live GPS", "Fuel audit", "Maintenance AI"]),
+        new("Salguri", "Enterprise Supply", "pub-badge--amber",
+            "Wholesale procurement, batch tracking, and inventory sync.",
+            ["SKU accuracy", "Supplier invoices", "Smart reorder"]),
+    ];
+}

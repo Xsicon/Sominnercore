@@ -1,0 +1,19 @@
+<div class="kn-page-header">
+    <div>
+        <h1>@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p class="kn-subtitle">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="kn-row">@Actions</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}
