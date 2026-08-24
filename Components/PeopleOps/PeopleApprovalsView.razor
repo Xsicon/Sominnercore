@@ -1,0 +1,71 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">People</p>
+        <h2>Approvals</h2>
+        <p>Time edits and payroll for @SupportApi.DisplayName</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <p class="sh-empty-list">@msg</p>
+    }
+
+    @if (loading)
+    {
+        <p class="sh-empty-list">Loading…</p>
+    }
+    else if (items.Count == 0)
+    {
+        <p class="sh-empty-list">No pending approvals.</p>
+    }
+    else
+    {
+        <ul style="list-style:none;padding:0;">
+            @foreach (var a in items)
+            {
+                <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <strong>@a.RequestType</strong>
+                    <span class="cs-ticket-chip">@a.Status</span>
+                    <div><small>@(a.RequesterName ?? "—") · @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
+                    @if (a.Status == "pending")
+                    {
+                        <div style="margin-top:0.4rem;display:flex;gap:0.35rem;">
+                            <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, true)">Approve</button>
+                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, false)">Reject</button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private List<ApprovalRequestDto> items = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var result = await SupportApi.GetApprovalsAsync();
+        items = result.Success ? result.Data ?? [] : [];
+        if (!result.Success) msg = result.Message;
+        loading = false;
+    }
+
+    private async Task Decide(Guid id, bool approve)
+    {
+        busy = true;
+        var r = await SupportApi.DecideApprovalAsync(id, approve);
+        msg = r.Success ? (approve ? "Approved" : "Rejected") : r.Message;
+        await Load();
+        busy = false;
+    }
+}

@@ -1,0 +1,111 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">People</p>
+        <h2>Time</h2>
+        <p>Clock and manual entries for @SupportApi.DisplayName</p>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="ClockIn">Clock in</button>
+        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="ClockOut">Clock out</button>
+        <input class="cs-ticket-field__select" style="width:5rem;" type="number" min="1" @bind="manualMinutes" />
+        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="AddManual">Add manual mins</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <p class="sh-empty-list">@msg</p>
+    }
+
+    @if (loading)
+    {
+        <p class="sh-empty-list">Loading…</p>
+    }
+    else if (entries.Count == 0)
+    {
+        <p class="sh-empty-list">No time entries yet.</p>
+    }
+    else
+    {
+        <table class="sh-table">
+            <thead><tr><th>When</th><th>Type</th><th>Mins</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var e in entries)
+            {
+                <tr>
+                    <td>@(e.ClockIn?.ToLocalTime().ToString("g") ?? e.CreatedAt.ToLocalTime().ToString("g"))</td>
+                    <td>@e.EntryType</td>
+                    <td>@(e.Minutes?.ToString() ?? "—")</td>
+                    <td>@e.Status</td>
+                    <td>
+                        @if (e.Status == "approved")
+                        {
+                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy"
+                                    @onclick="() => RequestEdit(e)">Request edit</button>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private int manualMinutes = 30;
+    private List<TimeEntryDto> entries = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var result = await SupportApi.GetTimeEntriesAsync();
+        entries = result.Success ? result.Data ?? [] : [];
+        if (!result.Success) msg = result.Message;
+        loading = false;
+    }
+
+    private async Task ClockIn()
+    {
+        busy = true;
+        var r = await SupportApi.ClockInAsync();
+        msg = r.Success ? "Clocked in" : r.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task ClockOut()
+    {
+        busy = true;
+        var r = await SupportApi.ClockOutAsync();
+        msg = r.Success ? $"Clocked out ({r.Data?.Minutes} min)" : r.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task AddManual()
+    {
+        busy = true;
+        var r = await SupportApi.AddManualTimeAsync(manualMinutes);
+        msg = r.Success ? "Manual time added" : r.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task RequestEdit(TimeEntryDto e)
+    {
+        busy = true;
+        var next = Math.Max(1, (e.Minutes ?? 30) + 15);
+        var r = await SupportApi.RequestTimeEditAsync(e.Id, next, "Correction");
+        msg = r.Success ? "Edit sent for approval" : r.Message;
+        await Load();
+        busy = false;
+    }
+}

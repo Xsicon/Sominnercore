@@ -1,0 +1,83 @@
+@page "/admin/calendar"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+
+<PageTitle>Calendar - KobNeti</PageTitle>
+
+@if (ready)
+{
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
+    <main class="main-content">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <h1>Calendar</h1>
+                    <p class="header-subtitle">Events for @SupportApi.DisplayName (includes milestone dates)</p>
+                </div>
+            </div>
+        </header>
+        <div class="sh-scroll">
+            <div class="sh-page">
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <input class="cs-ticket-field__select" placeholder="Event title" @bind="title" />
+                    <input class="cs-ticket-field__select" type="datetime-local" @bind="starts" />
+                    <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" @onclick="Create">Add event</button>
+                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="Remind">Send reminders</button>
+                </div>
+                @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
+                @foreach (var e in events)
+                {
+                    <div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <strong>@e.Title</strong>
+                        <span class="cs-ticket-chip">@e.EventType</span>
+                        <span>@e.StartsAt.ToLocalTime().ToString("g")</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </main>
+</div>
+}
+
+@code {
+    private bool ready;
+    private string? msg;
+    private string title = "";
+    private DateTime? starts = DateTime.Now.AddDays(1);
+    private List<CalendarEventDto> events = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null) { Navigation.NavigateTo("/admin/login"); return; }
+        ready = true;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        var r = await SupportApi.GetCalendarEventsAsync();
+        events = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) msg = r.Message;
+    }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(title) || starts is null) return;
+        var r = await SupportApi.CreateCalendarEventAsync(title.Trim(), starts.Value.ToUniversalTime());
+        msg = r.Success ? "Created" : r.Message;
+        if (r.Success) title = "";
+        await Load();
+    }
+
+    private async Task Remind()
+    {
+        var r = await SupportApi.SendCalendarRemindersAsync();
+        msg = r.Success ? $"Sent {r.Data} reminders" : r.Message;
+    }
+}

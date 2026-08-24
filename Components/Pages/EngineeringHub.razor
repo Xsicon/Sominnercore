@@ -1,0 +1,131 @@
+@page "/admin/engineering"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@using KobNeti.Components.Engineering
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Engineering - KobNeti</PageTitle>
+
+@if (isCheckingAuth)
+{
+    <div class="sh-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="sh-loading"><p>Redirecting to login...</p></div>
+}
+else
+{
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
+    <main class="main-content">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <h1>@GetTabTitle()</h1>
+                    <p class="header-subtitle">@GetTabSubtitle()</p>
+                </div>
+                <div class="sh-header-actions">
+                    <span class="sh-active-project" title="@SupportApi.TenantKey">@SupportApi.DisplayName</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="ops-subnav">
+            <button type="button" class="ops-subnav__item @(activeTab == "board" ? "active" : "")" @onclick="@(() => SetTab("board"))">Board</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "milestones" ? "active" : "")" @onclick="@(() => SetTab("milestones"))">Milestones</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "github" ? "active" : "")" @onclick="@(() => SetTab("github"))">GitHub</button>
+        </nav>
+
+        @if (activeTab == "milestones")
+        {
+            <div class="sh-scroll" @key="workspaceKey">
+                <EngineeringMilestonesView />
+            </div>
+        }
+        else if (activeTab == "github")
+        {
+            <div class="sh-scroll" @key="workspaceKey">
+                <EngineeringGithubView />
+            </div>
+        }
+        else
+        {
+            <div class="sh-scroll" @key="workspaceKey">
+                <EngineeringBoardView />
+            </div>
+        }
+    </main>
+</div>
+}
+
+@code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
+    private string activeTab = "board";
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            isAuthenticated = false;
+            isCheckingAuth = false;
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        isAuthenticated = true;
+        isCheckingAuth = false;
+        ApplyTabFromQuery();
+        SupportApi.TenantChanged += OnTenantChanged;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { /* shell handles */ }
+    }
+
+    private void OnTenantChanged()
+    {
+        workspaceEpoch++;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyTabFromQuery()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = uri.Query.TrimStart('?');
+        if (string.IsNullOrEmpty(query)) return;
+        foreach (var part in query.Split('&'))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2 && kv[0] == "tab")
+                activeTab = Uri.UnescapeDataString(kv[1]);
+        }
+    }
+
+    private Task SetTab(string tab)
+    {
+        activeTab = tab;
+        Navigation.NavigateTo(tab == "board" ? "/admin/engineering" : $"/admin/engineering?tab={tab}", replace: true);
+        return Task.CompletedTask;
+    }
+
+    private string GetTabTitle() => activeTab switch
+    {
+        "milestones" => "Milestones",
+        "github" => "GitHub",
+        _ => "Engineering Board"
+    };
+
+    private string GetTabSubtitle() => activeTab switch
+    {
+        "milestones" => $"Roadmap timeline for {SupportApi.DisplayName}",
+        "github" => $"Read-only PRs & commits for {SupportApi.DisplayName}",
+        _ => $"Tasks for {SupportApi.DisplayName}"
+    };
+
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+}

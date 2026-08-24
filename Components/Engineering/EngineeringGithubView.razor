@@ -1,0 +1,145 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Engineering</p>
+        <h2>GitHub</h2>
+        <p>Read-only PRs &amp; commits for @SupportApi.DisplayName</p>
+    </div>
+
+    @if (SupportApi.IsPlatformAdmin)
+    {
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+            <input class="cs-ticket-field__select" style="min-width:18rem;" placeholder="https://github.com/owner/repo" @bind="repoUrl" @bind:event="oninput" />
+            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="SaveRepoAsync">Save repo URL</button>
+            <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+        </div>
+    }
+    else
+    {
+        <p class="sh-empty-list">Ask a platform admin to set the product GitHub repo URL, then refresh.</p>
+        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+    }
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="sh-empty-list">@error</p>
+    }
+    else if (loading)
+    {
+        <p class="sh-empty-list">Loading…</p>
+    }
+    else if (cache is null)
+    {
+        <p class="sh-empty-list">No cache yet.</p>
+    }
+    else
+    {
+        <p>
+            Repo: @(cache.RepoUrl ?? "—")
+            @if (cache.PullsFetchedAt.HasValue)
+            {
+                <span> · pulls @cache.PullsFetchedAt.Value.ToLocalTime().ToString("g")</span>
+            }
+        </p>
+        @if (!string.IsNullOrWhiteSpace(cache.Message))
+        {
+            <p class="sh-empty-list">@cache.Message</p>
+        }
+
+        <h3>Pull requests</h3>
+        @if (cache.Pulls.Count == 0)
+        {
+            <p class="sh-empty-list">No PRs cached.</p>
+        }
+        else
+        {
+            <ul style="list-style:none;padding:0;">
+                @foreach (var pr in cache.Pulls)
+                {
+                    <li style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <a href="@pr.HtmlUrl" target="_blank" rel="noopener">#@pr.Number @pr.Title</a>
+                        <span class="cs-ticket-chip">@pr.State</span>
+                    </li>
+                }
+            </ul>
+        }
+
+        <h3 style="margin-top:1.25rem;">Commits</h3>
+        @if (cache.Commits.Count == 0)
+        {
+            <p class="sh-empty-list">No commits cached.</p>
+        }
+        else
+        {
+            <ul style="list-style:none;padding:0;">
+                @foreach (var c in cache.Commits)
+                {
+                    <li style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <a href="@c.HtmlUrl" target="_blank" rel="noopener">@c.Sha[..Math.Min(7, c.Sha.Length)]</a>
+                        <span> @c.Message</span>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private GithubCacheDto? cache;
+    private string repoUrl = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var result = await SupportApi.GetGithubCacheAsync();
+            if (!result.Success) { error = result.Message; cache = null; }
+            else
+            {
+                cache = result.Data;
+                repoUrl = cache?.RepoUrl ?? "";
+            }
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task SaveRepoAsync()
+    {
+        saving = true;
+        try
+        {
+            var result = await SupportApi.UpdateProductGithubRepoAsync(SupportApi.TenantId, repoUrl);
+            if (!result.Success) error = result.Message;
+            else await LoadAsync();
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task RefreshAsync()
+    {
+        saving = true;
+        try
+        {
+            var result = await SupportApi.RefreshGithubCacheAsync();
+            if (!result.Success) error = result.Message;
+            else
+            {
+                cache = result.Data;
+                error = null;
+            }
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+}

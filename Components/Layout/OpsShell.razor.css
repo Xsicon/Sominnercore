@@ -251,3 +251,48 @@
         z-index: 15;
     }
 }
+
+.ops-shell .ops-help-btn {
+    align-self: flex-start;
+    width: 2rem;
+    height: 2rem;
+    margin: 0 1rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #233648;
+    background: #101922;
+    color: #e2e8f0;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ops-shell .ops-help-btn:hover {
+    border-color: #2dd4bf;
+    color: #2dd4bf;
+}
+
+.ops-help-panel {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    width: min(360px, calc(100vw - 2rem));
+    max-height: min(60vh, 420px);
+    overflow: auto;
+    z-index: 40;
+    background: #1c252e;
+    border: 1px solid #233648;
+    border-radius: 12px;
+    padding: 0.85rem 1rem 1rem;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.ops-help-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.ops-help-panel a {
+    color: #2dd4bf;
+}

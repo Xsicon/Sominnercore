@@ -1,16 +1,140 @@
+@using KobNeti.Services.Support
+@using Microsoft.AspNetCore.Components.Web
+@inject SupportApiClient SupportApi
+
 <div class="sh-page internal">
     <div class="sh-page-intro">
         <p class="sh-eyebrow">Team Collaboration</p>
         <h2>Internal Chat</h2>
-        <p>Private channels for agents and ops — not visible to customers</p>
+        <p>Private channels for agents — not visible to customers</p>
     </div>
 
-    <div class="sh-empty-list" style="padding: 3rem 1.5rem; text-align: center;">
-        <span class="material-symbols-outlined" style="font-size: 2.5rem; opacity: 0.5;">forum</span>
-        <h3 style="margin: 0.75rem 0 0.35rem;">Coming soon</h3>
-        <p style="margin: 0; opacity: 0.75;">
-            Internal Chat is out of scope for the Support API v1 cutover.
-            This tab is reserved for a future agent collaboration channel.
-        </p>
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <p class="sh-empty-list">@msg</p>
+    }
+
+    <div style="display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:1rem;min-height:320px;">
+        <div>
+            <div style="display:flex;gap:0.35rem;margin-bottom:0.75rem;">
+                <input class="cs-ticket-field__select" placeholder="New channel" @bind="newChannel" />
+                <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="CreateChannel">+</button>
+            </div>
+            @foreach (var c in channels)
+            {
+                <button type="button"
+                        class="ops-subnav__item @(selected?.Id == c.Id ? "active" : "")"
+                        style="display:block;width:100%;text-align:left;margin-bottom:0.25rem;"
+                        @onclick="() => SelectChannel(c)">
+                    #@c.Name
+                </button>
+            }
+            @if (channels.Count == 0)
+            {
+                <p class="sh-empty-list">No channels yet.</p>
+            }
+        </div>
+        <div>
+            @if (selected is null)
+            {
+                <p class="sh-empty-list">Select or create a channel.</p>
+            }
+            else
+            {
+                <div style="max-height:280px;overflow:auto;margin-bottom:0.75rem;">
+                    @foreach (var m in messages)
+                    {
+                        <div style="padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <strong>@m.SenderName</strong>
+                            <small style="opacity:0.6;margin-left:0.35rem;">@m.CreatedAt.ToLocalTime().ToString("g")</small>
+                            <div>@m.Body</div>
+                        </div>
+                    }
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <input class="cs-ticket-field__select" style="flex:1;" placeholder="Message…" @bind="draft"
+                           @onkeydown="OnKey" />
+                    <button type="button" class="cs-btn cs-btn--primary cs-btn--sm"
+                            disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Send">
+                        Send
+                    </button>
+                </div>
+            }
+        </div>
     </div>
 </div>
+
+@code {
+    private List<ImChannelDto> channels = [];
+    private List<ImMessageDto> messages = [];
+    private ImChannelDto? selected;
+    private string newChannel = "";
+    private string draft = "";
+    private string? msg;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync() => await LoadChannels();
+
+    private async Task LoadChannels()
+    {
+        var r = await SupportApi.GetImChannelsAsync();
+        channels = r.Data ?? [];
+        if (!r.Success) msg = r.Message;
+        if (selected is not null)
+        {
+            selected = channels.FirstOrDefault(c => c.Id == selected.Id);
+            if (selected is not null)
+                await LoadMessages();
+        }
+    }
+
+    private async Task CreateChannel()
+    {
+        if (string.IsNullOrWhiteSpace(newChannel)) return;
+        busy = true;
+        try
+        {
+            var r = await SupportApi.CreateImChannelAsync(newChannel.Trim());
+            if (!r.Success) { msg = r.Message; return; }
+            newChannel = "";
+            await LoadChannels();
+            if (r.Data is not null)
+                await SelectChannel(r.Data);
+        }
+        finally { busy = false; }
+    }
+
+    private async Task SelectChannel(ImChannelDto c)
+    {
+        selected = c;
+        await LoadMessages();
+    }
+
+    private async Task LoadMessages()
+    {
+        if (selected is null) return;
+        var r = await SupportApi.GetImMessagesAsync(selected.Id);
+        messages = r.Data ?? [];
+        if (!r.Success) msg = r.Message;
+    }
+
+    private async Task Send()
+    {
+        if (selected is null || string.IsNullOrWhiteSpace(draft)) return;
+        busy = true;
+        try
+        {
+            var r = await SupportApi.SendImMessageAsync(selected.Id, draft.Trim());
+            if (!r.Success) { msg = r.Message; return; }
+            draft = "";
+            await LoadMessages();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await Send();
+    }
+}

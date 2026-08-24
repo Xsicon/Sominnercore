@@ -71,6 +71,15 @@ public class SupportTicketDto
     public DateTime? FirstResponseAt { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public string? PageUrl { get; set; }
+    public string? AccountId { get; set; }
+    public Guid? ChatSessionId { get; set; }
+    public List<string> Tags { get; set; } = [];
+    public int? SlaFirstResponseMinutes { get; set; }
+    public DateTime? FirstResponseDueAt { get; set; }
+    public DateTime? ResolveDueAt { get; set; }
+    public Guid? EngTaskId { get; set; }
+    public List<TicketEventDto> Timeline { get; set; } = [];
     public List<SupportTicketReplyDto> Replies { get; set; } = [];
     public int ReplyCount { get; set; }
 
@@ -104,12 +113,32 @@ public class UpdateTicketRequest
     public string? Team { get; set; }
     public Guid? AssignedTo { get; set; }
     public string? AssignedToName { get; set; }
+    public List<string>? Tags { get; set; }
+    public Guid? EngTaskId { get; set; }
+}
+
+public class TicketEventDto
+{
+    public Guid Id { get; set; }
+    public string EventType { get; set; } = "";
+    public string? ActorName { get; set; }
+    public string? Detail { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class SupportMacroDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string? Category { get; set; }
 }
 
 public class TicketStatsDto
 {
     public int OpenCount { get; set; }
     public int InProgressCount { get; set; }
+    public int WaitingCount { get; set; }
     public int TotalCount { get; set; }
 }
 
@@ -268,3 +297,341 @@ public class RotateEmbedKeyDto
     public string PublicKey { get; set; } = "";
     public string WidgetSnippet { get; set; } = "";
 }
+
+public class IncidentDto
+{
+    public Guid Id { get; set; }
+    public string IncidentNumber { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Severity { get; set; } = "sev3";
+    public string Status { get; set; } = "open";
+    public string? CommanderName { get; set; }
+    public Guid? CommanderUserId { get; set; }
+    public Guid? SourceTicketId { get; set; }
+    public string? PostmortemNotes { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public List<IncidentEventDto> Timeline { get; set; } = [];
+}
+
+public class IncidentEventDto
+{
+    public Guid Id { get; set; }
+    public string EventType { get; set; } = "";
+    public string? ActorName { get; set; }
+    public string? Detail { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class EscalateTicketRequest
+{
+    public string? Title { get; set; }
+    public string Severity { get; set; } = "sev2";
+    public string? CommanderName { get; set; }
+}
+
+public class UpdateIncidentRequest
+{
+    public string? Status { get; set; }
+    public string? Severity { get; set; }
+    public string? CommanderName { get; set; }
+    public string? PostmortemNotes { get; set; }
+}
+
+public class EngTaskDto
+{
+    public Guid Id { get; set; }
+    public string TaskNumber { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string TaskType { get; set; } = "feature";
+    public string Status { get; set; } = "backlog";
+    public string Priority { get; set; } = "medium";
+    public decimal? EstimatePoints { get; set; }
+    public string? AssigneeName { get; set; }
+    public Guid? TicketId { get; set; }
+    public Guid? MilestoneId { get; set; }
+    public string? GithubPrUrl { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+public class CreateEngTaskRequest
+{
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string TaskType { get; set; } = "feature";
+    public string Status { get; set; } = "backlog";
+    public string Priority { get; set; } = "medium";
+    public decimal? EstimatePoints { get; set; }
+    public string? AssigneeName { get; set; }
+    public Guid? TicketId { get; set; }
+    public Guid? MilestoneId { get; set; }
+    public string? GithubPrUrl { get; set; }
+}
+
+public class UpdateEngTaskRequest
+{
+    public string? Title { get; set; }
+    public string? Status { get; set; }
+    public string? Priority { get; set; }
+    public Guid? TicketId { get; set; }
+    public bool ClearTicketId { get; set; }
+    public Guid? MilestoneId { get; set; }
+    public string? GithubPrUrl { get; set; }
+    public bool ClearGithubPrUrl { get; set; }
+}
+
+public class MilestoneDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string Status { get; set; } = "planned";
+    public DateOnly? TargetDate { get; set; }
+    public DateOnly? StartDate { get; set; }
+    public int SortOrder { get; set; }
+    public Guid? CalendarEventId { get; set; }
+    public int TaskCount { get; set; }
+}
+
+public class CreateMilestoneRequest
+{
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string Status { get; set; } = "planned";
+    public DateOnly? TargetDate { get; set; }
+    public DateOnly? StartDate { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class CalendarEventDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string? Description { get; set; }
+    public string EventType { get; set; } = "milestone";
+    public DateTime StartsAt { get; set; }
+    public DateTime? EndsAt { get; set; }
+    public string? SourceEntityType { get; set; }
+    public Guid? SourceEntityId { get; set; }
+}
+
+public class GithubCacheDto
+{
+    public string? RepoUrl { get; set; }
+    public DateTime? PullsFetchedAt { get; set; }
+    public DateTime? CommitsFetchedAt { get; set; }
+    public List<GithubPullDto> Pulls { get; set; } = [];
+    public List<GithubCommitDto> Commits { get; set; } = [];
+    public string? Message { get; set; }
+}
+
+public class GithubPullDto
+{
+    public int Number { get; set; }
+    public string Title { get; set; } = "";
+    public string State { get; set; } = "";
+    public string HtmlUrl { get; set; } = "";
+    public string? Author { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+public class GithubCommitDto
+{
+    public string Sha { get; set; } = "";
+    public string Message { get; set; } = "";
+    public string HtmlUrl { get; set; } = "";
+    public string? Author { get; set; }
+    public DateTime? Date { get; set; }
+}
+
+public class TimeEntryDto
+{
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
+    public string UserName { get; set; } = "";
+    public string EntryType { get; set; } = "manual";
+    public DateTime? ClockIn { get; set; }
+    public DateTime? ClockOut { get; set; }
+    public int? Minutes { get; set; }
+    public Guid? TicketId { get; set; }
+    public Guid? EngTaskId { get; set; }
+    public string? Notes { get; set; }
+    public string Status { get; set; } = "approved";
+    public Guid? SupersedesId { get; set; }
+    public Guid? ApprovalId { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class ApprovalRequestDto
+{
+    public Guid Id { get; set; }
+    public string RequestType { get; set; } = "";
+    public string Status { get; set; } = "pending";
+    public string PayloadJson { get; set; } = "{}";
+    public string? RequesterName { get; set; }
+    public string? ApproverName { get; set; }
+    public DateTime? DecidedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class PayRateDto
+{
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
+    public string? Role { get; set; }
+    public decimal HourlyRate { get; set; }
+    public string Currency { get; set; } = "USD";
+    public DateOnly EffectiveFrom { get; set; }
+}
+
+public class PayPeriodDto
+{
+    public Guid Id { get; set; }
+    public string Label { get; set; } = "";
+    public DateOnly StartsOn { get; set; }
+    public DateOnly EndsOn { get; set; }
+    public string Status { get; set; } = "open";
+    public int TotalMinutes { get; set; }
+    public decimal TotalAmount { get; set; }
+    public string Currency { get; set; } = "USD";
+    public List<PayPeriodLineDto> Lines { get; set; } = [];
+    public Guid? ApprovalId { get; set; }
+}
+
+public class PayPeriodLineDto
+{
+    public Guid? UserId { get; set; }
+    public string UserName { get; set; } = "";
+    public int Minutes { get; set; }
+    public decimal HourlyRate { get; set; }
+    public decimal Amount { get; set; }
+}
+
+public class AuditEventDto
+{
+    public Guid Id { get; set; }
+    public string? ActorName { get; set; }
+    public string Action { get; set; } = "";
+    public string EntityType { get; set; } = "";
+    public string? EntityId { get; set; }
+    public string? BeforeJson { get; set; }
+    public string? AfterJson { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class NotificationDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = "";
+    public string? Body { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public bool IsRead { get; set; }
+}
+
+public class NotificationPrefsDto
+{
+    public bool AssignEnabled { get; set; } = true;
+    public bool ApprovalEnabled { get; set; } = true;
+    public bool EscalationEnabled { get; set; } = true;
+    public bool ReminderEnabled { get; set; } = true;
+}
+
+public class OpsFileDto
+{
+    public Guid Id { get; set; }
+    public string FolderPath { get; set; } = "/";
+    public string FileName { get; set; } = "";
+    public string? ContentType { get; set; }
+    public long? SizeBytes { get; set; }
+    public string StoragePath { get; set; } = "";
+    public string? PublicUrl { get; set; }
+    public string? CreatedByName { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class IntegrationDto
+{
+    public Guid Id { get; set; }
+    public string Provider { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Status { get; set; } = "disconnected";
+    public bool HasSecrets { get; set; }
+}
+
+public class OverviewDto
+{
+    public string TenantId { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public int ActiveChats { get; set; }
+    public int OpenTickets { get; set; }
+    public int OpenIncidents { get; set; }
+    public int EngTasksInProgress { get; set; }
+    public int PendingApprovals { get; set; }
+    public int UnreadNotifications { get; set; }
+}
+
+public class CrossProductOverviewDto
+{
+    public List<OverviewDto> Products { get; set; } = [];
+    public int TotalOpenTickets { get; set; }
+    public int TotalActiveChats { get; set; }
+    public int TotalOpenIncidents { get; set; }
+    public int TotalPendingApprovals { get; set; }
+}
+
+public class ReportRunDto
+{
+    public Guid Id { get; set; }
+    public string ReportType { get; set; } = "";
+    public string Label { get; set; } = "";
+    public int RowCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string? CreatedByName { get; set; }
+}
+
+public class PlatformHelpArticleDto
+{
+    public Guid Id { get; set; }
+    public string Slug { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string Category { get; set; } = "general";
+    public string Status { get; set; } = "published";
+    public int SortOrder { get; set; }
+}
+
+public class ImChannelDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string ChannelType { get; set; } = "channel";
+    public DateTime CreatedAt { get; set; }
+}
+
+public class ImMessageDto
+{
+    public Guid Id { get; set; }
+    public Guid ChannelId { get; set; }
+    public Guid? SenderUserId { get; set; }
+    public string SenderName { get; set; } = "";
+    public string Body { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+}
+
+public class AssetDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string AssetType { get; set; } = "hardware";
+    public string? SerialOrKey { get; set; }
+    public string Status { get; set; } = "available";
+    public Guid? AssignedUserId { get; set; }
+    public string? AssignedUserName { get; set; }
+    public DateOnly? RenewalDate { get; set; }
+    public string? Notes { get; set; }
+}
+

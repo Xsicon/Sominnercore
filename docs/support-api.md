@@ -11,7 +11,7 @@ The multi-tenant **operations** API lives in a sibling repo (formerly Sominnerco
 MuuqWear still may store live chat on **MuuqWearApi** (`http://localhost:5243/`).  
 KobNeti Support Hub reads **KobNetiApi** (`http://localhost:5241/`). Those can be separate stores.
 
-KobNetiApi **bridges** tenant `muuqwear` to MuuqWearApi when `UpstreamApiBaseUrl` is set (default in Development → localhost).
+KobNetiApi uses the **ops store by default**. Optional bridge to MuuqWearApi only when `UpstreamApiBaseUrl` is set (emergency); Bridging DI is not registered in W3+.
 
 ## Run (all three)
 
@@ -29,7 +29,7 @@ JwtSecret for the bridge must match MuuqWear `Authentication:JwtSecret` (Support
 
 Cutover notes: `../Sominnercore-SupportApi/docs/support-muuqwear-cutover.md`  
 Schema SQL: `../Sominnercore-SupportApi/supabase/support_schema.sql` (schema name remains `sominnercore`)  
-Also apply: `products_registry.sql`, `staff_access.sql`, `teams.sql`.  
+Also apply: `products_registry.sql`, `staff_access.sql`, `teams.sql`, `support_w2_intake.sql`, `support_w2_lifecycle.sql`, `support_w3_incidents.sql`, `support_w4_engineering.sql`, `support_w5_people_ops.sql`, `support_w6_platform_glue.sql`, `support_w7_insights.sql`.
 Widget embed: `../Sominnercore-SupportApi/docs/widget-embed.md`
 
 ## Multi-project Support Hub

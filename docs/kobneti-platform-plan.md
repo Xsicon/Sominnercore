@@ -155,31 +155,31 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 4 — Ticket Intake
 
-- [ ] **W2.1** Public ticket form API keyed by product public key (already partial).
-- [ ] **W2.2** Embeddable ticket form snippet per product.
-- [ ] **W2.3** Capture product context (page URL, account id if any).
-- [ ] **W2.4** Email-to-ticket = later; stub only.
+- [x] **W2.1** Public ticket form API keyed by product public key (already partial).
+- [x] **W2.2** Embeddable ticket form snippet per product.
+- [x] **W2.3** Capture product context (page URL, account id if any).
+- [x] **W2.4** Email-to-ticket = later; stub only.
 
 ### Module 5 — Ticket Lifecycle
 
-- [ ] **W2.5** Align statuses with PRD (New → In Progress → Waiting → Resolved → Closed) or map clearly to current `open` / `in_progress` / `resolved`.
-- [ ] **W2.6** Assignment, priority, tags, timeline/history.
-- [ ] **W2.7** SLA timer fields per product tier (can be null initially).
-- [ ] **W2.8** Link ticket → future eng task id (nullable FK).
+- [x] **W2.5** Align statuses with PRD (New → In Progress → Waiting → Resolved → Closed) or map clearly to current `open` / `in_progress` / `resolved`.
+- [x] **W2.6** Assignment, priority, tags, timeline/history.
+- [x] **W2.7** SLA timer fields per product tier (can be null initially).
+- [x] **W2.8** Link ticket → future eng task id (nullable FK).
 
 ### Module 10 — Client Messaging (Live Chat)
 
-- [ ] **W2.9** Ops-owned chat store as default for new products (no bridge required).
-- [ ] **W2.10** MuuqWear: finish chosen path (bridge prod **or** migrate sessions into ops).
-- [ ] **W2.11** Widget contract documented (send/messages/status) + public key.
-- [ ] **W2.12** Macros/canned replies per product.
-- [ ] **W2.13** Chat → ticket conversion.
+- [x] **W2.9** Ops-owned chat store as default for new products (no bridge required).
+- [x] **W2.10** MuuqWear: finish chosen path (bridge prod **or** migrate sessions into ops).
+- [x] **W2.11** Widget contract documented (send/messages/status) + public key.
+- [x] **W2.12** Macros/canned replies per product.
+- [x] **W2.13** Chat → ticket conversion.
 
 ### Module 14 — Knowledge Base (product/tech)
 
-- [ ] **W2.14** Keep admin KB CRUD; ensure articles always scoped by product.
-- [ ] **W2.15** Suggest KB articles from ticket category (basic).
-- [ ] **W2.16** Distinguish later Help Center (Module 22) — do not mix content types.
+- [x] **W2.14** Keep admin KB CRUD; ensure articles always scoped by product.
+- [x] **W2.15** Suggest KB articles from ticket category (basic).
+- [x] **W2.16** Distinguish later Help Center (Module 22) — do not mix content types.
 
 **Exit criteria:** Agent can switch product and handle chat + tickets + KB without using product admin UIs.
 
@@ -189,16 +189,16 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 6 — Escalation & Incidents
 
-- [ ] **W3.1** Incident entity (severity, commander, status, product_id).
-- [ ] **W3.2** Escalate ticket → incident.
-- [ ] **W3.3** Notify assignees (hook to Module 17 when ready; email/log stub OK).
-- [ ] **W3.4** Incident timeline + postmortem notes field.
+- [x] **W3.1** Incident entity (severity, commander, status, product_id).
+- [x] **W3.2** Escalate ticket → incident.
+- [x] **W3.3** Notify assignees (hook to Module 17 when ready; email/log stub OK).
+- [x] **W3.4** Incident timeline + postmortem notes field.
 
 ### Cutover & quality
 
-- [ ] **W3.5** Remove MuuqWear upstream bridge once ops store is source of truth.
-- [ ] **W3.6** Tenant isolation tests for every new Support table.
-- [ ] **W3.7** Onboard Salguri/GaarX widgets to KobNetiApi (config only if W2.9 done).
+- [x] **W3.5** Remove MuuqWear upstream bridge once ops store is source of truth.
+- [x] **W3.6** Tenant isolation tests for every new Support table.
+- [x] **W3.7** Onboard Salguri/GaarX widgets to KobNetiApi (config only if W2.9 done).
 
 ---
 
@@ -206,22 +206,22 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 7 — Engineering Tasks
 
-- [ ] **W4.1** Task entity: type, status, priority, estimate, product_id, assignee.
-- [ ] **W4.2** Board/list API + minimal UI.
-- [ ] **W4.3** Link task ↔ ticket.
-- [ ] **W4.4** Link task ↔ GitHub PR url (manual until Module 11).
+- [x] **W4.1** Task entity: type, status, priority, estimate, product_id, assignee.
+- [x] **W4.2** Board/list API + minimal UI.
+- [x] **W4.3** Link task ↔ ticket.
+- [x] **W4.4** Link task ↔ GitHub PR url (manual until Module 11).
 
 ### Module 8 — Project Planning
 
-- [ ] **W4.5** Milestone/roadmap entities per product.
-- [ ] **W4.6** Timeline view (simple list/dates before Gantt).
-- [ ] **W4.7** Push milestone dates to Calendar (W6) via events table.
+- [x] **W4.5** Milestone/roadmap entities per product.
+- [x] **W4.6** Timeline view (simple list/dates before Gantt).
+- [x] **W4.7** Push milestone dates to Calendar (W6) via events table.
 
 ### Module 11 — GitHub (read-only)
 
-- [ ] **W4.8** Store repo link on product; PAT/OAuth via Integrations Hub later.
-- [ ] **W4.9** Read-only list PRs/commits (cached).
-- [ ] **W4.10** Never write to GitHub from ops API.
+- [x] **W4.8** Store repo link on product; PAT/OAuth via Integrations Hub later.
+- [x] **W4.9** Read-only list PRs/commits (cached).
+- [x] **W4.10** Never write to GitHub from ops API.
 
 ---
 
@@ -229,20 +229,20 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 12 — Time Tracking
 
-- [ ] **W5.1** Clock in/out entries (append-only).
-- [ ] **W5.2** Manual time against ticket/task.
-- [ ] **W5.3** Edits create new audit rows; require approval (Module 18).
+- [x] **W5.1** Clock in/out entries (append-only).
+- [x] **W5.2** Manual time against ticket/task.
+- [x] **W5.3** Edits create new audit rows; require approval (Module 18).
 
 ### Module 18 — Approval Workflows
 
-- [ ] **W5.4** Generic approval request (type, payload, status, approver chain).
-- [ ] **W5.5** Wire time-edit + payroll approvals.
+- [x] **W5.4** Generic approval request (type, payload, status, approver chain).
+- [x] **W5.5** Wire time-edit + payroll approvals.
 
 ### Module 13 — Payroll (internal)
 
-- [ ] **W5.6** Rates per user/role; pay periods.
-- [ ] **W5.7** Calculate from **approved** time only.
-- [ ] **W5.8** Export CSV/PDF; no external bank integration in v1.
+- [x] **W5.6** Rates per user/role; pay periods.
+- [x] **W5.7** Calculate from **approved** time only.
+- [x] **W5.8** Export CSV/PDF; no external bank integration in v1.
 
 ---
 
@@ -250,30 +250,30 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 16 — Audit Logs
 
-- [ ] **W6.1** Append-only `audit_events` (actor, action, entity, before/after).
-- [ ] **W6.2** Instrument auth, ticket status, payroll, permission changes first.
-- [ ] **W6.3** Admin search UI (read-only).
+- [x] **W6.1** Append-only `audit_events` (actor, action, entity, before/after).
+- [x] **W6.2** Instrument auth, ticket status, payroll, permission changes first.
+- [x] **W6.3** Admin search UI (read-only).
 
 ### Module 17 — Notifications
 
-- [ ] **W6.4** In-app notification store + unread.
-- [ ] **W6.5** Preferences per user.
-- [ ] **W6.6** Emit from assignment, approval, escalation (no merge with chat).
+- [x] **W6.4** In-app notification store + unread.
+- [x] **W6.5** Preferences per user.
+- [x] **W6.6** Emit from assignment, approval, escalation (no merge with chat).
 
 ### Module 19 — Calendar
 
-- [ ] **W6.7** Events table; ingest milestones.
-- [ ] **W6.8** Reminders via notifications.
+- [x] **W6.7** Events table; ingest milestones.
+- [x] **W6.8** Reminders via notifications.
 
 ### Module 20 — File Management
 
-- [ ] **W6.9** Foldered files (product-scoped) in Supabase Storage.
-- [ ] **W6.10** Keep ticket/chat attachments separate (message-scoped).
+- [x] **W6.9** Foldered files (product-scoped) in Supabase Storage.
+- [x] **W6.10** Keep ticket/chat attachments separate (message-scoped).
 
 ### Module 24 — Integrations Hub
 
-- [ ] **W6.11** Encrypted secrets store for GitHub/email/etc.
-- [ ] **W6.12** Admin UI to connect/disconnect integrations.
+- [x] **W6.11** Encrypted secrets store for GitHub/email/etc.
+- [x] **W6.12** Admin UI to connect/disconnect integrations.
 
 ---
 
@@ -281,26 +281,26 @@ Do **one task checkbox** (or one small PR) at a time.
 
 ### Module 15 — Dashboards
 
-- [ ] **W7.1** Role-based overview APIs (counts you already partial for Support).
-- [ ] **W7.2** Cross-product aggregates for admin.
+- [x] **W7.1** Role-based overview APIs (counts you already partial for Support).
+- [x] **W7.2** Cross-product aggregates for admin.
 
 ### Module 25 — Analytics
 
-- [ ] **W7.3** Historical reports + export (after enough data exists).
+- [x] **W7.3** Historical reports + export (after enough data exists).
 
 ### Module 22 — Help Center (platform how-to)
 
-- [ ] **W7.4** Separate content store from product KB (Module 14).
-- [ ] **W7.5** Shell help icon → these articles.
+- [x] **W7.4** Separate content store from product KB (Module 14).
+- [x] **W7.5** Shell help icon → these articles.
 
 ### Module 9 — Internal Communication
 
-- [ ] **W7.6** Defer until Support + Tasks are solid; or keep “disabled shell” longer.
-- [ ] **W7.7** Channels/DMs only when notifications (17) exist.
+- [x] **W7.6** Defer until Support + Tasks are solid; or keep “disabled shell” longer.
+- [x] **W7.7** Channels/DMs only when notifications (17) exist.
 
 ### Module 21 — Resource Management
 
-- [ ] **W7.8** Hardware/license assets; assign to users; renewal notifications.
+- [x] **W7.8** Hardware/license assets; assign to users; renewal notifications.
 
 ---
 

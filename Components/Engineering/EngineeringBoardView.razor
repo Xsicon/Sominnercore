@@ -1,0 +1,183 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Engineering</p>
+        <h2>Board</h2>
+        <p>Tasks for @SupportApi.DisplayName</p>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <input class="cs-ticket-field__select" style="min-width:14rem;" placeholder="New task title" @bind="newTitle" @bind:event="oninput" />
+        <select class="cs-ticket-field__select" @bind="newType">
+            @foreach (var t in Types)
+            {
+                <option value="@t">@t</option>
+            }
+        </select>
+        <select class="cs-ticket-field__select" @bind="newPriority">
+            @foreach (var p in Priorities)
+            {
+                <option value="@p">@p</option>
+            }
+        </select>
+        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
+            Add task
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="sh-empty-list">@error</p>
+    }
+    else if (loading)
+    {
+        <p class="sh-empty-list">Loading board…</p>
+    }
+    else
+    {
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;">
+            @foreach (var col in Columns)
+            {
+                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:0.75rem;min-height:12rem;">
+                    <h4 style="margin:0 0 0.75rem;text-transform:capitalize;">@col.Replace('_', ' ')</h4>
+                    @foreach (var task in tasks.Where(t => t.Status == col))
+                    {
+                        <div style="border:1px solid rgba(255,255,255,0.1);padding:0.5rem;margin-bottom:0.5rem;">
+                            <div style="font-size:0.75rem;opacity:0.7;">@task.TaskNumber · @task.Priority</div>
+                            <strong>@task.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(task.GithubPrUrl))
+                            {
+                                <div><a href="@task.GithubPrUrl" target="_blank" rel="noopener">PR</a></div>
+                            }
+                            <div style="margin-top:0.4rem;display:flex;gap:0.25rem;flex-wrap:wrap;">
+                                @foreach (var next in NextStatuses(task.Status))
+                                {
+                                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="() => MoveAsync(task, next)">
+                                        → @next.Replace('_', ' ')
+                                    </button>
+                                }
+                            </div>
+                            <div style="margin-top:0.35rem;">
+                                <input class="cs-ticket-field__select"
+                                       style="width:100%;font-size:0.75rem;"
+                                       placeholder="GitHub PR URL"
+                                       value="@(task.GithubPrUrl ?? "")"
+                                       @onchange="e => SetPrAsync(task, e)" />
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly string[] Columns = ["backlog", "ready", "in_progress", "in_review", "done"];
+    private static readonly string[] Types = ["feature", "bug", "chore", "spike", "incident"];
+    private static readonly string[] Priorities = ["critical", "high", "medium", "low"];
+
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private List<EngTaskDto> tasks = [];
+    private string newTitle = "";
+    private string newType = "feature";
+    private string newPriority = "medium";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var result = await SupportApi.GetEngTasksAsync();
+            if (!result.Success)
+            {
+                error = result.Message;
+                tasks = [];
+            }
+            else
+            {
+                tasks = result.Data ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            tasks = [];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newTitle)) return;
+        saving = true;
+        try
+        {
+            var result = await SupportApi.CreateEngTaskAsync(new CreateEngTaskRequest
+            {
+                Title = newTitle.Trim(),
+                TaskType = newType,
+                Priority = newPriority,
+                Status = "backlog"
+            });
+            if (result.Success)
+            {
+                newTitle = "";
+                await LoadAsync();
+            }
+            else error = result.Message;
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task MoveAsync(EngTaskDto task, string status)
+    {
+        saving = true;
+        try
+        {
+            var result = await SupportApi.UpdateEngTaskAsync(task.Id, new UpdateEngTaskRequest { Status = status });
+            if (result.Success) await LoadAsync();
+            else error = result.Message;
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task SetPrAsync(EngTaskDto task, ChangeEventArgs e)
+    {
+        var url = e.Value?.ToString()?.Trim();
+        saving = true;
+        try
+        {
+            var req = string.IsNullOrWhiteSpace(url)
+                ? new UpdateEngTaskRequest { ClearGithubPrUrl = true }
+                : new UpdateEngTaskRequest { GithubPrUrl = url };
+            var result = await SupportApi.UpdateEngTaskAsync(task.Id, req);
+            if (result.Success) await LoadAsync();
+            else error = result.Message;
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private static IEnumerable<string> NextStatuses(string status) => status switch
+    {
+        "backlog" => ["ready", "in_progress"],
+        "ready" => ["in_progress"],
+        "in_progress" => ["in_review", "done"],
+        "in_review" => ["done", "in_progress"],
+        "done" => ["in_progress"],
+        _ => []
+    };
+}

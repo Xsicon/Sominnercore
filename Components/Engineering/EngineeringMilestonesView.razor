@@ -1,0 +1,124 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Engineering</p>
+        <h2>Milestones</h2>
+        <p>Timeline for @SupportApi.DisplayName</p>
+    </div>
+
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <input class="cs-ticket-field__select" style="min-width:12rem;" placeholder="Milestone title" @bind="newTitle" @bind:event="oninput" />
+        <input class="cs-ticket-field__select" type="date" @bind="newTarget" />
+        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
+            Add milestone
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="sh-empty-list">@error</p>
+    }
+    else if (loading)
+    {
+        <p class="sh-empty-list">Loading…</p>
+    }
+    else
+    {
+        <h3>Roadmap</h3>
+        @if (milestones.Count == 0)
+        {
+            <p class="sh-empty-list">No milestones yet.</p>
+        }
+        else
+        {
+            <ul style="list-style:none;padding:0;margin:0 0 1.5rem;">
+                @foreach (var m in milestones.OrderBy(x => x.TargetDate).ThenBy(x => x.SortOrder))
+                {
+                    <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <strong>@m.Title</strong>
+                        <span class="cs-ticket-chip">@m.Status</span>
+                        <span class="cs-ticket-chip">@(m.TargetDate?.ToString("yyyy-MM-dd") ?? "no date")</span>
+                        <span class="cs-ticket-chip">@m.TaskCount tasks</span>
+                        @if (m.CalendarEventId.HasValue)
+                        {
+                            <span class="cs-ticket-chip">on calendar</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+
+        <h3>Calendar events (from milestones)</h3>
+        @if (events.Count == 0)
+        {
+            <p class="sh-empty-list">No calendar events. Add a milestone with a target date.</p>
+        }
+        else
+        {
+            <ul style="list-style:none;padding:0;margin:0;">
+                @foreach (var e in events)
+                {
+                    <li style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <strong>@e.Title</strong>
+                        <span> — @e.StartsAt.ToLocalTime().ToString("d")</span>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private List<MilestoneDto> milestones = [];
+    private List<CalendarEventDto> events = [];
+    private string newTitle = "";
+    private DateTime? newTarget;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var ms = await SupportApi.GetMilestonesAsync();
+            var cal = await SupportApi.GetCalendarEventsAsync();
+            if (!ms.Success) { error = ms.Message; milestones = []; }
+            else milestones = ms.Data ?? [];
+            events = cal.Success ? cal.Data ?? [] : [];
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newTitle)) return;
+        saving = true;
+        try
+        {
+            DateOnly? target = newTarget.HasValue ? DateOnly.FromDateTime(newTarget.Value) : null;
+            var result = await SupportApi.CreateMilestoneAsync(new CreateMilestoneRequest
+            {
+                Title = newTitle.Trim(),
+                TargetDate = target,
+                Status = "planned"
+            });
+            if (result.Success)
+            {
+                newTitle = "";
+                newTarget = null;
+                await LoadAsync();
+            }
+            else error = result.Message;
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
+}

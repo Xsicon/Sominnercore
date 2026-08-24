@@ -1,0 +1,173 @@
+@using System.Text
+@using KobNeti.Services.Support
+@using Microsoft.JSInterop
+@inject SupportApiClient SupportApi
+@inject IJSRuntime JS
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">People Ops</p>
+        <h2>Payroll</h2>
+        <p>Approved time only · @SupportApi.DisplayName</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <p class="sh-empty-list">@msg</p>
+    }
+
+    @if (SupportApi.IsPlatformAdmin)
+    {
+        <section style="margin-bottom:1.5rem;">
+            <h3>Rates</h3>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+                <input class="cs-ticket-field__select" style="width:6rem;" type="number" step="0.01" @bind="rateAmount" />
+                <input class="cs-ticket-field__select" style="width:8rem;" placeholder="role (e.g. engineer)" @bind="rateRole" />
+                <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="SaveRate">Save rate</button>
+            </div>
+            <ul style="list-style:none;padding:0;">
+                @foreach (var r in rates)
+                {
+                    <li style="padding:0.35rem 0;">@r.HourlyRate @r.Currency · @(r.Role ?? r.UserId?.ToString() ?? "default")</li>
+                }
+            </ul>
+        </section>
+
+        <section style="margin-bottom:1.5rem;">
+            <h3>New pay period</h3>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <input class="cs-ticket-field__select" placeholder="Label" @bind="periodLabel" />
+                <input class="cs-ticket-field__select" type="date" @bind="periodStart" />
+                <input class="cs-ticket-field__select" type="date" @bind="periodEnd" />
+                <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="CreatePeriod">Create</button>
+            </div>
+        </section>
+    }
+
+    <h3>Periods</h3>
+    @if (loading)
+    {
+        <p class="sh-empty-list">Loading…</p>
+    }
+    else if (periods.Count == 0)
+    {
+        <p class="sh-empty-list">No pay periods.</p>
+    }
+    else
+    {
+        @foreach (var p in periods)
+        {
+            <div style="padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <strong>@p.Label</strong>
+                <span class="cs-ticket-chip">@p.Status</span>
+                <span class="cs-ticket-chip">@p.StartsOn → @p.EndsOn</span>
+                <span class="cs-ticket-chip">@p.TotalMinutes min · @p.TotalAmount @p.Currency</span>
+                @if (SupportApi.IsPlatformAdmin)
+                {
+                    <div style="margin-top:0.4rem;display:flex;gap:0.35rem;flex-wrap:wrap;">
+                        @if (p.Status is "open" or "calculated")
+                        {
+                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => Calculate(p.Id)">Calculate</button>
+                        }
+                        @if (p.Status == "calculated")
+                        {
+                            <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="() => Submit(p.Id)">Submit approval</button>
+                        }
+                    </div>
+                }
+                @if (p.Status is "approved" or "exported")
+                {
+                    <div style="margin-top:0.35rem;">
+                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => Export(p)">Export CSV</button>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private List<PayRateDto> rates = [];
+    private List<PayPeriodDto> periods = [];
+    private decimal rateAmount = 50;
+    private string rateRole = "engineer";
+    private string periodLabel = "";
+    private DateTime? periodStart = DateTime.UtcNow.Date.AddDays(-14);
+    private DateTime? periodEnd = DateTime.UtcNow.Date;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var r = await SupportApi.GetPayRatesAsync();
+        var p = await SupportApi.GetPayPeriodsAsync();
+        rates = r.Success ? r.Data ?? [] : [];
+        periods = p.Success ? p.Data ?? [] : [];
+        loading = false;
+    }
+
+    private async Task SaveRate()
+    {
+        busy = true;
+        var result = await SupportApi.SavePayRateAsync(rateAmount, rateRole);
+        msg = result.Success ? "Rate saved" : result.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task CreatePeriod()
+    {
+        if (string.IsNullOrWhiteSpace(periodLabel) || periodStart is null || periodEnd is null) return;
+        busy = true;
+        var result = await SupportApi.CreatePayPeriodAsync(
+            periodLabel.Trim(),
+            DateOnly.FromDateTime(periodStart.Value),
+            DateOnly.FromDateTime(periodEnd.Value));
+        msg = result.Success ? "Period created" : result.Message;
+        if (result.Success) periodLabel = "";
+        await Load();
+        busy = false;
+    }
+
+    private async Task Calculate(Guid id)
+    {
+        busy = true;
+        var result = await SupportApi.CalculatePayPeriodAsync(id);
+        msg = result.Success ? $"Calculated {result.Data?.TotalAmount}" : result.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task Submit(Guid id)
+    {
+        busy = true;
+        var result = await SupportApi.SubmitPayPeriodAsync(id);
+        msg = result.Success ? "Submitted for approval" : result.Message;
+        await Load();
+        busy = false;
+    }
+
+    private async Task Export(PayPeriodDto p)
+    {
+        busy = true;
+        var (ok, csv, message) = await SupportApi.DownloadPayPeriodCsvAsync(p.Id);
+        if (!ok || csv is null)
+        {
+            msg = message;
+        }
+        else
+        {
+            var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(csv));
+            await JS.InvokeVoidAsync(
+                "eval",
+                $"(function(){{const b=atob('{b64}');const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u],{{type:'text/csv'}}));a.download='payroll-{p.Id:N}.csv';a.click();}})();");
+            msg = "CSV downloaded";
+            await Load();
+        }
+        busy = false;
+    }
+}

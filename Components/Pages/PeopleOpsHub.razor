@@ -1,0 +1,66 @@
+@page "/admin/people"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@using KobNeti.Components.PeopleOps
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>People Ops - KobNeti</PageTitle>
+
+@if (isCheckingAuth)
+{
+    <div class="sh-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="sh-loading"><p>Redirecting…</p></div>
+}
+else
+{
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
+    <main class="main-content">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <h1>Payroll</h1>
+                    <p class="header-subtitle">Rates &amp; pay periods for @SupportApi.DisplayName</p>
+                </div>
+                <div class="sh-header-actions">
+                    <span class="sh-active-project">@SupportApi.DisplayName</span>
+                </div>
+            </div>
+        </header>
+        <div class="sh-scroll" @key="workspaceKey">
+            <PeoplePayrollView />
+        </div>
+    </main>
+</div>
+}
+
+@code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            isCheckingAuth = false;
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        isAuthenticated = true;
+        isCheckingAuth = false;
+        SupportApi.TenantChanged += OnTenantChanged;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
+    }
+
+    private void OnTenantChanged() { workspaceEpoch++; _ = InvokeAsync(StateHasChanged); }
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+}

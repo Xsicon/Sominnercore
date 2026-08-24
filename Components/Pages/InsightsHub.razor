@@ -1,0 +1,329 @@
+@page "/admin/insights"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Insights - KobNeti</PageTitle>
+
+@if (ready)
+{
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
+    <main class="main-content">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <h1>@TabTitle</h1>
+                    <p class="header-subtitle">@SupportApi.DisplayName</p>
+                </div>
+                <div class="sh-header-actions">
+                    <span class="sh-active-project">@SupportApi.DisplayName</span>
+                </div>
+            </div>
+        </header>
+        <nav class="ops-subnav">
+            <button type="button" class="ops-subnav__item @(tab=="overview"?"active":"")" @onclick="@(() => SetTab("overview"))">Overview</button>
+            <button type="button" class="ops-subnav__item @(tab=="cross"?"active":"")" @onclick="@(() => SetTab("cross"))">All products</button>
+            <button type="button" class="ops-subnav__item @(tab=="reports"?"active":"")" @onclick="@(() => SetTab("reports"))">Reports</button>
+            <button type="button" class="ops-subnav__item @(tab=="help"?"active":"")" @onclick="@(() => SetTab("help"))">Platform help</button>
+            <button type="button" class="ops-subnav__item @(tab=="assets"?"active":"")" @onclick="@(() => SetTab("assets"))">Assets</button>
+        </nav>
+        <div class="sh-scroll" @key="workspaceKey">
+            <div class="sh-page">
+                @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
+
+                @if (tab == "overview")
+                {
+                    @if (overview is null)
+                    {
+                        <p class="sh-empty-list">Loading…</p>
+                    }
+                    else
+                    {
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;">
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.ActiveChats</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Active chats</div>
+                            </div>
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.OpenTickets</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Open tickets</div>
+                            </div>
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.OpenIncidents</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Open incidents</div>
+                            </div>
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.EngTasksInProgress</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Eng in progress</div>
+                            </div>
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.PendingApprovals</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Pending approvals</div>
+                            </div>
+                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+                                <div style="font-size:1.4rem;font-weight:600;">@overview.UnreadNotifications</div>
+                                <div style="opacity:0.7;font-size:0.85rem;">Unread alerts</div>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (tab == "cross")
+                {
+                    @if (cross is null)
+                    {
+                        <p class="sh-empty-list">Loading…</p>
+                    }
+                    else
+                    {
+                        <p class="sh-empty-list" style="margin-bottom:1rem;">
+                            Totals — tickets @cross.TotalOpenTickets · chats @cross.TotalActiveChats ·
+                            incidents @cross.TotalOpenIncidents · approvals @cross.TotalPendingApprovals
+                        </p>
+                        @foreach (var p in cross.Products)
+                        {
+                            <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                                <strong>@p.DisplayName</strong>
+                                <div><small>
+                                    tickets @p.OpenTickets · chats @p.ActiveChats · incidents @p.OpenIncidents ·
+                                    eng @p.EngTasksInProgress · approvals @p.PendingApprovals
+                                </small></div>
+                            </div>
+                        }
+                    }
+                }
+                else if (tab == "reports")
+                {
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                        <select class="cs-ticket-field__select" @bind="reportType">
+                            <option value="tickets">Tickets</option>
+                            <option value="time">Time</option>
+                            <option value="payroll">Payroll</option>
+                            <option value="audit">Audit</option>
+                        </select>
+                        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="RunReport">Run export</button>
+                    </div>
+                    @foreach (var r in reports)
+                    {
+                        <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <strong>@r.Label</strong>
+                            <span class="cs-ticket-chip">@r.ReportType</span>
+                            <span class="cs-ticket-chip">@r.RowCount rows</span>
+                            <small>@r.CreatedAt.ToLocalTime().ToString("g")</small>
+                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="() => ShowCsv(r.Id)">View CSV</button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(csvPreview))
+                    {
+                        <pre style="margin-top:1rem;max-height:240px;overflow:auto;font-size:0.75rem;white-space:pre-wrap;">@csvPreview</pre>
+                    }
+                }
+                else if (tab == "help")
+                {
+                    @foreach (var a in helpArticles)
+                    {
+                        <details style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <summary><strong>@a.Title</strong> <span class="cs-ticket-chip">@a.Category</span></summary>
+                            <p style="margin:0.5rem 0 0;opacity:0.9;">@a.Body</p>
+                        </details>
+                    }
+                }
+                else
+                {
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                        <input class="cs-ticket-field__select" placeholder="Asset name" @bind="assetName" />
+                        <select class="cs-ticket-field__select" @bind="assetType">
+                            <option value="hardware">Hardware</option>
+                            <option value="license">License</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="CreateAsset">Add</button>
+                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="RemindRenewals">Renewal reminders</button>
+                    </div>
+                    @foreach (var a in assets)
+                    {
+                        <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                            <strong>@a.Name</strong>
+                            <span class="cs-ticket-chip">@a.AssetType</span>
+                            <span class="cs-ticket-chip">@a.Status</span>
+                            @if (!string.IsNullOrEmpty(a.AssignedUserName)) { <span>→ @a.AssignedUserName</span> }
+                            @if (a.RenewalDate is not null) { <small>renew @a.RenewalDate</small> }
+                            @if (a.Status != "retired")
+                            {
+                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => AssignAsset(a.Id)">Assign me</button>
+                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => RetireAsset(a.Id)">Retire</button>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </main>
+</div>
+}
+
+@code {
+    private bool ready;
+    private string tab = "overview";
+    private string? msg;
+    private bool busy;
+    private string workspaceKey = "";
+    private OverviewDto? overview;
+    private CrossProductOverviewDto? cross;
+    private List<ReportRunDto> reports = [];
+    private List<PlatformHelpArticleDto> helpArticles = [];
+    private List<AssetDto> assets = [];
+    private string reportType = "tickets";
+    private string? csvPreview;
+    private string assetName = "";
+    private string assetType = "hardware";
+
+    private string TabTitle => tab switch
+    {
+        "cross" => "All products",
+        "reports" => "Reports",
+        "help" => "Platform help",
+        "assets" => "Assets",
+        _ => "Overview"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        SupportApi.TenantChanged += OnTenantChanged;
+        workspaceKey = SupportApi.TenantId;
+        ready = true;
+        await LoadTab();
+    }
+
+    private void OnTenantChanged()
+    {
+        workspaceKey = SupportApi.TenantId;
+        _ = InvokeAsync(async () => { await LoadTab(); StateHasChanged(); });
+    }
+
+    private async Task SetTab(string t)
+    {
+        tab = t;
+        csvPreview = null;
+        msg = null;
+        await LoadTab();
+    }
+
+    private async Task LoadTab()
+    {
+        msg = null;
+        try
+        {
+            if (tab == "overview")
+            {
+                var r = await SupportApi.GetOverviewAsync();
+                overview = r.Success ? r.Data : null;
+                if (!r.Success) msg = r.Message;
+            }
+            else if (tab == "cross")
+            {
+                var r = await SupportApi.GetCrossProductOverviewAsync();
+                cross = r.Success ? r.Data : null;
+                if (!r.Success) msg = r.Message;
+            }
+            else if (tab == "reports")
+            {
+                var r = await SupportApi.GetReportsAsync();
+                reports = r.Data ?? [];
+                if (!r.Success) msg = r.Message;
+            }
+            else if (tab == "help")
+            {
+                var r = await SupportApi.GetPlatformHelpAsync();
+                helpArticles = r.Data ?? [];
+                if (!r.Success) msg = r.Message;
+            }
+            else
+            {
+                var r = await SupportApi.GetAssetsAsync();
+                assets = r.Data ?? [];
+                if (!r.Success) msg = r.Message;
+            }
+        }
+        catch (Exception ex) { msg = ex.Message; }
+    }
+
+    private async Task RunReport()
+    {
+        busy = true;
+        try
+        {
+            var r = await SupportApi.RunReportAsync(reportType);
+            msg = r.Success ? $"Generated {r.Data!.RowCount} rows" : r.Message;
+            await LoadTab();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task ShowCsv(Guid id)
+    {
+        var r = await SupportApi.GetReportCsvAsync(id);
+        csvPreview = r.Success ? r.Data : r.Message;
+    }
+
+    private async Task CreateAsset()
+    {
+        if (string.IsNullOrWhiteSpace(assetName)) return;
+        busy = true;
+        try
+        {
+            var r = await SupportApi.CreateAssetAsync(assetName.Trim(), assetType,
+                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60)));
+            msg = r.Success ? "Asset added" : r.Message;
+            assetName = "";
+            await LoadTab();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task AssignAsset(Guid id)
+    {
+        busy = true;
+        try
+        {
+            var r = await SupportApi.AssignAssetAsync(id, "Me");
+            msg = r.Success ? "Assigned" : r.Message;
+            await LoadTab();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task RetireAsset(Guid id)
+    {
+        busy = true;
+        try
+        {
+            var r = await SupportApi.RetireAssetAsync(id);
+            msg = r.Success ? "Retired" : r.Message;
+            await LoadTab();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task RemindRenewals()
+    {
+        busy = true;
+        try
+        {
+            var r = await SupportApi.SendAssetRenewalRemindersAsync();
+            msg = r.Success ? $"Sent {r.Data} reminders" : r.Message;
+        }
+        finally { busy = false; }
+    }
+
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+}

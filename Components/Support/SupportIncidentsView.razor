@@ -1,0 +1,215 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="sh-page">
+    <div class="sh-page-intro">
+        <p class="sh-eyebrow">Support Workspace</p>
+        <h2>Incidents</h2>
+        <p>Escalations for @SupportApi.DisplayName</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="sh-empty-list">@error</p>
+    }
+    else if (loading)
+    {
+        <p class="sh-empty-list">Loading incidents…</p>
+    }
+    else if (incidents.Count == 0)
+    {
+        <p class="sh-empty-list">No incidents yet. Escalate a ticket from the Tickets drawer.</p>
+    }
+    else
+    {
+        <div class="sh-table-wrap">
+            <table class="sh-table">
+                <thead>
+                    <tr>
+                        <th>Number</th>
+                        <th>Title</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                        <th>Commander</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var i in incidents)
+                    {
+                        <tr class="@(selected?.Id == i.Id ? "is-selected" : "")" @onclick="() => SelectAsync(i)">
+                            <td>@i.IncidentNumber</td>
+                            <td>@i.Title</td>
+                            <td>@i.Severity</td>
+                            <td>@i.Status</td>
+                            <td>@(i.CommanderName ?? "—")</td>
+                            <td>@(i.UpdatedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (selected is not null)
+        {
+            <section class="sh-page-intro" style="margin-top:1.5rem;">
+                <h3>@selected.IncidentNumber</h3>
+                <p>@selected.Title</p>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.75rem 0;">
+                    <select class="cs-ticket-field__select" value="@editStatus" @onchange="OnStatusChanged">
+                        @foreach (var s in Statuses)
+                        {
+                            <option value="@s">@s</option>
+                        }
+                    </select>
+                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="SaveStatusAsync">
+                        Update status
+                    </button>
+                </div>
+                <label class="cs-ticket-field__label">Postmortem notes</label>
+                <textarea class="cs-ticket-field__select"
+                          rows="4"
+                          @bind="postmortem"
+                          @bind:event="oninput"
+                          disabled="@saving"></textarea>
+                <button type="button"
+                        class="cs-btn cs-btn--primary cs-btn--sm"
+                        style="margin-top:0.5rem;"
+                        disabled="@saving"
+                        @onclick="SavePostmortemAsync">
+                    Save postmortem
+                </button>
+
+                <h4 style="margin-top:1.25rem;">Timeline</h4>
+                @if (selected.Timeline.Count == 0)
+                {
+                    <p class="sh-empty-list">No events.</p>
+                }
+                else
+                {
+                    <ul style="list-style:none;padding:0;margin:0;">
+                        @foreach (var evt in selected.Timeline.OrderByDescending(e => e.CreatedAt))
+                        {
+                            <li style="padding:0.4rem 0;border-bottom:1px solid var(--border, #233648);">
+                                <strong>@evt.EventType</strong>
+                                @if (!string.IsNullOrWhiteSpace(evt.Detail))
+                                {
+                                    <span> — @evt.Detail</span>
+                                }
+                                <div><small>@(evt.ActorName ?? "System") · @(evt.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</small></div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private static readonly string[] Statuses = ["open", "investigating", "mitigated", "resolved", "closed"];
+
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private List<IncidentDto> incidents = [];
+    private IncidentDto? selected;
+    private string editStatus = "open";
+    private string postmortem = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            var result = await SupportApi.GetIncidentsAsync();
+            if (!result.Success)
+            {
+                error = result.Message;
+                incidents = [];
+            }
+            else
+            {
+                incidents = result.Data ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            incidents = [];
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SelectAsync(IncidentDto row)
+    {
+        var result = await SupportApi.GetIncidentAsync(row.Id);
+        if (result.Success && result.Data != null)
+        {
+            selected = result.Data;
+            editStatus = selected.Status;
+            postmortem = selected.PostmortemNotes ?? "";
+        }
+        else
+        {
+            selected = row;
+            editStatus = row.Status;
+            postmortem = row.PostmortemNotes ?? "";
+        }
+    }
+
+    private void OnStatusChanged(ChangeEventArgs e) =>
+        editStatus = e.Value?.ToString() ?? editStatus;
+
+    private async Task SaveStatusAsync()
+    {
+        if (selected is null || editStatus == selected.Status)
+            return;
+        await PatchAsync(new UpdateIncidentRequest { Status = editStatus });
+    }
+
+    private async Task SavePostmortemAsync()
+    {
+        if (selected is null)
+            return;
+        await PatchAsync(new UpdateIncidentRequest { PostmortemNotes = postmortem });
+    }
+
+    private async Task PatchAsync(UpdateIncidentRequest request)
+    {
+        if (selected is null)
+            return;
+        saving = true;
+        try
+        {
+            var result = await SupportApi.UpdateIncidentAsync(selected.Id, request);
+            if (result.Success && result.Data != null)
+            {
+                selected = result.Data;
+                editStatus = selected.Status;
+                postmortem = selected.PostmortemNotes ?? "";
+                var idx = incidents.FindIndex(i => i.Id == selected.Id);
+                if (idx >= 0)
+                    incidents[idx] = selected;
+            }
+            else
+            {
+                error = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+}

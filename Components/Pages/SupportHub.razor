@@ -42,6 +42,7 @@ else
             <button type="button" class="ops-subnav__item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
             <button type="button" class="ops-subnav__item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetTab("chat"))">Live Chat</button>
             <button type="button" class="ops-subnav__item @(activeTab == "tickets" ? "active" : "")" @onclick="@(() => SetTab("tickets"))">Tickets</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "incidents" ? "active" : "")" @onclick="@(() => SetTab("incidents"))">Incidents</button>
             <button type="button" class="ops-subnav__item @(activeTab == "kb" ? "active" : "")" @onclick="@(() => SetTab("kb"))">Knowledge Base</button>
             <button type="button" class="ops-subnav__item @(activeTab == "internal" ? "active" : "")" @onclick="@(() => SetTab("internal"))">Internal Chat</button>
             <button type="button" class="ops-subnav__item @(activeTab == "settings" ? "active" : "")" @onclick="@(() => SetTab("settings"))">Settings</button>
@@ -57,6 +58,12 @@ else
         {
             <div class="sh-scroll" @key="workspaceKey">
                 <SupportTicketsView />
+            </div>
+        }
+        else if (activeTab == "incidents")
+        {
+            <div class="sh-scroll" @key="workspaceKey">
+                <SupportIncidentsView />
             </div>
         }
         else if (activeTab == "kb")
@@ -167,6 +174,7 @@ else
     {
         "chat" => "Live Chat",
         "tickets" => "Tickets",
+        "incidents" => "Incidents",
         "kb" => "Knowledge Base",
         "internal" => "Internal Chat",
         "settings" => "Settings",
@@ -177,6 +185,7 @@ else
     {
         "chat" => $"Respond to {SupportApi.DisplayName} customers in real time",
         "tickets" => $"Route and resolve {SupportApi.DisplayName} tickets",
+        "incidents" => $"Track escalations for {SupportApi.DisplayName}",
         "kb" => $"Help articles for {SupportApi.DisplayName}",
         "internal" => "Coming soon",
         "settings" => "Project desks and API connection",

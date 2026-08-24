@@ -19,7 +19,7 @@
                 var macro = _macros[index];
                 <button type="button"
                         class="cs-macros-bar__chip"
-                        @key="macro.Label"
+                        @key="@(macro.Id?.ToString() ?? macro.Label)"
                         @onclick="@(() => SelectMacroAsync(index))"
                         @onclick:stopPropagation="true">
                     @macro.Label
@@ -30,15 +30,54 @@
 </div>
 
 @code {
-    private IReadOnlyList<SupportCannedReply> _macros = SupportCannedReplies.All;
+    private sealed class MacroChip
+    {
+        public Guid? Id { get; set; }
+        public string Label { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+
+    private List<MacroChip> _macros = [];
+    private string _loadedForTenant = "";
 
     [Parameter] public EventCallback<string> OnApply { get; set; }
 
     private bool IsOpen { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnParametersSetAsync()
     {
-        _macros = SupportCannedReplies.ForTenant(SupportApi.TenantId);
+        if (string.Equals(_loadedForTenant, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase)
+            && _macros.Count > 0)
+            return;
+
+        _loadedForTenant = SupportApi.TenantId;
+        await LoadMacrosAsync();
+    }
+
+    private async Task LoadMacrosAsync()
+    {
+        try
+        {
+            var result = await SupportApi.GetMacrosAsync();
+            if (result.Success && result.Data is { Count: > 0 })
+            {
+                _macros = result.Data.Select(m => new MacroChip
+                {
+                    Id = m.Id,
+                    Label = m.Title,
+                    Text = m.Body
+                }).ToList();
+                return;
+            }
+        }
+        catch
+        {
+            // Fall back to canned replies.
+        }
+
+        _macros = SupportCannedReplies.ForTenant(SupportApi.TenantId)
+            .Select(c => new MacroChip { Label = c.Label, Text = c.Text })
+            .ToList();
     }
 
     private void Toggle() => IsOpen = !IsOpen;

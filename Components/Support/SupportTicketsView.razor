@@ -36,7 +36,7 @@
         <div class="cs-stat-card" style="background:#DBEAFE;border-color:#3B82F630">
             <div class="cs-stat-card__bar" style="background:#3B82F6"></div>
             <div>
-                <p class="cs-stat-card__value">@(stats?.OpenCount ?? tickets.Count(t => t.Status == "open"))</p>
+                <p class="cs-stat-card__value">@(stats?.OpenCount ?? tickets.Count(t => t.Status is "new" or "open"))</p>
                 <p class="cs-stat-card__label">Open</p>
             </div>
         </div>
@@ -208,9 +208,11 @@
     private static readonly (string Key, string Label)[] StatusFilters =
     [
         ("All", "All"),
-        ("open", "Open"),
+        ("new", "New"),
         ("in_progress", "In Progress"),
-        ("resolved", "Resolved")
+        ("waiting", "Waiting"),
+        ("resolved", "Resolved"),
+        ("closed", "Closed")
     ];
 
     private int MineCount =>
@@ -394,9 +396,12 @@
 
     private static string GetStatusLabel(string status) => status switch
     {
+        "new" or "open" => "New",
         "in_progress" => "In Progress",
+        "waiting" => "Waiting",
         "resolved" => "Resolved",
-        _ => "Open"
+        "closed" => "Closed",
+        _ => status
     };
 
     private static string GetPriorityLabel(string priority) => priority switch
@@ -409,7 +414,9 @@
     private static (string Bg, string Text, string Dot) GetStatusStyle(string status) => status switch
     {
         "in_progress" => ("#FEF3C7", "#92400E", "#F59E0B"),
+        "waiting" => ("#EDE9FE", "#5B21B6", "#8B5CF6"),
         "resolved" => ("#D1FAE5", "#065F46", "#22C55E"),
+        "closed" => ("#E5E7EB", "#374151", "#6B7280"),
         _ => ("#DBEAFE", "#1E3A8A", "#3B82F6")
     };
 

@@ -1,0 +1,94 @@
+@page "/admin/time"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@using KobNeti.Components.PeopleOps
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Time & Approvals - KobNeti</PageTitle>
+
+@if (isCheckingAuth)
+{
+    <div class="sh-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="sh-loading"><p>Redirecting…</p></div>
+}
+else
+{
+<div class="admin-dashboard support-hub admin-dashboard--embedded">
+    <main class="main-content">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div>
+                    <h1>@(activeTab == "approvals" ? "Approvals" : "Time Tracking")</h1>
+                    <p class="header-subtitle">@SupportApi.DisplayName</p>
+                </div>
+                <div class="sh-header-actions">
+                    <span class="sh-active-project">@SupportApi.DisplayName</span>
+                </div>
+            </div>
+        </header>
+        <nav class="ops-subnav">
+            <button type="button" class="ops-subnav__item @(activeTab == "time" ? "active" : "")" @onclick="@(() => SetTab("time"))">Time</button>
+            <button type="button" class="ops-subnav__item @(activeTab == "approvals" ? "active" : "")" @onclick="@(() => SetTab("approvals"))">Approvals</button>
+        </nav>
+        <div class="sh-scroll" @key="workspaceKey">
+            @if (activeTab == "approvals")
+            {
+                <PeopleApprovalsView />
+            }
+            else
+            {
+                <PeopleTimeView />
+            }
+        </div>
+    </main>
+</div>
+}
+
+@code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
+    private string activeTab = "time";
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            isCheckingAuth = false;
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        isAuthenticated = true;
+        isCheckingAuth = false;
+        ApplyTab();
+        SupportApi.TenantChanged += OnTenantChanged;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
+    }
+
+    private void OnTenantChanged() { workspaceEpoch++; _ = InvokeAsync(StateHasChanged); }
+    private void ApplyTab()
+    {
+        var q = Navigation.ToAbsoluteUri(Navigation.Uri).Query.TrimStart('?');
+        foreach (var part in q.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2 && kv[0] == "tab") activeTab = Uri.UnescapeDataString(kv[1]);
+        }
+    }
+    private Task SetTab(string tab)
+    {
+        activeTab = tab;
+        Navigation.NavigateTo(tab == "time" ? "/admin/time" : $"/admin/time?tab={tab}", replace: true);
+        return Task.CompletedTask;
+    }
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+}

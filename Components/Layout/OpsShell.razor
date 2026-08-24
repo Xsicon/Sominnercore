@@ -50,11 +50,29 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="/admin" class="nav-item @(IsActive("/admin") && !IsActive("/admin/support") && !IsActive("/admin/staff") && !IsActive("/admin/teams") ? "active" : "")">
+            <a href="/admin" class="nav-item @(IsActive("/admin") && !IsActive("/admin/support") && !IsActive("/admin/engineering") && !IsActive("/admin/time") && !IsActive("/admin/people") && !IsActive("/admin/calendar") && !IsActive("/admin/platform") && !IsActive("/admin/insights") && !IsActive("/admin/staff") && !IsActive("/admin/teams") ? "active" : "")">
                 <span>Overview</span>
             </a>
             <a href="/admin/support" class="nav-item @(IsActive("/admin/support") ? "active" : "")">
                 <span>Support Hub</span>
+            </a>
+            <a href="/admin/engineering" class="nav-item @(IsActive("/admin/engineering") ? "active" : "")">
+                <span>Engineering</span>
+            </a>
+            <a href="/admin/time" class="nav-item @(IsActive("/admin/time") ? "active" : "")">
+                <span>Time &amp; Approvals</span>
+            </a>
+            <a href="/admin/people" class="nav-item @(IsActive("/admin/people") ? "active" : "")">
+                <span>People Ops</span>
+            </a>
+            <a href="/admin/calendar" class="nav-item @(IsActive("/admin/calendar") ? "active" : "")">
+                <span>Calendar</span>
+            </a>
+            <a href="/admin/platform" class="nav-item @(IsActive("/admin/platform") ? "active" : "")">
+                <span>Platform</span>
+            </a>
+            <a href="/admin/insights" class="nav-item @(IsActive("/admin/insights") ? "active" : "")">
+                <span>Insights</span>
             </a>
             @if (isPlatformAdmin)
             {
@@ -65,16 +83,10 @@
                     <span>Teams</span>
                 </a>
             }
-
-            <p class="ops-nav-section">Coming later</p>
-            <span class="nav-item nav-item--disabled" title="Wave W4">Engineering</span>
-            <span class="nav-item nav-item--disabled" title="Wave W5">Time &amp; Approvals</span>
-            <span class="nav-item nav-item--disabled" title="Wave W5">People Ops</span>
-            <span class="nav-item nav-item--disabled" title="Wave W6">Calendar</span>
-            <span class="nav-item nav-item--disabled" title="Wave W7">Insights</span>
         </nav>
 
         <div class="sidebar-footer">
+            <button type="button" class="ops-help-btn" @onclick="OpenHelp" title="Platform help">?</button>
             <div class="user-info">
                 <div class="user-avatar"><span>@GetUserInitials()</span></div>
                 <div class="user-details">
@@ -87,6 +99,35 @@
             </button>
         </div>
     </aside>
+
+    @if (helpOpen)
+    {
+        <div class="ops-help-panel" role="dialog" aria-label="Platform help">
+            <div class="ops-help-panel__header">
+                <strong>Platform help</strong>
+                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="() => helpOpen = false">Close</button>
+            </div>
+            @if (helpLoading)
+            {
+                <p class="sh-empty-list">Loading…</p>
+            }
+            else if (!string.IsNullOrEmpty(helpError))
+            {
+                <p class="sh-empty-list">@helpError</p>
+            }
+            else
+            {
+                @foreach (var a in helpArticles)
+                {
+                    <details style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <summary>@a.Title</summary>
+                        <p style="margin:0.4rem 0 0;font-size:0.9rem;opacity:0.9;">@a.Body</p>
+                    </details>
+                }
+                <p style="margin-top:0.75rem;"><a href="/admin/insights" @onclick="() => helpOpen = false">Open Insights → Help</a></p>
+            }
+        </div>
+    }
 
     @if (sidebarOpen)
     {
@@ -111,6 +152,10 @@
     private string currentUserEmail = "";
     private string agentRole = "";
     private bool isPlatformAdmin;
+    private bool helpOpen;
+    private bool helpLoading;
+    private string? helpError;
+    private List<PlatformHelpArticleDto> helpArticles = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,6 +195,27 @@
         finally
         {
             tenantsLoading = false;
+        }
+    }
+
+    private async Task OpenHelp()
+    {
+        helpOpen = true;
+        helpLoading = true;
+        helpError = null;
+        try
+        {
+            var r = await SupportApi.GetPlatformHelpAsync();
+            helpArticles = r.Data ?? [];
+            if (!r.Success) helpError = r.Message;
+        }
+        catch (Exception ex)
+        {
+            helpError = ex.Message;
+        }
+        finally
+        {
+            helpLoading = false;
         }
     }
 

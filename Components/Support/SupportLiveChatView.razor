@@ -145,6 +145,11 @@
                             </button>
                             @if (selectedSession.Status == "active")
                             {
+                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm"
+                                        @onclick="ConvertSelectedToTicket"
+                                        disabled="@(isConvertingSession || isClosingSession)">
+                                    @(isConvertingSession ? "Creating…" : "Create Ticket")
+                                </button>
                                 <button type="button" class="cs-btn cs-btn--danger cs-btn--sm"
                                         @onclick="CloseSelectedSession"
                                         disabled="@isClosingSession">
@@ -267,6 +272,7 @@
     private bool messagesLoadSucceeded;
     private bool isSendingAdminMessage;
     private bool isClosingSession;
+    private bool isConvertingSession;
     private string? loadError;
     private string? messagesError;
     private string? actionError;
@@ -699,6 +705,39 @@
     }
 
     private void ApplyMacro(string text) => adminMessageInput = text;
+
+    private async Task ConvertSelectedToTicket()
+    {
+        if (!selectedSessionId.HasValue || isConvertingSession) return;
+
+        try
+        {
+            isConvertingSession = true;
+            actionError = null;
+            var result = await SupportApi.ConvertChatToTicketAsync(selectedSessionId.Value, "chat");
+            if (!result.Success)
+            {
+                actionError = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Failed to create ticket from chat."
+                    : result.Message;
+                return;
+            }
+
+            actionError = null;
+            // Soft success via existing banner path
+            loadError = null;
+            messagesError = null;
+            actionError = $"Created ticket {result.Data?.TicketNumber}";
+        }
+        catch (Exception ex)
+        {
+            actionError = ex.Message;
+        }
+        finally
+        {
+            isConvertingSession = false;
+        }
+    }
 
     private async Task CloseSelectedSession()
     {

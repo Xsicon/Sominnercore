@@ -556,6 +556,791 @@ public class SupportApiClient
             throw new InvalidOperationException(result.Message);
     }
 
+    public async Task<ApiResponse<List<SupportMacroDto>>> GetMacrosAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Support/macros");
+            return await ReadEnvelopeAsync<List<SupportMacroDto>>(res, "Failed to load macros.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<SupportMacroDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<HelpArticleDto>>> SuggestArticlesForTicketAsync(Guid ticketId, int limit = 5)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"api/Help/admin/tickets/{ticketId}/suggestions?limit={limit}");
+            return await ReadEnvelopeAsync<List<HelpArticleDto>>(res, "Failed to load suggestions.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<HelpArticleDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<SupportTicketDto>> ConvertChatToTicketAsync(
+        Guid sessionId, string? category = null, string? subject = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"api/Chat/session/{sessionId}/convert-to-ticket",
+                new { category, subject });
+            return await ReadEnvelopeAsync<SupportTicketDto>(res, "Failed to convert chat to ticket.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<SupportTicketDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(string? status = null)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(status)
+                ? "api/Incidents"
+                : $"api/Incidents?status={Uri.EscapeDataString(status)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<IncidentDto>>(res, "Failed to load incidents.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<IncidentDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<IncidentDto>> GetIncidentAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/Incidents/{id}");
+            return await ReadEnvelopeAsync<IncidentDto>(res, "Failed to load incident.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IncidentDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<IncidentDto>> EscalateTicketToIncidentAsync(
+        Guid ticketId, EscalateTicketRequest? request = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"api/Incidents/from-ticket/{ticketId}",
+                request ?? new EscalateTicketRequest());
+            return await ReadEnvelopeAsync<IncidentDto>(res, "Failed to escalate ticket.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IncidentDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<IncidentDto>> UpdateIncidentAsync(Guid id, UpdateIncidentRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Patch, $"api/Incidents/{id}", request);
+            return await ReadEnvelopeAsync<IncidentDto>(res, "Failed to update incident.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IncidentDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<EngTaskDto>>> GetEngTasksAsync(string? status = null, Guid? milestoneId = null)
+    {
+        try
+        {
+            var qs = new List<string>();
+            if (!string.IsNullOrWhiteSpace(status))
+                qs.Add($"status={Uri.EscapeDataString(status)}");
+            if (milestoneId.HasValue)
+                qs.Add($"milestoneId={milestoneId}");
+            var url = qs.Count == 0 ? "api/EngTasks" : $"api/EngTasks?{string.Join("&", qs)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<EngTaskDto>>(res, "Failed to load tasks.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<EngTaskDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<EngTaskDto>> CreateEngTaskAsync(CreateEngTaskRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/EngTasks", request);
+            return await ReadEnvelopeAsync<EngTaskDto>(res, "Failed to create task.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<EngTaskDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<EngTaskDto>> UpdateEngTaskAsync(Guid id, UpdateEngTaskRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Patch, $"api/EngTasks/{id}", request);
+            return await ReadEnvelopeAsync<EngTaskDto>(res, "Failed to update task.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<EngTaskDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<MilestoneDto>>> GetMilestonesAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Milestones");
+            return await ReadEnvelopeAsync<List<MilestoneDto>>(res, "Failed to load milestones.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<MilestoneDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<MilestoneDto>> CreateMilestoneAsync(CreateMilestoneRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Milestones", request);
+            return await ReadEnvelopeAsync<MilestoneDto>(res, "Failed to create milestone.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<MilestoneDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<CalendarEventDto>>> GetCalendarEventsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Calendar/events");
+            return await ReadEnvelopeAsync<List<CalendarEventDto>>(res, "Failed to load calendar events.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<CalendarEventDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<GithubCacheDto>> GetGithubCacheAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Github");
+            return await ReadEnvelopeAsync<GithubCacheDto>(res, "Failed to load GitHub cache.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<GithubCacheDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<GithubCacheDto>> RefreshGithubCacheAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Github/refresh");
+            return await ReadEnvelopeAsync<GithubCacheDto>(res, "Failed to refresh GitHub cache.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<GithubCacheDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<object>> UpdateProductGithubRepoAsync(string slug, string? githubRepoUrl)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Patch,
+                $"api/products/{Uri.EscapeDataString(slug)}/github-repo",
+                new { githubRepoUrl });
+            return await ReadEnvelopeAsync<object>(res, "Failed to update GitHub repo.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<TimeEntryDto>>> GetTimeEntriesAsync(string? status = null)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(status)
+                ? "api/TimeEntries"
+                : $"api/TimeEntries?status={Uri.EscapeDataString(status)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<TimeEntryDto>>(res, "Failed to load time entries.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<TimeEntryDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<TimeEntryDto>> ClockInAsync(Guid? ticketId = null, Guid? engTaskId = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/clock-in", new { ticketId, engTaskId });
+            return await ReadEnvelopeAsync<TimeEntryDto>(res, "Failed to clock in.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<TimeEntryDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<TimeEntryDto>> ClockOutAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/clock-out");
+            return await ReadEnvelopeAsync<TimeEntryDto>(res, "Failed to clock out.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<TimeEntryDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<TimeEntryDto>> AddManualTimeAsync(int minutes, Guid? ticketId = null, Guid? engTaskId = null, string? notes = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/manual", new { minutes, ticketId, engTaskId, notes });
+            return await ReadEnvelopeAsync<TimeEntryDto>(res, "Failed to add manual time.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<TimeEntryDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ApprovalRequestDto>> RequestTimeEditAsync(Guid entryId, int minutes, string? reason = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/request-edit", new { entryId, minutes, reason });
+            return await ReadEnvelopeAsync<ApprovalRequestDto>(res, "Failed to request time edit.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ApprovalRequestDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<ApprovalRequestDto>>> GetApprovalsAsync(string? status = null)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(status)
+                ? "api/Approvals"
+                : $"api/Approvals?status={Uri.EscapeDataString(status)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<ApprovalRequestDto>>(res, "Failed to load approvals.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ApprovalRequestDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ApprovalRequestDto>> DecideApprovalAsync(Guid id, bool approve)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Approvals/{id}/decide", new { approve });
+            return await ReadEnvelopeAsync<ApprovalRequestDto>(res, "Failed to decide approval.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ApprovalRequestDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<PayRateDto>>> GetPayRatesAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Payroll/rates");
+            return await ReadEnvelopeAsync<List<PayRateDto>>(res, "Failed to load rates.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<PayRateDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<PayRateDto>> SavePayRateAsync(decimal hourlyRate, string? role = null, Guid? userId = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Payroll/rates", new { hourlyRate, role, userId, currency = "USD" });
+            return await ReadEnvelopeAsync<PayRateDto>(res, "Failed to save rate.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PayRateDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<PayPeriodDto>>> GetPayPeriodsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Payroll/periods");
+            return await ReadEnvelopeAsync<List<PayPeriodDto>>(res, "Failed to load pay periods.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<PayPeriodDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<PayPeriodDto>> CreatePayPeriodAsync(string label, DateOnly startsOn, DateOnly endsOn)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Payroll/periods", new { label, startsOn, endsOn });
+            return await ReadEnvelopeAsync<PayPeriodDto>(res, "Failed to create pay period.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PayPeriodDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<PayPeriodDto>> CalculatePayPeriodAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Payroll/periods/{id}/calculate");
+            return await ReadEnvelopeAsync<PayPeriodDto>(res, "Failed to calculate payroll.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PayPeriodDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<PayPeriodDto>> SubmitPayPeriodAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Payroll/periods/{id}/submit");
+            return await ReadEnvelopeAsync<PayPeriodDto>(res, "Failed to submit payroll.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PayPeriodDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public string PayPeriodExportUrl(Guid id) => $"api/Payroll/periods/{id}/export.csv";
+
+    public async Task<(bool Success, string? Csv, string Message)> DownloadPayPeriodCsvAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, PayPeriodExportUrl(id));
+            if (!res.IsSuccessStatusCode)
+            {
+                var err = await res.Content.ReadAsStringAsync();
+                return (false, null, string.IsNullOrWhiteSpace(err) ? "Export failed." : err);
+            }
+            var csv = await res.Content.ReadAsStringAsync();
+            return (true, csv, "OK");
+        }
+        catch (Exception ex)
+        {
+            return (false, null, ex.Message);
+        }
+    }
+
+    public async Task<ApiResponse<List<AuditEventDto>>> SearchAuditAsync(string? search = null, string? action = null)
+    {
+        try
+        {
+            var qs = new List<string>();
+            if (!string.IsNullOrWhiteSpace(search)) qs.Add($"search={Uri.EscapeDataString(search)}");
+            if (!string.IsNullOrWhiteSpace(action)) qs.Add($"action={Uri.EscapeDataString(action)}");
+            var url = qs.Count == 0 ? "api/Audit" : $"api/Audit?{string.Join("&", qs)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<AuditEventDto>>(res, "Failed to load audit.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<AuditEventDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<NotificationDto>>> GetNotificationsAsync(bool unreadOnly = false)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/Notifications?unreadOnly={unreadOnly}");
+            return await ReadEnvelopeAsync<List<NotificationDto>>(res, "Failed to load notifications.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<NotificationDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<NotificationDto>> MarkNotificationReadAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Notifications/{id}/read");
+            return await ReadEnvelopeAsync<NotificationDto>(res, "Failed to mark read.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<NotificationDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<NotificationPrefsDto>> GetNotificationPrefsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Notifications/preferences");
+            return await ReadEnvelopeAsync<NotificationPrefsDto>(res, "Failed to load prefs.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<NotificationPrefsDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<NotificationPrefsDto>> SaveNotificationPrefsAsync(NotificationPrefsDto prefs)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Put, "api/Notifications/preferences", prefs);
+            return await ReadEnvelopeAsync<NotificationPrefsDto>(res, "Failed to save prefs.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<NotificationPrefsDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<CalendarEventDto>> CreateCalendarEventAsync(string title, DateTime startsAt, string eventType = "meeting")
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Calendar/events", new { title, startsAt, eventType });
+            return await ReadEnvelopeAsync<CalendarEventDto>(res, "Failed to create event.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<CalendarEventDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<int>> SendCalendarRemindersAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Calendar/reminders");
+            return await ReadEnvelopeAsync<int>(res, "Failed to send reminders.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<int> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<OpsFileDto>>> GetOpsFilesAsync(string? folder = null)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(folder) ? "api/OpsFiles" : $"api/OpsFiles?folder={Uri.EscapeDataString(folder)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
+            return await ReadEnvelopeAsync<List<OpsFileDto>>(res, "Failed to load files.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<OpsFileDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<OpsFileDto>> CreateOpsFileAsync(string fileName, string folderPath = "/")
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/OpsFiles", new { fileName, folderPath });
+            return await ReadEnvelopeAsync<OpsFileDto>(res, "Failed to register file.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<OpsFileDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<IntegrationDto>>> GetIntegrationsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Integrations");
+            return await ReadEnvelopeAsync<List<IntegrationDto>>(res, "Failed to load integrations.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<IntegrationDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<IntegrationDto>> ConnectIntegrationAsync(string provider, string? secretValue = null)
+    {
+        try
+        {
+            object body = string.IsNullOrWhiteSpace(secretValue)
+                ? new { provider }
+                : new { provider, secrets = new Dictionary<string, string> { ["token"] = secretValue } };
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Integrations/connect", body);
+            return await ReadEnvelopeAsync<IntegrationDto>(res, "Failed to connect.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IntegrationDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<IntegrationDto>> DisconnectIntegrationAsync(string provider)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Integrations/{Uri.EscapeDataString(provider)}/disconnect");
+            return await ReadEnvelopeAsync<IntegrationDto>(res, "Failed to disconnect.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IntegrationDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<OverviewDto>> GetOverviewAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Overview");
+            return await ReadEnvelopeAsync<OverviewDto>(res, "Failed to load overview.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<OverviewDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<CrossProductOverviewDto>> GetCrossProductOverviewAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Overview/cross-product");
+            return await ReadEnvelopeAsync<CrossProductOverviewDto>(res, "Failed to load cross-product overview.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<CrossProductOverviewDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<ReportRunDto>>> GetReportsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Reports");
+            return await ReadEnvelopeAsync<List<ReportRunDto>>(res, "Failed to load reports.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ReportRunDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ReportRunDto>> RunReportAsync(string reportType, string? label = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Reports/run", new { reportType, label });
+            return await ReadEnvelopeAsync<ReportRunDto>(res, "Failed to run report.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ReportRunDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<string>> GetReportCsvAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/Reports/{id}/csv");
+            return await ReadEnvelopeAsync<string>(res, "Failed to load CSV.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<string> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<PlatformHelpArticleDto>>> GetPlatformHelpAsync(bool publishedOnly = true)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/PlatformHelp?publishedOnly={publishedOnly}");
+            return await ReadEnvelopeAsync<List<PlatformHelpArticleDto>>(res, "Failed to load help.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<PlatformHelpArticleDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<ImChannelDto>>> GetImChannelsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/InternalChat/channels");
+            return await ReadEnvelopeAsync<List<ImChannelDto>>(res, "Failed to load channels.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ImChannelDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ImChannelDto>> CreateImChannelAsync(string name, string channelType = "channel")
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/InternalChat/channels", new { name, channelType });
+            return await ReadEnvelopeAsync<ImChannelDto>(res, "Failed to create channel.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ImChannelDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<ImMessageDto>>> GetImMessagesAsync(Guid channelId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/InternalChat/channels/{channelId}/messages");
+            return await ReadEnvelopeAsync<List<ImMessageDto>>(res, "Failed to load messages.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ImMessageDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ImMessageDto>> SendImMessageAsync(Guid channelId, string body)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/InternalChat/channels/{channelId}/messages", new { body });
+            return await ReadEnvelopeAsync<ImMessageDto>(res, "Failed to send message.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ImMessageDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<AssetDto>>> GetAssetsAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Assets");
+            return await ReadEnvelopeAsync<List<AssetDto>>(res, "Failed to load assets.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<AssetDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<AssetDto>> CreateAssetAsync(string name, string assetType = "hardware", DateOnly? renewalDate = null, string? notes = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Assets", new { name, assetType, renewalDate, notes });
+            return await ReadEnvelopeAsync<AssetDto>(res, "Failed to create asset.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<AssetDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<AssetDto>> AssignAssetAsync(Guid id, string? userName)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Assets/{id}/assign", new { userName });
+            return await ReadEnvelopeAsync<AssetDto>(res, "Failed to assign asset.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<AssetDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<AssetDto>> RetireAssetAsync(Guid id)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Assets/{id}/retire");
+            return await ReadEnvelopeAsync<AssetDto>(res, "Failed to retire asset.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<AssetDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<int>> SendAssetRenewalRemindersAsync(int withinDays = 30)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Assets/renewal-reminders?withinDays={withinDays}");
+            return await ReadEnvelopeAsync<int>(res, "Failed to send reminders.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<int> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<SupportTicketReplyDto>> AddTicketReplyAsync(Guid ticketId, string message)
     {
         try

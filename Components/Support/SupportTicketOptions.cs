@@ -47,9 +47,12 @@ public static class SupportTicketStatuses
 {
     public static readonly (string Value, string Label)[] All =
     [
-        ("open", "Open"),
+        ("new", "New"),
+        ("open", "Open (legacy)"),
         ("in_progress", "In Progress"),
-        ("resolved", "Resolved")
+        ("waiting", "Waiting"),
+        ("resolved", "Resolved"),
+        ("closed", "Closed")
     ];
 }
 

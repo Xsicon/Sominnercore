@@ -46,11 +46,20 @@
                             Assign to me
                         </button>
                     }
+                    @if (Ticket.Status is not ("resolved" or "closed"))
+                    {
+                        <button type="button"
+                                class="cs-btn cs-btn--outline cs-btn--sm"
+                                disabled="@IsSaving"
+                                @onclick="EscalateToIncidentAsync">
+                            Escalate
+                        </button>
+                    }
                 </div>
 
                 <div class="cs-ticket-card__meta">
                     <span class="cs-ticket-chip">Opened @FormatTimeAgo(Ticket.CreatedAt)</span>
-                    @if (Ticket.Status != "resolved")
+                    @if (Ticket.Status is not ("resolved" or "closed"))
                     {
                         <span class="cs-ticket-chip @(Ticket.AgentReplyCount > 0 ? "cs-ticket-chip--success" : "cs-ticket-chip--warn")">
                             @(Ticket.AgentReplyCount > 0 ? "First response sent" : "Awaiting first response")
@@ -107,8 +116,98 @@
                             }
                         </select>
                     </div>
+                    <div class="cs-ticket-field">
+                        <label class="cs-ticket-field__label">Tags (comma-separated)</label>
+                        <input class="cs-ticket-field__select"
+                               value="@tagsInput"
+                               disabled="@IsSaving"
+                               @onchange="OnTagsChanged" />
+                    </div>
+                    <div class="cs-ticket-field">
+                        <label class="cs-ticket-field__label">Eng task id</label>
+                        <input class="cs-ticket-field__select"
+                               value="@engTaskInput"
+                               disabled="@IsSaving"
+                               placeholder="optional UUID"
+                               @onchange="OnEngTaskChanged" />
+                        <button type="button"
+                                class="cs-btn cs-btn--outline cs-btn--sm"
+                                style="margin-top:0.35rem;"
+                                disabled="@IsSaving"
+                                @onclick="CreateLinkedEngTaskAsync">
+                            Create eng task
+                        </button>
+                    </div>
                 </div>
+
+                @if (Ticket.FirstResponseDueAt.HasValue || Ticket.ResolveDueAt.HasValue)
+                {
+                    <div class="cs-ticket-card__meta" style="margin-top:0.75rem;">
+                        @if (Ticket.FirstResponseDueAt.HasValue)
+                        {
+                            <span class="cs-ticket-chip">First response due @Ticket.FirstResponseDueAt.Value.ToLocalTime().ToString("g")</span>
+                        }
+                        @if (Ticket.ResolveDueAt.HasValue)
+                        {
+                            <span class="cs-ticket-chip">Resolve due @Ticket.ResolveDueAt.Value.ToLocalTime().ToString("g")</span>
+                        }
+                        @if (Ticket.SlaFirstResponseMinutes is int mins)
+                        {
+                            <span class="cs-ticket-chip">SLA @mins min</span>
+                        }
+                    </div>
+                }
             </div>
+
+            <section class="cs-ticket-section">
+                <h4 class="cs-ticket-section__title">Suggested articles</h4>
+                @if (suggestionsLoading)
+                {
+                    <p class="cs-ticket-thread__empty">Loading…</p>
+                }
+                else if (suggestions.Count == 0)
+                {
+                    <p class="cs-ticket-thread__empty">No KB matches for “@Ticket.Category”.</p>
+                }
+                else
+                {
+                    <ul class="cs-ticket-thread" style="list-style:none;padding:0;margin:0;">
+                        @foreach (var a in suggestions)
+                        {
+                            <li style="padding:0.4rem 0;border-bottom:1px solid #233648;">
+                                <strong>@a.Title</strong>
+                                <span class="cs-ticket-chip">@a.Category</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="cs-ticket-section">
+                <h4 class="cs-ticket-section__title">Timeline</h4>
+                @if (Ticket.Timeline.Count == 0)
+                {
+                    <p class="cs-ticket-thread__empty">No events yet.</p>
+                }
+                else
+                {
+                    <div class="cs-ticket-thread">
+                        @foreach (var evt in Ticket.Timeline.OrderByDescending(e => e.CreatedAt))
+                        {
+                            <div class="cs-ticket-bubble cs-ticket-bubble--agent">
+                                <p class="cs-ticket-bubble__text">
+                                    <strong>@evt.EventType</strong>
+                                    @if (!string.IsNullOrWhiteSpace(evt.Detail))
+                                    {
+                                        <span> — @evt.Detail</span>
+                                    }
+                                </p>
+                                <span class="cs-ticket-bubble__time">@(evt.ActorName ?? "System") · @FormatReplyTime(evt.CreatedAt)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
 
             <section class="cs-ticket-section">
                 <h4 class="cs-ticket-section__title">Original message</h4>
@@ -169,6 +268,11 @@
     private SupportMacrosBar? macrosBar;
     private string replyText = string.Empty;
     private string agentName = "Admin";
+    private string tagsInput = "";
+    private string engTaskInput = "";
+    private List<HelpArticleDto> suggestions = [];
+    private bool suggestionsLoading;
+    private Guid? suggestionsForTicket;
     private bool isSaving;
     private bool scrollAfterRender;
     private bool wasLoading = true;
@@ -219,7 +323,97 @@
             scrollAfterRender = true;
 
         wasLoading = IsLoading;
-        await Task.CompletedTask;
+        tagsInput = string.Join(", ", Ticket.Tags ?? []);
+        engTaskInput = Ticket.EngTaskId?.ToString() ?? "";
+
+        if (!IsLoading && Ticket.Id != Guid.Empty && suggestionsForTicket != Ticket.Id)
+        {
+            suggestionsForTicket = Ticket.Id;
+            await LoadSuggestionsAsync();
+        }
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        suggestionsLoading = true;
+        try
+        {
+            var result = await SupportApi.SuggestArticlesForTicketAsync(Ticket.Id);
+            suggestions = result.Success ? result.Data ?? [] : [];
+        }
+        catch
+        {
+            suggestions = [];
+        }
+        finally
+        {
+            suggestionsLoading = false;
+        }
+    }
+
+    private async Task OnTagsChanged(ChangeEventArgs e)
+    {
+        tagsInput = e.Value?.ToString() ?? "";
+        var tags = tagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        await PatchTicketAsync(new UpdateTicketRequest { Tags = tags }, "Tags updated");
+    }
+
+    private async Task OnEngTaskChanged(ChangeEventArgs e)
+    {
+        engTaskInput = e.Value?.ToString()?.Trim() ?? "";
+        Guid? engId = null;
+        if (!string.IsNullOrWhiteSpace(engTaskInput))
+        {
+            if (!Guid.TryParse(engTaskInput, out var parsed))
+            {
+                await NotifyAsync("Eng task id must be a UUID", true);
+                return;
+            }
+            engId = parsed;
+        }
+        else
+        {
+            engId = Guid.Empty; // clear
+        }
+
+        await PatchTicketAsync(new UpdateTicketRequest { EngTaskId = engId }, "Eng task link updated");
+    }
+
+    private async Task CreateLinkedEngTaskAsync()
+    {
+        IsSaving = true;
+        try
+        {
+            var created = await SupportApi.CreateEngTaskAsync(new CreateEngTaskRequest
+            {
+                Title = Ticket.Subject,
+                Description = Ticket.Message,
+                TaskType = "bug",
+                Priority = Ticket.Priority is "urgent" or "high" ? "high" : "medium",
+                Status = "ready",
+                TicketId = Ticket.Id
+            });
+            if (created.Success && created.Data != null)
+            {
+                engTaskInput = created.Data.Id.ToString();
+                var refreshed = await SupportApi.GetTicketByIdResultAsync(Ticket.Id);
+                if (refreshed.Success && refreshed.Data != null)
+                    await ApplyTicketUpdate(refreshed.Data);
+                await NotifyAsync($"Created {created.Data.TaskNumber}");
+            }
+            else
+            {
+                await NotifyAsync(FirstNonEmpty(created.Message, "Failed to create eng task."), true);
+            }
+        }
+        catch (Exception ex)
+        {
+            await NotifyAsync(ex.Message, true);
+        }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -262,7 +456,7 @@
                 var fallback = await SupportApi.UpdateTicketAsync(Ticket.Id, new UpdateTicketRequest
                 {
                     AssignedToName = agentName,
-                    Status = Ticket.Status == "open" ? "in_progress" : Ticket.Status
+                    Status = Ticket.Status is "new" or "open" ? "in_progress" : Ticket.Status
                 });
                 if (fallback.Success && fallback.Data != null)
                 {
@@ -275,6 +469,41 @@
                         FirstNonEmpty(result.Message, "Failed to assign ticket."),
                         isError: true);
                 }
+            }
+        }
+        catch (Exception ex)
+        {
+            await NotifyAsync(ex.Message, isError: true);
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task EscalateToIncidentAsync()
+    {
+        IsSaving = true;
+        try
+        {
+            var result = await SupportApi.EscalateTicketToIncidentAsync(Ticket.Id, new EscalateTicketRequest
+            {
+                Title = $"Escalation: {Ticket.Subject}",
+                Severity = "sev2",
+                CommanderName = agentName
+            });
+            if (result.Success && result.Data != null)
+            {
+                var refreshed = await SupportApi.GetTicketByIdResultAsync(Ticket.Id);
+                if (refreshed.Success && refreshed.Data != null)
+                    await ApplyTicketUpdate(refreshed.Data);
+                await NotifyAsync($"Escalated to {result.Data.IncidentNumber}");
+            }
+            else
+            {
+                await NotifyAsync(
+                    FirstNonEmpty(result.Message, "Failed to escalate ticket."),
+                    isError: true);
             }
         }
         catch (Exception ex)
@@ -380,7 +609,7 @@
                     Ticket.Replies.Add(result.Data);
                     if (Ticket.FirstResponseAt == null && result.Data.IsAgent)
                         Ticket.FirstResponseAt = result.Data.CreatedAt ?? DateTime.UtcNow;
-                    if (Ticket.Status == "open")
+                    if (Ticket.Status is "new" or "open")
                         Ticket.Status = "in_progress";
                     await ApplyTicketUpdate(Ticket);
                 }
@@ -422,6 +651,8 @@
     private async Task ApplyTicketUpdate(SupportTicketDto updated)
     {
         Ticket = updated;
+        tagsInput = string.Join(", ", Ticket.Tags ?? []);
+        engTaskInput = Ticket.EngTaskId?.ToString() ?? "";
         await OnTicketUpdated.InvokeAsync(updated);
         StateHasChanged();
     }
