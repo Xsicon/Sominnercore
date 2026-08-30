@@ -48,7 +48,7 @@ Use this for every screen port. Open Studio (`kobneti-design`, `npm run dev`) ne
 | Wave | Studio | Blazor | Status |
 |------|--------|--------|--------|
 | S1 | Public* | MainLayout / Home / public pages | Done |
-| S2 | LoginPage / Sidebar / Header | AdminLogin / OpsShell | |
+| S2 | LoginPage / Sidebar / Header | AdminLogin / OpsShell | Done |
 | S3 | Overview / LiveChat / Tickets / … | AdminDashboard / SupportHub | |
 | S4 | Eng / Time / Payroll | Engineering / Time / People | |
 | S5 | Calendar / Files / … | Calendar / Platform / Insights | |

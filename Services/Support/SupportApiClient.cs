@@ -129,6 +129,27 @@ public class SupportApiClient
         _agentRole = ReadJwtClaim(_agentToken, "app_role");
     }
 
+    /// <summary>Anonymous password-reset request (Postmark via API).</summary>
+    public async Task<ApiResponse<object>> RequestPasswordResetAsync(string email, string redirectTo)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "api/Auth/forgot-password");
+            req.Content = JsonContent.Create(new { email, redirectTo });
+            var res = await _http.SendAsync(req);
+            var body = await res.Content.ReadFromJsonAsync<ApiResponse<object>>(JsonOptions)
+                       ?? new ApiResponse<object>();
+            body.Success = res.IsSuccessStatusCode && body.Success;
+            if (!res.IsSuccessStatusCode && string.IsNullOrWhiteSpace(body.Message))
+                body.Message = "Could not send reset email. Try again later.";
+            return body;
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<List<StaffMemberDto>>> GetStaffAsync()
     {
         try

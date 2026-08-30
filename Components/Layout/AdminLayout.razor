@@ -1,7 +1,7 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 
-@if (IsLoginRoute)
+@if (IsAuthShellRoute)
 {
     @Body
 }
@@ -13,12 +13,13 @@ else
 }
 
 @code {
-    private bool IsLoginRoute
+    private bool IsAuthShellRoute
     {
         get
         {
             var path = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
-            return string.Equals(path, "/admin/login", StringComparison.OrdinalIgnoreCase);
+            return path.Equals("/admin/login", StringComparison.OrdinalIgnoreCase)
+                   || path.Equals("/admin/reset-password", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

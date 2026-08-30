@@ -105,10 +105,10 @@ Studio: `PublicWebsiteRoot`, `PublicNavbar`, `PublicFooter`, `PublicHomePage`, P
 
 Studio: `LoginPage`, `Sidebar`, `Header`.
 
-- [ ] **S2.1** Rebuild login page layout from `LoginPage.tsx`.
-- [ ] **S2.2** Rebuild sidebar from `Sidebar.tsx` (collapse, categories, badges).
-- [ ] **S2.3** Rebuild top header from `Header.tsx`.
-- [ ] **S2.4** Route map to existing hubs; product switcher in Studio placement.
+- [x] **S2.1** Rebuild login page layout from `LoginPage.tsx` (+ forgot password + Postmark reset).
+- [x] **S2.2** Rebuild sidebar from `Sidebar.tsx` (collapse, categories, product switcher, status).
+- [x] **S2.3** Rebuild top header from `Header.tsx`.
+- [x] **S2.4** Route map to existing hubs; product switcher in Studio placement.
 
 **Exit:** Ops chrome matches Studio; hubs still temporary until later waves.
 
@@ -224,5 +224,6 @@ A screen is done only if:
 | 1.0 | 2026-08-24 | Theme-swap waves (superseded — insufficient fidelity) |
 | 2.0 | 2026-08-24 | From-scratch structural port plan; teardown required |
 | 2.1 | 2026-08-24 | S1 public done; S0 teardown + foundations completed |
+| 2.2 | 2026-08-25 | S2 login + ops chrome; Postmark password reset |
 
 *When implementing, check boxes here. Do not mark a wave done for “CSS light mode only.”*

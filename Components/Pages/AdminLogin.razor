@@ -1,95 +1,165 @@
 ﻿@page "/admin/login"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
+@using KobNeti.Services.Support
 @inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
 @inject RateLimiter RateLimiter
 
-<PageTitle>Admin Login - KobNeti</PageTitle>
+<PageTitle>Sign in - KobNeti</PageTitle>
 
-<div class="admin-login-container">
-    <div class="login-card">
-        <div class="login-header">
-            <div class="lock-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
+<div class="kn-login" id="kobneti-standalone-login-page">
+    <div class="kn-login__watermark" aria-hidden="true">
+        <svg viewBox="0 0 100 100" fill="currentColor">
+            <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" />
+            <polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="#F8FAFC" />
+            <path d="M38 32 L38 68 M38 50 L62 32 M44 46 L64 68" stroke="#6366F1" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+    </div>
+
+    <div class="kn-login__wrap">
+        <div class="kn-login__card" id="kobneti-login-card">
+            <div class="kn-login__brand">
+                <div class="kn-login__mark">K</div>
+                <span class="kn-login__wordmark">KobNeti</span>
             </div>
-            <h1>KobNeti Admin</h1>
-            <p>Sign in to access the admin dashboard</p>
-        </div>
+            <div class="kn-login__caption">Operations Platform</div>
+            <h1 class="kn-login__title">Sign in to your account</h1>
+            <p class="kn-login__sub">Enter your credentials to access the internal dashboard.</p>
 
-        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" class="login-form">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <div class="input-wrapper">
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="20" height="16" x="2" y="4" rx="2"/>
-                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                    </svg>
-                    <input type="email" @bind="loginModel.Email" id="email" class="form-input" placeholder="Enter email" disabled="@isLoading" />
+            @if (alreadyLoggedIn)
+            {
+                <div class="kn-login__session">
+                    <div class="kn-login__session-avatar">@sessionInitials</div>
+                    <div class="kn-login__session-meta">
+                        <div class="kn-login__session-label">Already signed in as</div>
+                        <div class="kn-login__session-name">@sessionName</div>
+                        <div class="kn-login__session-email">@sessionEmail</div>
+                    </div>
                 </div>
-            </div>
+                <button type="button" class="kn-login__submit" id="btn-go-to-dashboard" @onclick="GoDashboard">Go to Dashboard</button>
+                <button type="button" class="kn-login__text-btn" id="btn-switch-account" @onclick="() => alreadyLoggedIn = false">Sign in with a different account</button>
+            }
+            else
+            {
+                <EditForm Model="loginModel" OnValidSubmit="HandleLogin" class="kn-login__form">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="kn-login__error" id="login-error-banner" role="alert">
+                            <span class="material-symbols-outlined" style="font-size:1rem;">error</span>
+                            <span>@errorMessage</span>
+                            <button type="button" class="kn-login__error-close" @onclick="() => errorMessage = null">✕</button>
+                        </div>
+                    }
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <div class="input-wrapper">
-                    <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <input type="@(showPassword ? "text" : "password")" @bind="loginModel.Password" id="password" class="form-input" placeholder="Enter your password" disabled="@isLoading" />
-                    <button type="button" class="password-toggle" @onclick="TogglePasswordVisibility" disabled="@isLoading">
-                        @if (showPassword)
+                    <label class="kn-login__label" for="login-email-input">Email address</label>
+                    <input id="login-email-input" class="kn-login__input" type="email" autocomplete="email" required
+                           placeholder="name@kobneti.com" @bind="loginModel.Email" disabled="@isLoading" />
+
+                    <div class="kn-login__label-row">
+                        <label class="kn-login__label" for="login-password-input">Password</label>
+                        <button type="button" class="kn-login__forgot" id="link-forgot-password" @onclick="OpenForgot">Forgot password?</button>
+                    </div>
+                    <div class="kn-login__password">
+                        <input id="login-password-input" class="kn-login__input" type="@(showPassword ? "text" : "password")"
+                               autocomplete="current-password" required placeholder="••••••••"
+                               @bind="loginModel.Password" disabled="@isLoading" />
+                        <button type="button" class="kn-login__eye" id="btn-toggle-password-visibility"
+                                aria-label="@(showPassword ? "Hide password" : "Show password")"
+                                @onclick="() => showPassword = !showPassword" disabled="@isLoading">
+                            <span class="material-symbols-outlined" style="font-size:1.1rem;">@(showPassword ? "visibility_off" : "visibility")</span>
+                        </button>
+                    </div>
+
+                    <button type="submit" class="kn-login__submit" id="btn-sign-in-submit" disabled="@isLoading">
+                        @if (isLoading)
                         {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/>
-                                <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
-                                <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/>
-                                <path d="m2 2 20 20"/>
-                            </svg>
+                            <span class="kn-login__spinner"></span>
+                            <span>Signing in...</span>
                         }
                         else
                         {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
+                            <span>Sign in</span>
                         }
                     </button>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="error-message">
-                    @errorMessage
-                </div>
+                </EditForm>
             }
 
-            <button type="submit" class="submit-button" disabled="@isLoading">
-                @if (isLoading)
+            <div class="kn-login__footer">
+                <a class="kn-login__back" id="link-back-to-kobneti" href="/">← Back to KobNeti.com</a>
+                <div class="kn-login__secure">
+                    <span class="material-symbols-outlined" style="font-size:0.9rem;">lock</span>
+                    Secured by KobNeti SSO
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (showForgot)
+    {
+        <div class="kn-login-modal-backdrop" @onclick="CloseForgot">
+            <div class="kn-login-modal" @onclick:stopPropagation="true">
+                <div class="kn-login-modal__head">
+                    <div class="kn-login-modal__title">
+                        <span class="material-symbols-outlined" style="color:#6366F1;">key</span>
+                        Reset Password
+                    </div>
+                    <button type="button" class="kn-login-modal__close" @onclick="CloseForgot">✕</button>
+                </div>
+
+                @if (forgotSubmitted)
                 {
-                    <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                    </svg>
-                    <span>Signing in...</span>
+                    <div class="kn-login-modal__success">
+                        <span class="material-symbols-outlined" style="font-size:2rem;color:#059669;">check_circle</span>
+                        <p class="kn-login-modal__success-title">Password Reset Email Sent</p>
+                        <p class="kn-login-modal__success-body">
+                            We have sent instructions and a secure one-time authorization link to <strong>@forgotEmail</strong>.
+                        </p>
+                        <button type="button" class="kn-login__submit kn-login__submit--sm" @onclick="CloseForgot">Return to Sign In</button>
+                    </div>
                 }
                 else
                 {
-                    <span>Sign In</span>
+                    <EditForm Model="forgotModel" OnValidSubmit="HandleForgot">
+                        <p class="kn-login-modal__copy">
+                            Enter your registered work email address and we will send a secure reset link via Postmark.
+                        </p>
+                        @if (!string.IsNullOrEmpty(forgotError))
+                        {
+                            <div class="kn-login__error" role="alert">@forgotError</div>
+                        }
+                        <label class="kn-login__label" for="forgot-email">Work Email</label>
+                        <input id="forgot-email" class="kn-login__input" type="email" required @bind="forgotModel.Email" disabled="@forgotLoading" />
+                        <div class="kn-login-modal__actions">
+                            <button type="button" class="kn-login__ghost" @onclick="CloseForgot" disabled="@forgotLoading">Cancel</button>
+                            <button type="submit" class="kn-login__submit kn-login__submit--sm" disabled="@forgotLoading">
+                                @(forgotLoading ? "Sending…" : "Send Reset Link")
+                            </button>
+                        </div>
+                    </EditForm>
                 }
-            </button>
-        </EditForm>
-    </div>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
-    private LoginModel loginModel = new();
-    private bool isLoading = false;
-    private bool showPassword = false;
+    private readonly LoginModel loginModel = new();
+    private readonly ForgotModel forgotModel = new();
+    private bool isLoading;
+    private bool showPassword;
     private string? errorMessage;
+    private bool alreadyLoggedIn;
+    private string sessionName = "";
+    private string sessionEmail = "";
+    private string sessionInitials = "?";
+
+    private bool showForgot;
+    private bool forgotSubmitted;
+    private bool forgotLoading;
+    private string forgotEmail = "";
+    private string? forgotError;
 
     private class LoginModel
     {
@@ -97,9 +167,82 @@
         public string Password { get; set; } = "";
     }
 
-    private void TogglePasswordVisibility()
+    private class ForgotModel
     {
-        showPassword = !showPassword;
+        public string Email { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, _) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user != null)
+        {
+            alreadyLoggedIn = true;
+            sessionEmail = user.Email ?? "";
+            sessionName = await AuthService.GetAgentDisplayNameAsync();
+            sessionInitials = GetInitials(sessionName, sessionEmail);
+        }
+    }
+
+    private void GoDashboard() => Navigation.NavigateTo("/admin");
+
+    private void OpenForgot()
+    {
+        forgotModel.Email = loginModel.Email;
+        forgotEmail = "";
+        forgotError = null;
+        forgotSubmitted = false;
+        showForgot = true;
+    }
+
+    private void CloseForgot()
+    {
+        showForgot = false;
+        forgotLoading = false;
+    }
+
+    private async Task HandleForgot()
+    {
+        forgotLoading = true;
+        forgotError = null;
+        StateHasChanged();
+
+        try
+        {
+            if (!await RateLimiter.IsAllowedAsync("forgot-password"))
+            {
+                forgotError = "Too many reset requests. Please wait a minute and try again.";
+                return;
+            }
+
+            await RateLimiter.RecordAttemptAsync("forgot-password");
+
+            var email = forgotModel.Email.Trim();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                forgotError = "Enter your work email.";
+                return;
+            }
+
+            var redirectTo = Navigation.ToAbsoluteUri("admin/reset-password").ToString();
+            var result = await SupportApi.RequestPasswordResetAsync(email, redirectTo);
+            if (!result.Success)
+            {
+                forgotError = result.Message ?? "Could not send reset email.";
+                return;
+            }
+
+            forgotEmail = email;
+            forgotSubmitted = true;
+        }
+        catch
+        {
+            forgotError = "Could not send reset email. Please try again.";
+        }
+        finally
+        {
+            forgotLoading = false;
+        }
     }
 
     private async Task HandleLogin()
@@ -112,7 +255,6 @@
         {
             errorMessage = "Too many login attempts. Please wait 60 seconds before trying again.";
             isLoading = false;
-            StateHasChanged();
             return;
         }
 
@@ -125,23 +267,17 @@
             if (success && user != null)
             {
                 Navigation.NavigateTo("/admin");
+                return;
             }
-            else if (error == "not_authorized")
-            {
+
+            if (error == "not_authorized")
                 errorMessage = "Your account is not authorized for admin access.";
-            }
-            else if (error != null && error.Contains("invalid_credentials"))
-            {
+            else if (error != null && error.Contains("invalid_credentials", StringComparison.OrdinalIgnoreCase))
                 errorMessage = "Invalid email or password. Please try again.";
-            }
-            else if (error != null && error.Contains("Email not confirmed"))
-            {
+            else if (error != null && error.Contains("Email not confirmed", StringComparison.OrdinalIgnoreCase))
                 errorMessage = "Please confirm your email address before signing in.";
-            }
             else
-            {
-                errorMessage = "Login failed. Please check your credentials.";
-            }
+                errorMessage = "Invalid email or password. Please try again.";
         }
         catch
         {
@@ -150,7 +286,17 @@
         finally
         {
             isLoading = false;
-            StateHasChanged();
         }
+    }
+
+    private static string GetInitials(string name, string email)
+    {
+        var source = string.IsNullOrWhiteSpace(name) ? email : name;
+        if (string.IsNullOrWhiteSpace(source)) return "?";
+        var parts = source.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return (parts[0][0].ToString() + parts[1][0]).ToUpperInvariant();
+        var local = source.Split('@')[0];
+        return local.Length >= 2 ? local[..2].ToUpperInvariant() : local.ToUpperInvariant();
     }
 }

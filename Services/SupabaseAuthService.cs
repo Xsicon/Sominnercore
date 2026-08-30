@@ -106,6 +106,55 @@ public class SupabaseAuthService
         }
     }
 
+    public async Task SignOutAsync()
+    {
+        try
+        {
+            await EnsureInitializedAsync();
+            await _client.Auth.SignOut();
+        }
+        catch
+        {
+            // Ignore errors on sign out
+        }
+        finally
+        {
+            try { await _sessionStore.ClearAsync(); } catch { /* ignore */ }
+            LocalStorageSessionHandler.SetCache(null);
+        }
+    }
+
+    /// <summary>
+    /// Applies recovery tokens from the password-reset redirect hash/query, then updates the password.
+    /// </summary>
+    public async Task<(bool Success, string? Error)> CompletePasswordResetAsync(
+        string accessToken,
+        string refreshToken,
+        string newPassword)
+    {
+        try
+        {
+            await EnsureInitializedAsync();
+            if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(refreshToken))
+                return (false, "Reset link is missing or expired. Request a new one.");
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 8)
+                return (false, "Password must be at least 8 characters.");
+
+            await _client.Auth.SetSession(accessToken.Trim(), refreshToken.Trim());
+            var user = await _client.Auth.Update(new UserAttributes { Password = newPassword });
+            if (user == null)
+                return (false, "Could not update password. Try requesting a new reset link.");
+
+            await SignOutAsync();
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     public async Task<(bool Success, string? Error, User? User)> SignInAsync(string email, string password)
     {
         try
@@ -130,24 +179,6 @@ public class SupabaseAuthService
         catch (Exception ex)
         {
             return (false, ex.Message, null);
-        }
-    }
-
-    public async Task SignOutAsync()
-    {
-        try
-        {
-            await EnsureInitializedAsync();
-            await _client.Auth.SignOut();
-        }
-        catch
-        {
-            // Ignore errors on sign out
-        }
-        finally
-        {
-            try { await _sessionStore.ClearAsync(); } catch { /* ignore */ }
-            LocalStorageSessionHandler.SetCache(null);
         }
     }
 

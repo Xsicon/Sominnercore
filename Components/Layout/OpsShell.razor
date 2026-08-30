@@ -8,54 +8,83 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-@* S0 minimal ops chrome — full Studio Sidebar/Header port is S2 *@
-<div class="ops-shell @(sidebarOpen ? "is-sidebar-open" : "")">
-    <aside class="ops-sidebar" aria-label="Operations navigation">
-        <div class="ops-sidebar__header">
-            <div class="ops-sidebar__brand">
-                <div class="ops-sidebar__mark">K</div>
+@* S2 — Studio Sidebar + Header structural port *@
+<div class="ops-shell @(sidebarCollapsed ? "is-collapsed" : "") @(mobileOpen ? "is-sidebar-open" : "")">
+    <aside class="ops-sidebar" id="main-sidebar" aria-label="Operations navigation">
+        <div class="ops-sidebar__top">
+            @if (!sidebarCollapsed)
+            {
                 <div>
                     <div class="ops-sidebar__name">KobNeti</div>
                     <p class="ops-sidebar__subtitle">Operations Platform</p>
                 </div>
-            </div>
-            @if (!string.IsNullOrWhiteSpace(agentRole))
-            {
-                <span class="ops-sidebar__role">@agentRole</span>
-            }
-        </div>
-
-        <div class="ops-product">
-            <p class="ops-product__label">Product</p>
-            @if (tenantsLoading)
-            {
-                <p class="ops-product__hint">Loading…</p>
-            }
-            else if (!string.IsNullOrEmpty(tenantsError))
-            {
-                <p class="ops-product__hint" style="color:#FCA5A5;">@tenantsError</p>
             }
             else
             {
-                <div class="ops-product__list" role="list">
-                    @foreach (var t in tenants)
-                    {
-                        var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
-                        <button type="button"
-                                role="listitem"
-                                class="ops-product__chip @(active ? "is-active" : "")"
-                                @onclick="() => SelectTenantAsync(t)">
-                            @t.DisplayName
-                        </button>
-                    }
+                <div class="ops-sidebar__mark ops-sidebar__mark--solo">K</div>
+            }
+            <button type="button" class="ops-sidebar__collapse" title="Toggle sidebar" @onclick="ToggleCollapse">
+                <span class="material-symbols-outlined">@(sidebarCollapsed ? "chevron_right" : "chevron_left")</span>
+            </button>
+        </div>
+
+        <div class="ops-sidebar__user-wrap">
+            @if (!sidebarCollapsed)
+            {
+                <div class="ops-sidebar__user-card">
+                    <div class="ops-sidebar__avatar ops-sidebar__avatar--lg">@GetUserInitials()</div>
+                    <div class="ops-sidebar__user-meta">
+                        <div class="ops-sidebar__user-line">
+                            <span class="ops-sidebar__user-name">@GetUserDisplayName()</span>
+                            <span class="ops-sidebar__online">Online</span>
+                        </div>
+                        <div class="ops-sidebar__user-role">@(string.IsNullOrWhiteSpace(agentRole) ? "Staff" : agentRole)</div>
+                    </div>
                 </div>
+            }
+            else
+            {
+                <div class="ops-sidebar__avatar ops-sidebar__avatar--lg ops-sidebar__avatar--center" title="@GetUserDisplayName()">@GetUserInitials()</div>
+            }
+        </div>
+
+        <div class="ops-product @(sidebarCollapsed ? "is-collapsed" : "")">
+            @if (!sidebarCollapsed)
+            {
+                <p class="ops-product__label">Product</p>
+                @if (tenantsLoading)
+                {
+                    <p class="ops-product__hint">Loading…</p>
+                }
+                else if (!string.IsNullOrEmpty(tenantsError))
+                {
+                    <p class="ops-product__hint" style="color:#FCA5A5;">@tenantsError</p>
+                }
+                else
+                {
+                    <div class="ops-product__list" role="list">
+                        @foreach (var t in tenants)
+                        {
+                            var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
+                            <button type="button" role="listitem"
+                                    class="ops-product__chip @(active ? "is-active" : "")"
+                                    @onclick="() => SelectTenantAsync(t)">
+                                @t.DisplayName
+                            </button>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="ops-product__collapsed" title="@SupportApi.DisplayName">@GetProductInitial()</div>
             }
         </div>
 
         <nav class="ops-sidebar__nav kn-scrollbar">
-            <a href="/admin" class="ops-nav-link @(IsExactAdmin() ? "is-active" : "")">
+            <a href="/admin" class="ops-nav-link @(IsExactAdmin() ? "is-active" : "")" title="Overview">
                 <span class="material-symbols-outlined">dashboard</span>
-                <span>Overview</span>
+                @if (!sidebarCollapsed) { <span>Overview</span> }
             </a>
 
             @foreach (var cat in Categories)
@@ -63,22 +92,34 @@
                 if (cat.PlatformAdminOnly && !isPlatformAdmin)
                     continue;
 
+                var catActive = cat.Items.Any(i => IsActive(i.Match));
                 <div class="ops-nav-cat">
-                    <button type="button" class="ops-nav-cat__btn" @onclick="() => ToggleCat(cat.Id)">
+                    <button type="button" class="ops-nav-cat__btn @(catActive ? "is-active" : "")"
+                            title="@cat.Label"
+                            @onclick="() => OnCategoryClick(cat)">
                         <span class="ops-nav-cat__left">
                             <span class="material-symbols-outlined">@cat.Icon</span>
-                            <span>@cat.Label</span>
+                            @if (!sidebarCollapsed) { <span>@cat.Label</span> }
                         </span>
-                        <span class="material-symbols-outlined" style="font-size:1rem;opacity:0.7;">
-                            @(expanded.Contains(cat.Id) ? "expand_less" : "expand_more")
-                        </span>
+                        @if (!sidebarCollapsed)
+                        {
+                            <span class="ops-nav-cat__right">
+                                @if (!string.IsNullOrEmpty(cat.Badge))
+                                {
+                                    <span class="ops-badge ops-badge--@cat.BadgeTone">@cat.Badge</span>
+                                }
+                                <span class="material-symbols-outlined" style="font-size:1rem;opacity:0.7;">
+                                    @(expanded.Contains(cat.Id) ? "expand_more" : "chevron_right")
+                                </span>
+                            </span>
+                        }
                     </button>
-                    @if (expanded.Contains(cat.Id))
+                    @if (!sidebarCollapsed && expanded.Contains(cat.Id))
                     {
                         <div class="ops-nav-cat__subs">
                             @foreach (var item in cat.Items)
                             {
-                                <a href="@item.Href" class="ops-nav-link @(IsActive(item.Match) ? "is-active" : "")">
+                                <a href="@item.Href" class="ops-nav-link ops-nav-link--sub @(IsActive(item.Match) ? "is-active" : "")">
                                     <span>@item.Label</span>
                                 </a>
                             }
@@ -88,70 +129,138 @@
             }
         </nav>
 
-        <div class="ops-sidebar__footer">
-            <button type="button" class="ops-sidebar__help" @onclick="OpenHelp" title="Platform help">?</button>
-            <div class="ops-sidebar__user">
-                <div class="ops-sidebar__avatar"><span>@GetUserInitials()</span></div>
-                <div>
-                    <p class="ops-sidebar__user-name">@GetUserDisplayName()</p>
-                    <p class="ops-sidebar__user-email">@currentUserEmail</p>
+        <div class="ops-sidebar__status">
+            @if (!sidebarCollapsed)
+            {
+                <div class="ops-sidebar__status-row">
+                    <span class="ops-pulse"></span>
+                    <span>System Status: Online</span>
                 </div>
-            </div>
-            <button class="ops-sidebar__logout" @onclick="HandleLogout" type="button">Logout</button>
-        </div>
-    </aside>
-
-    @if (helpOpen)
-    {
-        <div class="ops-help-panel" role="dialog" aria-label="Platform help">
-            <div class="ops-help-panel__header">
-                <strong>Platform help</strong>
-                <KnButton Variant="outline" Size="sm" OnClick="CloseHelp">Close</KnButton>
-            </div>
-            @if (helpLoading)
-            {
-                <KnEmpty Title="Loading…" />
-            }
-            else if (!string.IsNullOrEmpty(helpError))
-            {
-                <KnEmpty Title="@helpError" />
+                <span class="material-symbols-outlined" style="font-size:1rem;color:#34D399;">verified_user</span>
             }
             else
             {
-                @foreach (var a in helpArticles)
-                {
-                    <details style="padding:0.4rem 0;border-bottom:1px solid var(--kn-border);">
-                        <summary>@a.Title</summary>
-                        <p style="margin:0.4rem 0 0;font-size:0.9rem;opacity:0.9;">@a.Body</p>
-                    </details>
-                }
-                <p style="margin-top:0.75rem;"><a href="/admin/insights">Open Insights → Help</a></p>
+                <span class="ops-pulse" title="System Status: Online"></span>
             }
         </div>
-    }
+    </aside>
 
-    @if (sidebarOpen)
+    @if (mobileOpen)
     {
-        <div class="ops-overlay" @onclick="ToggleSidebar"></div>
+        <div class="ops-overlay" @onclick="() => mobileOpen = false"></div>
     }
 
     <div class="ops-shell__main">
         <header class="ops-topbar">
             <div class="ops-topbar__left">
-                <button class="ops-topbar__menu kn-btn kn-btn--ghost kn-btn--sm" @onclick="ToggleSidebar" type="button" aria-label="Toggle menu">
+                <button type="button" class="ops-icon-btn ops-topbar__menu" @onclick="() => mobileOpen = !mobileOpen" aria-label="Toggle menu">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <div>
-                    <p class="ops-topbar__title">@PageTitle</p>
-                    <div class="ops-topbar__product">@SupportApi.DisplayName</div>
+                <button type="button" class="ops-icon-btn ops-topbar__collapse-desk" @onclick="ToggleCollapse" aria-label="Collapse sidebar">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="ops-search" title="Search coming soon">
+                    <span class="material-symbols-outlined">search</span>
+                    <input type="text" placeholder="Search tickets, tasks, users, products..." readonly disabled />
+                    <kbd>⌘K</kbd>
                 </div>
             </div>
+
             <div class="ops-topbar__right">
-                <input class="kn-field kn-search" placeholder="Search…" disabled title="Coming soon" />
-                <KnButton Variant="outline" Size="sm" OnClick="OpenHelp">Help</KnButton>
+                <a class="ops-public-link" href="/" target="_blank" rel="noopener">
+                    <span class="material-symbols-outlined">public</span>
+                    <span>Public Website</span>
+                </a>
+                <button type="button" class="ops-icon-btn" title="Toggle theme" @onclick="ToggleTheme">
+                    <span class="material-symbols-outlined">@(isDark ? "light_mode" : "dark_mode")</span>
+                </button>
+                <button type="button" class="ops-icon-btn ops-icon-btn--badge" title="Notifications" @onclick="ToggleNotifs">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <span class="ops-dot">3</span>
+                </button>
+                @if (showNotifs)
+                {
+                    <div class="ops-dropdown ops-dropdown--wide">
+                        <div class="ops-dropdown__head">
+                            <strong>Notifications</strong>
+                            <span class="ops-chip">3 New</span>
+                        </div>
+                        <p class="ops-dropdown__empty">Live notifications wire up in a later wave. Check Support Hub for open work.</p>
+                        <a class="ops-dropdown__link" href="/admin/support">Open Support Hub</a>
+                    </div>
+                }
+                <button type="button" class="ops-icon-btn ops-icon-btn--badge" title="Messages" @onclick="ToggleMsgs">
+                    <span class="material-symbols-outlined">mail</span>
+                    <span class="ops-dot">2</span>
+                </button>
+                @if (showMsgs)
+                {
+                    <div class="ops-dropdown">
+                        <div class="ops-dropdown__head"><strong>Direct Messages</strong></div>
+                        <p class="ops-dropdown__empty">Internal chat is available in Support → Internal Chat.</p>
+                        <a class="ops-dropdown__link" href="/admin/support?tab=internal">Open Internal Chat</a>
+                    </div>
+                }
+                <div class="ops-user-menu">
+                    <button type="button" class="ops-user-menu__btn" @onclick="ToggleUserMenu">
+                        <span class="ops-sidebar__avatar">@GetUserInitials()</span>
+                        <span class="ops-user-menu__name">@GetUserDisplayName()</span>
+                        <span class="material-symbols-outlined" style="font-size:1rem;">expand_more</span>
+                    </button>
+                    @if (showUserMenu)
+                    {
+                        <div class="ops-dropdown ops-dropdown--user">
+                            <div class="ops-dropdown__profile">
+                                <p class="ops-sidebar__user-name">@GetUserDisplayName()</p>
+                                <p class="ops-sidebar__user-email">@currentUserEmail</p>
+                                <span class="ops-access-pill">@(string.IsNullOrWhiteSpace(agentRole) ? "Staff" : agentRole)</span>
+                            </div>
+                            <button type="button" class="ops-dropdown__item" @onclick="OpenHelp">
+                                <span class="material-symbols-outlined">help</span> Platform help
+                            </button>
+                            <button type="button" class="ops-dropdown__item ops-dropdown__item--danger" @onclick="HandleLogout">
+                                <span class="material-symbols-outlined">logout</span> Sign Out
+                            </button>
+                        </div>
+                    }
+                </div>
             </div>
         </header>
+
+        @if (helpOpen)
+        {
+            <div class="ops-help-panel" role="dialog" aria-label="Platform help">
+                <div class="ops-help-panel__header">
+                    <strong>Platform help</strong>
+                    <KnButton Variant="outline" Size="sm" OnClick="CloseHelp">Close</KnButton>
+                </div>
+                @if (helpLoading)
+                {
+                    <KnEmpty Title="Loading…" />
+                }
+                else if (!string.IsNullOrEmpty(helpError))
+                {
+                    <KnEmpty Title="@helpError" />
+                }
+                else
+                {
+                    @foreach (var a in helpArticles)
+                    {
+                        <details style="padding:0.4rem 0;border-bottom:1px solid var(--kn-border);">
+                            <summary>@a.Title</summary>
+                            <p style="margin:0.4rem 0 0;font-size:0.9rem;opacity:0.9;">@a.Body</p>
+                        </details>
+                    }
+                    <p style="margin-top:0.75rem;"><a href="/admin/insights">Open Insights → Help</a></p>
+                }
+            </div>
+        }
+
         <div class="ops-content">
+            <div class="ops-page-context">
+                <h1 class="ops-page-context__title">@PageTitle</h1>
+                <p class="ops-page-context__product">@SupportApi.DisplayName</p>
+            </div>
             @ChildContent
         </div>
     </div>
@@ -160,7 +269,8 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    private bool sidebarOpen;
+    private bool sidebarCollapsed;
+    private bool mobileOpen;
     private bool tenantsLoading = true;
     private string? tenantsError;
     private List<SupportTenantDto> tenants = [];
@@ -172,9 +282,15 @@
     private string? helpError;
     private List<PlatformHelpArticleDto> helpArticles = [];
     private HashSet<string> expanded = new(StringComparer.OrdinalIgnoreCase) { "tickets-support", "engineering" };
+    private bool showNotifs;
+    private bool showMsgs;
+    private bool showUserMenu;
+    private bool isDark;
 
     private sealed record NavLink(string Label, string Href, string Match);
-    private sealed record NavCategory(string Id, string Label, string Icon, List<NavLink> Items, bool PlatformAdminOnly = false);
+    private sealed record NavCategory(
+        string Id, string Label, string Icon, List<NavLink> Items,
+        bool PlatformAdminOnly = false, string? Badge = null, string BadgeTone = "primary");
 
     private static readonly List<NavCategory> Categories =
     [
@@ -185,7 +301,7 @@
             new("Escalations", "/admin/support?tab=incidents", "/admin/support"),
             new("Knowledge Base", "/admin/support?tab=kb", "/admin/support"),
             new("Internal Chat", "/admin/support?tab=internal", "/admin/support"),
-        ]),
+        ], Badge: null),
         new("engineering", "Engineering", "code",
         [
             new("Task Board", "/admin/engineering?tab=board", "/admin/engineering"),
@@ -290,9 +406,24 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            isDark = await JS.InvokeAsync<bool>("eval", "document.documentElement.classList.contains('dark')");
+            var collapsed = await JS.InvokeAsync<string?>("eval", "localStorage.getItem('kobneti-ops-sidebar-collapsed')");
+            sidebarCollapsed = collapsed == "1";
+            StateHasChanged();
+        }
+        catch { /* ignore */ }
+    }
+
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         ExpandForCurrentRoute();
+        showNotifs = showMsgs = showUserMenu = false;
+        mobileOpen = false;
         _ = InvokeAsync(StateHasChanged);
     }
 
@@ -305,10 +436,67 @@
         }
     }
 
-    private void ToggleCat(string id)
+    private void OnCategoryClick(NavCategory cat)
     {
-        if (!expanded.Add(id))
-            expanded.Remove(id);
+        if (sidebarCollapsed)
+        {
+            sidebarCollapsed = false;
+            expanded.Add(cat.Id);
+            _ = PersistCollapsedAsync();
+            return;
+        }
+
+        if (!expanded.Add(cat.Id))
+            expanded.Remove(cat.Id);
+    }
+
+    private void ToggleCollapse()
+    {
+        sidebarCollapsed = !sidebarCollapsed;
+        _ = PersistCollapsedAsync();
+    }
+
+    private async Task PersistCollapsedAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                $"localStorage.setItem('kobneti-ops-sidebar-collapsed','{(sidebarCollapsed ? "1" : "0")}')");
+        }
+        catch { /* ignore */ }
+    }
+
+    private void ToggleNotifs()
+    {
+        showNotifs = !showNotifs;
+        showMsgs = false;
+        showUserMenu = false;
+    }
+
+    private void ToggleMsgs()
+    {
+        showMsgs = !showMsgs;
+        showNotifs = false;
+        showUserMenu = false;
+    }
+
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+        showNotifs = false;
+        showMsgs = false;
+    }
+
+    private async Task ToggleTheme()
+    {
+        try
+        {
+            const string script =
+                "(function(){var KEY='sominnercore-ui-theme';var cur=localStorage.getItem(KEY)||'light';var next=cur==='dark'?'light':'dark';localStorage.setItem(KEY,next);document.documentElement.classList.toggle('dark', next==='dark');})();";
+            await JS.InvokeVoidAsync("eval", script);
+            isDark = !isDark;
+        }
+        catch { /* ignore */ }
     }
 
     private Task CloseHelp()
@@ -319,6 +507,7 @@
 
     private async Task OpenHelp()
     {
+        showUserMenu = false;
         helpOpen = true;
         helpLoading = true;
         helpError = null;
@@ -398,10 +587,8 @@
     {
         SupportApi.SetTenant(tenant.TenantId, tenant.PublicKey, tenant.DisplayName, tenant.PublicHelpCenterUrl);
         await PersistSelectedTenantAsync(tenant);
-        sidebarOpen = false;
+        mobileOpen = false;
     }
-
-    private void ToggleSidebar() => sidebarOpen = !sidebarOpen;
 
     private async Task HandleLogout()
     {
@@ -421,6 +608,12 @@
         if (string.IsNullOrEmpty(currentUserEmail)) return "User";
         var name = currentUserEmail.Split('@')[0];
         return name.Length == 0 ? "User" : char.ToUpperInvariant(name[0]) + name[1..];
+    }
+
+    private string GetProductInitial()
+    {
+        var n = SupportApi.DisplayName;
+        return string.IsNullOrWhiteSpace(n) ? "P" : n.Trim()[0].ToString().ToUpperInvariant();
     }
 
     public void Dispose()
