@@ -1,9 +1,9 @@
 @using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="cs-macros-bar">
+<div class="kn-s3-macros">
     <button type="button"
-            class="cs-macros-bar__toggle @(IsOpen ? "cs-macros-bar__toggle--active" : "")"
+            class="kn-s3-macros__toggle @(IsOpen ? "kn-s3-macros__toggle--active" : "")"
             @onclick="Toggle">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
@@ -12,13 +12,13 @@
     </button>
     @if (IsOpen)
     {
-        <div class="cs-macros-bar__chips">
+        <div class="kn-s3-macros__chips">
             @for (var i = 0; i < _macros.Count; i++)
             {
                 var index = i;
                 var macro = _macros[index];
                 <button type="button"
-                        class="cs-macros-bar__chip"
+                        class="kn-s3-macros__chip"
                         @key="@(macro.Id?.ToString() ?? macro.Label)"
                         @onclick="@(() => SelectMacroAsync(index))"
                         @onclick:stopPropagation="true">

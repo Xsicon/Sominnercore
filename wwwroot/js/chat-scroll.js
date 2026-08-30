@@ -7,15 +7,28 @@ window.chatScroll = {
         return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
     },
 
-    scrollToBottom: function (container, force) {
+    scrollToBottom: function (container, anchorOrForce, force) {
         if (!container) return;
 
-        var shouldScroll = force === true || window.chatScroll.isNearBottom(container);
-        if (!shouldScroll) return;
+        var anchor = null;
+        var shouldForce = force === true;
+
+        if (typeof anchorOrForce === 'boolean') {
+            shouldForce = anchorOrForce;
+        } else if (anchorOrForce) {
+            anchor = anchorOrForce;
+        }
+
+        if (!shouldForce && !window.chatScroll.isNearBottom(container)) {
+            return;
+        }
 
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
                 container.scrollTop = container.scrollHeight;
+                if (anchor && typeof anchor.scrollIntoView === 'function') {
+                    anchor.scrollIntoView({ block: 'end', behavior: 'auto' });
+                }
             });
         });
     }

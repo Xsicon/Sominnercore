@@ -1,32 +1,33 @@
 @using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
+@implements IDisposable
 
 <div class="kn-s3-page">
     <div class="kn-s3-head">
         <div>
-            <p class="kn-s3-eyebrow">Support Workspace</p>
+            <p class="kn-s3-eyebrow">Customer Support</p>
             <h2>Incidents</h2>
-            <p>Escalations for @SupportApi.DisplayName</p>
+            <p>Track escalations, update response status, and capture postmortems</p>
         </div>
     </div>
 
-    @if (!string.IsNullOrEmpty(error))
+    @if (!string.IsNullOrEmpty(loadError))
     {
-        <p class="kn-s3-empty">@error</p>
+        <p class="kn-s3-alert">@loadError</p>
     }
-    else if (loading)
+
+    @if (isLoading)
     {
-        <p class="kn-s3-empty">Loading incidents…</p>
-    }
-    else if (incidents.Count == 0)
-    {
-        <p class="kn-s3-empty">No incidents yet. Escalate a ticket from the Tickets drawer.</p>
+        <div class="kn-s3-loading-block kn-s3-loading-block--center" role="status" aria-busy="true">
+            <span class="kn-s3-spinner kn-s3-spinner--lg" aria-hidden="true"></span>
+            <p>Loading incidents…</p>
+        </div>
     }
     else
     {
         <div class="kn-s3-summary-row">
             <div class="kn-s3-summary kn-s3-summary--danger">
-                <div class="kn-s3-metric__label">Open</div>
+                <div class="kn-s3-metric__label">Active</div>
                 <div class="kn-s3-metric__value">@incidents.Count(i => i.Status is "open" or "investigating")</div>
             </div>
             <div class="kn-s3-summary kn-s3-summary--warn">
@@ -34,17 +35,43 @@
                 <div class="kn-s3-metric__value">@incidents.Count(i => i.Status == "mitigated")</div>
             </div>
             <div class="kn-s3-summary">
-                <div class="kn-s3-metric__label">Resolved</div>
+                <div class="kn-s3-metric__label">Closed out</div>
                 <div class="kn-s3-metric__value">@incidents.Count(i => i.Status is "resolved" or "closed")</div>
             </div>
         </div>
 
-        <div class="kn-s3-grid-2 kn-s3-grid-60-40">
+        <div class="kn-s3-toolbar">
+            <div class="kn-s3-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input placeholder="Search by number, title, or commander…"
+                       @bind="search"
+                       @bind:event="oninput" />
+            </div>
+            <div class="kn-s3-pills">
+                <button type="button"
+                        class="kn-s3-pill @(string.IsNullOrEmpty(filterStatus) ? "is-active" : "")"
+                        @onclick="() => filterStatus = null">
+                    All (@incidents.Count)
+                </button>
+                @foreach (var s in StatusFilters)
+                {
+                    var count = incidents.Count(i => i.Status == s.Key);
+                    <button type="button"
+                            class="kn-s3-pill @(filterStatus == s.Key ? "is-active" : "")"
+                            @onclick="() => filterStatus = s.Key">
+                        @s.Label (@count)
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (FilteredIncidents.Any())
+        {
             <div class="kn-s3-table-wrap">
                 <table class="kn-s3-table">
                     <thead>
                         <tr>
-                            <th>Number</th>
+                            <th>Incident</th>
                             <th>Title</th>
                             <th>Severity</th>
                             <th>Status</th>
@@ -53,13 +80,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var i in incidents)
+                        @foreach (var i in FilteredIncidents)
                         {
-                            <tr class="@(selected?.Id == i.Id ? "is-active" : "")" @onclick="() => SelectAsync(i)">
+                            var sev = GetSeverityStyle(i.Severity);
+                            var stat = GetStatusStyle(i.Status);
+                            <tr class="@(activeIncident?.Id == i.Id ? "is-active" : "")"
+                                @onclick="() => OpenDrawerAsync(i)">
                                 <td>@i.IncidentNumber</td>
                                 <td class="kn-s3-table__subject">@i.Title</td>
-                                <td>@i.Severity</td>
-                                <td>@i.Status</td>
+                                <td>
+                                    <span class="kn-chip" style="background:@sev.Bg;color:@sev.Text">@GetSeverityLabel(i.Severity)</span>
+                                </td>
+                                <td>
+                                    <span class="kn-chip" style="background:@stat.Bg;color:@stat.Text">@GetStatusLabel(i.Status)</span>
+                                </td>
                                 <td>@(i.CommanderName ?? "—")</td>
                                 <td>@(i.UpdatedAt?.ToLocalTime().ToString("g") ?? "—")</td>
                             </tr>
@@ -67,93 +101,87 @@
                     </tbody>
                 </table>
             </div>
+        }
+        else
+        {
+            <div class="kn-s3-empty">
+                <p>No incidents match your filters.</p>
+                <p class="kn-s3-hint">Escalate from Live Chat or from a ticket drawer to create one.</p>
+            </div>
+        }
+    }
 
-            @if (selected is not null)
-            {
-                <section class="kn-s3-panel">
-                    <h3>@selected.IncidentNumber</h3>
-                    <p style="margin:0 0 0.75rem;color:var(--kn-text-secondary);">@selected.Title</p>
-                    <div class="kn-s3-actions" style="margin-bottom:0.75rem;">
-                        <select class="cs-ticket-field__select" value="@editStatus" @onchange="OnStatusChanged">
-                            @foreach (var s in Statuses)
-                            {
-                                <option value="@s">@s</option>
-                            }
-                        </select>
-                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="SaveStatusAsync">
-                            Update status
-                        </button>
-                    </div>
-                    <label class="cs-ticket-field__label">Postmortem notes</label>
-                    <textarea class="cs-ticket-field__select"
-                              rows="4"
-                              @bind="postmortem"
-                              @bind:event="oninput"
-                              disabled="@saving"></textarea>
-                    <button type="button"
-                            class="kn-btn kn-btn--primary kn-btn--sm"
-                            style="margin-top:0.5rem;"
-                            disabled="@saving"
-                            @onclick="SavePostmortemAsync">
-                        Save postmortem
-                    </button>
+    @if (!string.IsNullOrEmpty(toast))
+    {
+        <div class="kn-s3-toast @(toastIsError ? "kn-s3-toast--error" : "")">@toast</div>
+    }
 
-                    <h4 style="margin-top:1.25rem;">Timeline</h4>
-                    @if (selected.Timeline.Count == 0)
-                    {
-                        <p class="kn-s3-empty" style="padding:1rem 0;">No events.</p>
-                    }
-                    else
-                    {
-                        <ul style="list-style:none;padding:0;margin:0;">
-                            @foreach (var evt in selected.Timeline.OrderByDescending(e => e.CreatedAt))
-                            {
-                                <li class="kn-s3-list-row" style="flex-direction:column;align-items:flex-start;">
-                                    <strong>@evt.EventType</strong>
-                                    @if (!string.IsNullOrWhiteSpace(evt.Detail))
-                                    {
-                                        <span>@evt.Detail</span>
-                                    }
-                                    <small style="color:var(--kn-text-muted);">@(evt.ActorName ?? "System") · @(evt.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</small>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </section>
-            }
-            else
-            {
-                <div class="kn-s3-panel kn-s3-empty">
-                    <p>Select an incident to view details.</p>
-                </div>
-            }
-        </div>
+    @if (activeIncident is not null)
+    {
+        <button type="button" class="kn-s3-drawer-backdrop" aria-label="Close incident drawer" @onclick="CloseDrawer"></button>
+        <SupportIncidentDrawer Incident="activeIncident"
+                               IsLoading="drawerLoading"
+                               OnClose="CloseDrawer"
+                               OnIncidentUpdated="HandleIncidentUpdated"
+                               OnNotify="HandleDrawerNotify" />
     }
 </div>
 
 @code {
-    private static readonly string[] Statuses = ["open", "investigating", "mitigated", "resolved", "closed"];
+    private static readonly (string Key, string Label)[] StatusFilters =
+    [
+        ("open", "Open"),
+        ("investigating", "Investigating"),
+        ("mitigated", "Mitigated"),
+        ("resolved", "Resolved"),
+        ("closed", "Closed")
+    ];
 
-    private bool loading = true;
-    private bool saving;
-    private string? error;
+    private bool isLoading = true;
+    private bool drawerLoading;
+    private string? loadError;
+    private string? filterStatus;
+    private string search = "";
+    private string? toast;
+    private bool toastIsError;
     private List<IncidentDto> incidents = [];
-    private IncidentDto? selected;
-    private string editStatus = "open";
-    private string postmortem = "";
+    private IncidentDto? activeIncident;
+    private System.Threading.Timer? toastTimer;
+
+    private IEnumerable<IncidentDto> FilteredIncidents
+    {
+        get
+        {
+            IEnumerable<IncidentDto> rows = incidents;
+            if (!string.IsNullOrWhiteSpace(filterStatus))
+                rows = rows.Where(i => i.Status == filterStatus);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var q = search.Trim();
+                rows = rows.Where(i =>
+                    i.IncidentNumber.Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || i.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || (i.CommanderName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            return rows.OrderByDescending(i => i.UpdatedAt ?? i.CreatedAt);
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
     private async Task LoadAsync()
     {
-        loading = true;
-        error = null;
+        isLoading = true;
+        loadError = null;
         try
         {
             var result = await SupportApi.GetIncidentsAsync();
             if (!result.Success)
             {
-                error = result.Message;
+                loadError = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Failed to load incidents."
+                    : result.Message;
                 incidents = [];
             }
             else
@@ -163,78 +191,116 @@
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            loadError = ex.Message;
             incidents = [];
         }
         finally
         {
-            loading = false;
+            isLoading = false;
         }
     }
 
-    private async Task SelectAsync(IncidentDto row)
+    private async Task OpenDrawerAsync(IncidentDto row)
     {
-        var result = await SupportApi.GetIncidentAsync(row.Id);
-        if (result.Success && result.Data != null)
-        {
-            selected = result.Data;
-            editStatus = selected.Status;
-            postmortem = selected.PostmortemNotes ?? "";
-        }
-        else
-        {
-            selected = row;
-            editStatus = row.Status;
-            postmortem = row.PostmortemNotes ?? "";
-        }
-    }
+        activeIncident = row;
+        drawerLoading = true;
+        StateHasChanged();
 
-    private void OnStatusChanged(ChangeEventArgs e) =>
-        editStatus = e.Value?.ToString() ?? editStatus;
-
-    private async Task SaveStatusAsync()
-    {
-        if (selected is null || editStatus == selected.Status)
-            return;
-        await PatchAsync(new UpdateIncidentRequest { Status = editStatus });
-    }
-
-    private async Task SavePostmortemAsync()
-    {
-        if (selected is null)
-            return;
-        await PatchAsync(new UpdateIncidentRequest { PostmortemNotes = postmortem });
-    }
-
-    private async Task PatchAsync(UpdateIncidentRequest request)
-    {
-        if (selected is null)
-            return;
-        saving = true;
         try
         {
-            var result = await SupportApi.UpdateIncidentAsync(selected.Id, request);
+            var result = await SupportApi.GetIncidentAsync(row.Id);
             if (result.Success && result.Data != null)
             {
-                selected = result.Data;
-                editStatus = selected.Status;
-                postmortem = selected.PostmortemNotes ?? "";
-                var idx = incidents.FindIndex(i => i.Id == selected.Id);
-                if (idx >= 0)
-                    incidents[idx] = selected;
+                activeIncident = result.Data;
+                SyncIncidentInList(result.Data);
             }
             else
             {
-                error = result.Message;
+                ShowToast(
+                    string.IsNullOrWhiteSpace(result.Message)
+                        ? "Failed to load incident details."
+                        : result.Message,
+                    isError: true);
             }
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            ShowToast(ex.Message, isError: true);
         }
         finally
         {
-            saving = false;
+            drawerLoading = false;
         }
     }
+
+    private void CloseDrawer() => activeIncident = null;
+
+    private Task HandleIncidentUpdated(IncidentDto updated)
+    {
+        SyncIncidentInList(updated);
+        activeIncident = updated;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDrawerNotify((string Message, bool IsError) notification)
+    {
+        ShowToast(notification.Message, notification.IsError);
+        return Task.CompletedTask;
+    }
+
+    private void SyncIncidentInList(IncidentDto updated)
+    {
+        var idx = incidents.FindIndex(i => i.Id == updated.Id);
+        if (idx >= 0)
+            incidents[idx] = updated;
+    }
+
+    private void ShowToast(string message, bool isError = false)
+    {
+        toast = message;
+        toastIsError = isError;
+        toastTimer?.Dispose();
+        toastTimer = new System.Threading.Timer(_ =>
+        {
+            toast = null;
+            _ = InvokeAsync(StateHasChanged);
+        }, null, 3200, Timeout.Infinite);
+    }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "investigating" => "Investigating",
+        "mitigated" => "Mitigated",
+        "resolved" => "Resolved",
+        "closed" => "Closed",
+        _ => "Open"
+    };
+
+    private static string GetSeverityLabel(string severity) => severity switch
+    {
+        "sev1" => "SEV-1",
+        "sev2" => "SEV-2",
+        "sev3" => "SEV-3",
+        "sev4" => "SEV-4",
+        _ => severity.ToUpperInvariant()
+    };
+
+    private static (string Bg, string Text) GetStatusStyle(string status) => status switch
+    {
+        "investigating" => ("#FEF3C7", "#92400E"),
+        "mitigated" => ("#EDE9FE", "#5B21B6"),
+        "resolved" => ("#D1FAE5", "#065F46"),
+        "closed" => ("#E5E7EB", "#374151"),
+        _ => ("#FEE2E2", "#991B1B")
+    };
+
+    private static (string Bg, string Text) GetSeverityStyle(string severity) => severity switch
+    {
+        "sev1" => ("#FEE2E2", "#991B1B"),
+        "sev2" => ("#FFEDD5", "#9A3412"),
+        "sev3" => ("#FEF3C7", "#92400E"),
+        _ => ("#E0E7FF", "#3730A3")
+    };
+
+    public void Dispose() => toastTimer?.Dispose();
 }

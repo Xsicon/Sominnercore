@@ -1,4 +1,4 @@
-@using KobNeti.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -11,15 +11,15 @@
     @if (SupportApi.IsPlatformAdmin)
     {
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-            <input class="cs-ticket-field__select" style="min-width:18rem;" placeholder="https://github.com/owner/repo" @bind="repoUrl" @bind:event="oninput" />
-            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="SaveRepoAsync">Save repo URL</button>
-            <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+            <input class="kn-field" style="min-width:18rem;" placeholder="https://github.com/owner/repo" @bind="repoUrl" @bind:event="oninput" />
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="SaveRepoAsync">Save repo URL</button>
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
         </div>
     }
     else
     {
         <p class="sh-empty-list">Ask a platform admin to set the product GitHub repo URL, then refresh.</p>
-        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
     }
 
     @if (!string.IsNullOrEmpty(error))
@@ -28,7 +28,7 @@
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loading…</p>
+        <p class="sh-empty-list">Loadingâ€¦</p>
     }
     else if (cache is null)
     {
@@ -37,10 +37,10 @@
     else
     {
         <p>
-            Repo: @(cache.RepoUrl ?? "—")
+            Repo: @(cache.RepoUrl ?? "â€”")
             @if (cache.PullsFetchedAt.HasValue)
             {
-                <span> · pulls @cache.PullsFetchedAt.Value.ToLocalTime().ToString("g")</span>
+                <span> Â· pulls @cache.PullsFetchedAt.Value.ToLocalTime().ToString("g")</span>
             }
         </p>
         @if (!string.IsNullOrWhiteSpace(cache.Message))
@@ -60,7 +60,7 @@
                 {
                     <li style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
                         <a href="@pr.HtmlUrl" target="_blank" rel="noopener">#@pr.Number @pr.Title</a>
-                        <span class="cs-ticket-chip">@pr.State</span>
+                        <span class="kn-chip kn-chip--neutral">@pr.State</span>
                     </li>
                 }
             </ul>

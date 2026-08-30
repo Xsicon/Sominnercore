@@ -2,97 +2,173 @@
 @inject SupportApiClient SupportApi
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Support Workspace</p>
-        <h2>Settings</h2>
-        <p>Select a project desk and review API connection</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Support Workspace</p>
+            <h2>Settings</h2>
+            <p>Active desk, KobNeti API connection, and product API URLs</p>
+        </div>
     </div>
 
-    <div class="sh-settings-grid">
-        <section class="sh-panel">
-            <h3>Projects</h3>
-            @if (!string.IsNullOrEmpty(loadError))
+    @if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="kn-s3-empty">@loadError</p>
+    }
+
+    <div class="kn-s3-grid-2">
+        <section class="kn-s3-panel">
+            <h3>Active project</h3>
+            @if (loading)
             {
-                <p class="sh-empty-list">@loadError</p>
-            }
-            else if (loading)
-            {
-                <p class="sh-empty-list">Loading projects…</p>
+                <p class="kn-s3-empty">Loading projects…</p>
             }
             else if (tenants.Count == 0)
             {
-                <p class="sh-empty-list">No enabled projects from Support API.</p>
+                <p class="kn-s3-empty">No enabled projects from Support API.</p>
             }
             else
             {
-                <ul class="sh-settings-list">
+                <div class="kn-s3-actions kn-s3-actions--stack">
                     @foreach (var t in tenants)
                     {
                         var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
-                        <li>
-                            <button type="button"
-                                    class="sh-project-pick @(active ? "active" : "")"
-                                    @onclick="() => SelectTenant(t)">
-                                <span class="dot @(DotClass(t.TenantId))"></span>
-                                @t.DisplayName
-                                <em>@(active ? "Active" : "Switch") · @t.TenantId</em>
-                            </button>
-                        </li>
+                        <button type="button"
+                                class="kn-btn @(active ? "kn-btn--primary" : "kn-btn--outline") kn-btn--sm kn-s3-project-pick"
+                                @onclick="() => SelectTenant(t)">
+                            @t.DisplayName
+                            <span style="opacity:0.7;font-weight:500;">(@t.TenantId)</span>
+                        </button>
                     }
-                </ul>
+                </div>
             }
         </section>
 
-        <section class="sh-panel">
-            <h3>API Connection</h3>
-            <label class="sh-field">
-                <span>Support API base URL</span>
-                <input type="text" readonly value="@Configuration["KobNetiApi:BaseUrl"]" />
-            </label>
-            <label class="sh-field">
-                <span>Active project</span>
-                <input type="text" readonly value="@SupportApi.DisplayName (@SupportApi.TenantId)" />
-            </label>
-            <label class="sh-field">
-                <span>Public tenant key</span>
-                <input type="text" readonly value="@SupportApi.TenantKey" />
-            </label>
-            <label class="sh-field">
-                <span>Help Center URL</span>
-                <input type="text" readonly value="@(string.IsNullOrWhiteSpace(SupportApi.PublicHelpCenterUrl) ? "(not set — falls back to /help)" : SupportApi.PublicHelpCenterUrl)" />
-            </label>
-            <p style="opacity:0.7;font-size:0.9rem;margin:0;">
-                Agent auth uses <code>POST /api/SupportAuth/exchange</code> then
-                <code>Authorization: Bearer</code> + <code>X-Tenant-Key</code>.
-                Chat, tickets, and KB are scoped to the selected project.
-            </p>
+        <section class="kn-s3-panel">
+            <h3>KobNeti API</h3>
+            <div class="kn-s3-list-row"><span>Base URL</span><strong style="font-size:0.8rem;font-weight:600;">@Configuration["KobNetiApi:BaseUrl"]</strong></div>
+            <div class="kn-s3-list-row"><span>Active desk</span><strong>@SupportApi.DisplayName</strong></div>
+            <div class="kn-s3-list-row"><span>Tenant key</span><strong style="font-size:0.75rem;">@SupportApi.TenantKey</strong></div>
         </section>
     </div>
+
+    <section class="kn-s3-panel">
+        <div class="kn-s3-panel__head">
+            <div>
+                <h3>Product API URLs</h3>
+                <p style="margin:0.35rem 0 0;font-size:0.85rem;color:var(--kn-text-muted);">
+                    Live chat and tickets for a product are read from its API when a URL is set and the API is running
+                    (e.g. MuuqWear → <code>http://localhost:5243/</code>).
+                </p>
+            </div>
+        </div>
+
+        @if (productsLoading)
+        {
+            <p class="kn-s3-empty">Loading product registry…</p>
+        }
+        else if (products.Count == 0)
+        {
+            <p class="kn-s3-empty">No products in registry.</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(productsNotice))
+            {
+                <p class="kn-s3-alert" style="margin-bottom:0.75rem;">@productsNotice</p>
+            }
+
+            <div class="kn-s3-upstream-list">
+                @foreach (var product in products)
+                {
+                    var draft = GetDraftUrl(product.TenantId);
+                    var status = GetStatus(product.TenantId);
+                    <div class="kn-s3-upstream-row">
+                        <div class="kn-s3-upstream-row__head">
+                            <strong>@product.DisplayName</strong>
+                            <span class="kn-s3-upstream-badge @StatusClass(status)">@StatusLabel(status)</span>
+                        </div>
+                        <label class="kn-s3-upstream-field">
+                            <span>Product API base URL</span>
+                            <input type="url"
+                                   placeholder="http://localhost:5243/"
+                                   value="@draft"
+                                   @oninput="e => SetDraftUrl(product.TenantId, e.Value?.ToString())" />
+                        </label>
+                        @if (!string.IsNullOrWhiteSpace(status?.Message) && status.Configured)
+                        {
+                            <p class="kn-s3-upstream-hint">@status.Message</p>
+                        }
+                        <div class="kn-s3-actions">
+                            <button type="button"
+                                    class="kn-btn kn-btn--primary kn-btn--sm"
+                                    disabled="@IsSaving(product.TenantId)"
+                                    @onclick="() => SaveUpstreamAsync(product)">
+                                @(IsSaving(product.TenantId) ? "Saving…" : "Save URL")
+                            </button>
+                            <button type="button"
+                                    class="kn-btn kn-btn--outline kn-btn--sm"
+                                    disabled="@IsChecking(product.TenantId)"
+                                    @onclick="() => CheckUpstreamAsync(product.TenantId)">
+                                @(IsChecking(product.TenantId) ? "Checking…" : "Test connection")
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
 </div>
 
 @code {
     [Parameter] public EventCallback<SupportTenantDto> OnTenantSelected { get; set; }
 
     private List<SupportTenantDto> tenants = [];
+    private List<ProductRegistryDto> products = [];
+    private readonly Dictionary<string, string> draftUrls = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProductUpstreamStatusDto> upstreamStatus = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> savingSlugs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> checkingSlugs = new(StringComparer.OrdinalIgnoreCase);
+
     private bool loading = true;
+    private bool productsLoading = true;
     private string? loadError;
+    private string? productsNotice;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             await SupportApi.EnsureAgentTokenAsync();
-            var result = await SupportApi.GetTenantsAsync();
-            if (!result.Success)
+
+            var tenantsTask = SupportApi.GetTenantsAsync();
+            var productsTask = SupportApi.GetProductRegistryAsync();
+            await Task.WhenAll(tenantsTask, productsTask);
+
+            var tenantResult = await tenantsTask;
+            if (!tenantResult.Success)
             {
-                loadError = string.IsNullOrWhiteSpace(result.Message)
+                loadError = string.IsNullOrWhiteSpace(tenantResult.Message)
                     ? "Failed to load projects."
-                    : result.Message;
-                return;
+                    : tenantResult.Message;
+            }
+            else
+            {
+                tenants = tenantResult.Data ?? [];
             }
 
-            tenants = result.Data ?? [];
+            var productResult = await productsTask;
+            if (!productResult.Success)
+            {
+                productsNotice = productResult.Message;
+                products = [];
+            }
+            else
+            {
+                products = productResult.Data ?? [];
+                foreach (var p in products)
+                    draftUrls[p.TenantId] = p.UpstreamApiBaseUrl ?? "";
+            }
         }
         catch (Exception ex)
         {
@@ -101,8 +177,21 @@
         finally
         {
             loading = false;
+            productsLoading = false;
         }
     }
+
+    private string GetDraftUrl(string tenantId) =>
+        draftUrls.TryGetValue(tenantId, out var url) ? url : "";
+
+    private void SetDraftUrl(string tenantId, string? value) =>
+        draftUrls[tenantId] = value ?? "";
+
+    private ProductUpstreamStatusDto? GetStatus(string tenantId) =>
+        upstreamStatus.TryGetValue(tenantId, out var status) ? status : null;
+
+    private bool IsSaving(string slug) => savingSlugs.Contains(slug);
+    private bool IsChecking(string slug) => checkingSlugs.Contains(slug);
 
     private async Task SelectTenant(SupportTenantDto tenant)
     {
@@ -110,11 +199,73 @@
             await OnTenantSelected.InvokeAsync(tenant);
     }
 
-    private static string DotClass(string tenantId) => tenantId.ToLowerInvariant() switch
+    private async Task SaveUpstreamAsync(ProductRegistryDto product)
     {
-        "muuqwear" => "teal",
-        "salguri" => "orange",
-        "gaarx" => "purple",
-        _ => "teal"
-    };
+        productsNotice = null;
+        savingSlugs.Add(product.TenantId);
+        try
+        {
+            var url = GetDraftUrl(product.TenantId).Trim();
+            var result = await SupportApi.UpdateProductUpstreamUrlAsync(
+                product.TenantId,
+                string.IsNullOrWhiteSpace(url) ? null : url);
+
+            if (!result.Success || result.Data is null)
+            {
+                productsNotice = result.Message ?? "Could not save product API URL.";
+                return;
+            }
+
+            product.UpstreamApiBaseUrl = result.Data.UpstreamApiBaseUrl;
+            draftUrls[product.TenantId] = result.Data.UpstreamApiBaseUrl ?? "";
+            await CheckUpstreamAsync(product.TenantId);
+        }
+        finally
+        {
+            savingSlugs.Remove(product.TenantId);
+        }
+    }
+
+    private async Task CheckUpstreamAsync(string slug)
+    {
+        checkingSlugs.Add(slug);
+        try
+        {
+            var result = await SupportApi.GetProductUpstreamStatusAsync(slug);
+            if (!result.Success || result.Data is null)
+            {
+                upstreamStatus[slug] = new ProductUpstreamStatusDto
+                {
+                    Configured = !string.IsNullOrWhiteSpace(GetDraftUrl(slug)),
+                    Reachable = false,
+                    Message = result.Message ?? "Could not check product API."
+                };
+                return;
+            }
+
+            upstreamStatus[slug] = result.Data;
+        }
+        finally
+        {
+            checkingSlugs.Remove(slug);
+        }
+    }
+
+    private static string StatusClass(ProductUpstreamStatusDto? status)
+    {
+        if (status is null)
+            return "kn-s3-upstream-badge--muted";
+        if (!status.Configured)
+            return "kn-s3-upstream-badge--muted";
+        return status.Reachable ? "kn-s3-upstream-badge--ok" : "kn-s3-upstream-badge--bad";
+    }
+
+    private static string StatusLabel(ProductUpstreamStatusDto? status)
+    {
+        if (status is null)
+            return "Not checked";
+        if (!status.Configured)
+            return "Ops store only";
+        return status.Reachable ? "API online" : "API offline";
+    }
 }

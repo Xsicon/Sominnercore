@@ -10,37 +10,25 @@
 
 @if (ready)
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>Calendar</h1>
-                    <p class="header-subtitle">Events for @SupportApi.DisplayName (includes milestone dates)</p>
-                </div>
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <ChildContent>
+        <div class="kn-s3-page">
+            <div class="kn-s3-toolbar" style="margin-bottom:1rem;">
+                <input placeholder="Event title" @bind="title" style="flex:1;max-width:240px;border:1px solid var(--kn-border);border-radius:var(--kn-radius-sm);padding:0.5rem;" />
+                <input type="datetime-local" @bind="starts" style="border:1px solid var(--kn-border);border-radius:var(--kn-radius-sm);padding:0.5rem;" />
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="Create">Add event</button>
+                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="Remind">Send reminders</button>
             </div>
-        </header>
-        <div class="sh-scroll">
-            <div class="sh-page">
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                    <input class="cs-ticket-field__select" placeholder="Event title" @bind="title" />
-                    <input class="cs-ticket-field__select" type="datetime-local" @bind="starts" />
-                    <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" @onclick="Create">Add event</button>
-                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="Remind">Send reminders</button>
+            @if (!string.IsNullOrEmpty(msg)) { <p class="kn-s3-empty">@msg</p> }
+            @foreach (var e in events)
+            {
+                <div class="kn-s3-list-row">
+                    <span><strong>@e.Title</strong> · @e.EventType · @e.StartsAt.ToLocalTime().ToString("g")</span>
                 </div>
-                @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
-                @foreach (var e in events)
-                {
-                    <div style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <strong>@e.Title</strong>
-                        <span class="cs-ticket-chip">@e.EventType</span>
-                        <span>@e.StartsAt.ToLocalTime().ToString("g")</span>
-                    </div>
-                }
-            </div>
+            }
         </div>
-    </main>
-</div>
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {

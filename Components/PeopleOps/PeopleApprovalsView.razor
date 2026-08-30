@@ -1,4 +1,4 @@
-@using KobNeti.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -15,7 +15,7 @@
 
     @if (loading)
     {
-        <p class="sh-empty-list">Loading…</p>
+        <p class="sh-empty-list">Loadingâ€¦</p>
     }
     else if (items.Count == 0)
     {
@@ -28,13 +28,13 @@
             {
                 <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
                     <strong>@a.RequestType</strong>
-                    <span class="cs-ticket-chip">@a.Status</span>
-                    <div><small>@(a.RequesterName ?? "—") · @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
+                    <span class="kn-chip kn-chip--neutral">@a.Status</span>
+                    <div><small>@(a.RequesterName ?? "â€”") Â· @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
                     @if (a.Status == "pending")
                     {
                         <div style="margin-top:0.4rem;display:flex;gap:0.35rem;">
-                            <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, true)">Approve</button>
-                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, false)">Reject</button>
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, true)">Approve</button>
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, false)">Reject</button>
                         </div>
                     }
                 </li>

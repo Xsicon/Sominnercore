@@ -1,0 +1,270 @@
+/* Hub pages inside OpsShell — light Studio layout (replaces admin-dashboard / support-hub dark shell) */
+
+.kn-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.kn-hub-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0 0 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--kn-border);
+}
+
+.kn-hub-subnav__item {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--kn-text-muted);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--kn-radius-sm);
+  font: 600 0.8rem/1.2 var(--kn-font);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.kn-hub-subnav__item:hover {
+  color: var(--kn-text-primary);
+  background: #F8FAFC;
+}
+
+.kn-hub-subnav__item.is-active {
+  color: var(--kn-accent);
+  background: var(--kn-accent-soft);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.kn-hub__body {
+  min-height: 0;
+}
+
+.kn-hub__body--scroll {
+  overflow: auto;
+  max-height: calc(100vh - 12rem);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Live Chat tab only — fill remaining viewport; columns scroll inside the grid */
+.kn-hub--live-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kn-hub--live-chat .kn-hub-subnav {
+  flex-shrink: 0;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.kn-hub__body--live-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: none;
+}
+
+.kn-hub-loading {
+  min-height: 40vh;
+  display: grid;
+  place-items: center;
+  color: var(--kn-text-muted);
+  font-size: 0.9rem;
+}
+
+/* Modals (Projects / Content Pages until dedicated wave) */
+.kn-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.kn-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  background: var(--kn-bg-card);
+  border: 1px solid var(--kn-border);
+  border-radius: var(--kn-radius-lg);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+.kn-modal--sm {
+  width: min(420px, 100%);
+}
+
+.kn-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--kn-border);
+}
+
+.kn-modal__head h2,
+.kn-modal__head h3 {
+  margin: 0;
+  font: 600 1.05rem/1.3 var(--kn-font);
+}
+
+.kn-modal__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--kn-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--kn-radius-sm);
+}
+
+.kn-modal__body {
+  padding: 1rem 1.15rem;
+}
+
+.kn-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.15rem 1rem;
+  border-top: 1px solid var(--kn-border);
+}
+
+.kn-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.kn-form-row--2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .kn-form-row--2 { grid-template-columns: 1fr; }
+}
+
+.kn-field label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font: 600 0.75rem/1.2 var(--kn-font);
+  color: var(--kn-text-secondary);
+}
+
+.kn-field input,
+.kn-field select,
+.kn-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--kn-border);
+  border-radius: var(--kn-radius-sm);
+  padding: 0.5rem 0.65rem;
+  font: 500 0.85rem/1.3 var(--kn-font);
+  background: #fff;
+  color: var(--kn-text-primary);
+}
+
+.kn-color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.kn-color-option {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.kn-color-option.is-selected {
+  border-color: var(--kn-text-primary);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kn-accent);
+}
+
+.kn-toast-wrap {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 60;
+}
+
+.kn-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--kn-radius);
+  background: var(--kn-bg-card);
+  border: 1px solid var(--kn-border);
+  box-shadow: var(--kn-shadow);
+  font-size: 0.85rem;
+}
+
+.kn-toast--error {
+  border-color: #FECACA;
+  background: #FEF2F2;
+  color: #991B1B;
+}
+
+.kn-toast--success {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+  color: #166534;
+}
+
+/* Legacy staff routes (AdminStaff / AdminTeams) — light until S5 */
+.kn-legacy-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.kn-legacy-ops .kn-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.kn-legacy-ops .kn-muted {
+  color: var(--kn-text-muted);
+  font-size: 0.85rem;
+}
+
+.kn-legacy-ops .kn-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.6rem;
+  background: #F8FAFC;
+  border: 1px solid var(--kn-border);
+  border-radius: var(--kn-radius-sm);
+}
+
+.kn-legacy-ops pre {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #F8FAFC;
+  border: 1px solid var(--kn-border);
+  border-radius: var(--kn-radius-sm);
+  overflow: auto;
+  font-size: 0.75rem;
+}

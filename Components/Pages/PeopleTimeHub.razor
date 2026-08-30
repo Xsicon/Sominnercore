@@ -12,7 +12,7 @@
 
 @if (isCheckingAuth)
 {
-    <div class="sh-loading"><p>Loading...</p></div>
+    <div class="kn-hub-loading"><p>Loading...</p></div>
 }
 else if (!isAuthenticated)
 {
@@ -20,35 +20,22 @@ else if (!isAuthenticated)
 }
 else
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>@(activeTab == "approvals" ? "Approvals" : "Time Tracking")</h1>
-                    <p class="header-subtitle">@SupportApi.DisplayName</p>
-                </div>
-                <div class="sh-header-actions">
-                    <span class="sh-active-project">@SupportApi.DisplayName</span>
-                </div>
-            </div>
-        </header>
-        <nav class="ops-subnav">
-            <button type="button" class="ops-subnav__item @(activeTab == "time" ? "active" : "")" @onclick="@(() => SetTab("time"))">Time</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "approvals" ? "active" : "")" @onclick="@(() => SetTab("approvals"))">Approvals</button>
-        </nav>
-        <div class="sh-scroll" @key="workspaceKey">
-            @if (activeTab == "approvals")
-            {
-                <PeopleApprovalsView />
-            }
-            else
-            {
-                <PeopleTimeView />
-            }
-        </div>
-    </main>
-</div>
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <Tabs>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "time" ? "is-active" : "")" @onclick="@(() => SetTab("time"))">Time</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "approvals" ? "is-active" : "")" @onclick="@(() => SetTab("approvals"))">Approvals</button>
+    </Tabs>
+    <ChildContent>
+        @if (activeTab == "approvals")
+        {
+            <PeopleApprovalsView @key="workspaceKey" />
+        }
+        else
+        {
+            <PeopleTimeView @key="workspaceKey" />
+        }
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {

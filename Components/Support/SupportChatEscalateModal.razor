@@ -1,0 +1,286 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+@implements IDisposable
+
+@if (IsOpen && SessionId.HasValue)
+{
+    <div class="kn-s3-modal-backdrop kn-s3-escalate-backdrop" @onclick="Close">
+        <div class="kn-s3-modal kn-s3-escalate-modal" role="dialog" aria-modal="true" aria-labelledby="escalate-modal-title" @onclick:stopPropagation="true">
+            <div class="kn-s3-escalate-modal__head">
+                <h3 id="escalate-modal-title" class="kn-s3-escalate-modal__title">
+                    Escalate Conversation — @CustomerName
+                </h3>
+                <button type="button" class="kn-s3-escalate-modal__close" aria-label="Close" @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="kn-s3-escalate-modal__success">
+                    <div class="kn-s3-escalate-modal__success-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    </div>
+                    <p class="kn-s3-escalate-modal__success-title">Escalation Dispatched</p>
+                    <p class="kn-s3-escalate-modal__success-text">@successMessage</p>
+                </div>
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <p class="kn-s3-alert kn-s3-alert--inline">@errorMessage</p>
+                }
+
+                <EditForm Model="formModel" OnValidSubmit="ConfirmEscalateAsync">
+                    <div class="kn-s3-escalate-field">
+                        <span class="kn-s3-escalate-label">Escalate to:</span>
+                        <div class="kn-s3-escalate-options">
+                            <label class="kn-s3-escalate-option">
+                                <input type="radio" name="escalate-target" checked="@(target == EscalateTarget.Engineering)" @onchange="() => SetTarget(EscalateTarget.Engineering)" />
+                                <span>Engineering Team</span>
+                            </label>
+                            <label class="kn-s3-escalate-option">
+                                <input type="radio" name="escalate-target" checked="@(target == EscalateTarget.SupportManager)" @onchange="() => SetTarget(EscalateTarget.SupportManager)" />
+                                <span>Support Team (Manager)</span>
+                            </label>
+                            <div class="kn-s3-escalate-option kn-s3-escalate-option--agent">
+                                <label class="kn-s3-escalate-option">
+                                    <input type="radio" name="escalate-target" checked="@(target == EscalateTarget.Agent)" @onchange="() => SetTarget(EscalateTarget.Agent)" />
+                                    <span>Specific Agent:</span>
+                                </label>
+                                <select class="kn-s3-escalate-select kn-s3-escalate-select--inline"
+                                        disabled="@(target != EscalateTarget.Agent)"
+                                        @bind="selectedAgentId">
+                                    @if (staffMembers.Count == 0)
+                                    {
+                                        <option value="@Guid.Empty">No agents available</option>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var member in staffMembers)
+                                        {
+                                            <option value="@member.Id">@GetStaffLabel(member)</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kn-s3-escalate-field">
+                        <label class="kn-s3-escalate-label" for="escalate-severity">Severity:</label>
+                        <select id="escalate-severity" class="kn-s3-escalate-select" @bind="severity">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="kn-s3-escalate-field">
+                        <label class="kn-s3-escalate-label" for="escalate-reason">
+                            Reason for Escalation: <span class="kn-s3-escalate-required">*</span>
+                        </label>
+                        <textarea id="escalate-reason"
+                                  class="kn-s3-escalate-textarea"
+                                  rows="3"
+                                  placeholder="Describe why this conversation is being escalated..."
+                                  @bind="reason"
+                                  disabled="@isSubmitting"></textarea>
+                    </div>
+
+                    <div class="kn-s3-escalate-modal__actions">
+                        <button type="button" class="kn-s3-escalate-cancel" @onclick="Close" disabled="@isSubmitting">Cancel</button>
+                        <button type="submit"
+                                class="kn-btn kn-btn--primary kn-s3-escalate-submit"
+                                disabled="@(isSubmitting || string.IsNullOrWhiteSpace(reason))">
+                            @(isSubmitting ? "Escalating…" : "Confirm Escalate")
+                        </button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private enum EscalateTarget
+    {
+        Engineering,
+        SupportManager,
+        Agent
+    }
+
+    private sealed class EscalateFormModel { }
+
+    [Parameter] public Guid? SessionId { get; set; }
+    [Parameter] public string CustomerName { get; set; } = "Customer";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<string> OnEscalated { get; set; }
+
+    private readonly EscalateFormModel formModel = new();
+    private List<StaffMemberDto> staffMembers = [];
+    private EscalateTarget target = EscalateTarget.Engineering;
+    private Guid selectedAgentId;
+    private string severity = "High";
+    private string reason = "";
+    private string? errorMessage;
+    private string? successMessage;
+    private bool isSubmitting;
+    private bool staffLoaded;
+    private System.Threading.Timer? successTimer;
+    private bool wasOpen;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && !wasOpen)
+            ResetFormFields();
+
+        wasOpen = IsOpen;
+
+        if (!IsOpen || !SessionId.HasValue)
+            return;
+
+        if (successMessage != null)
+            return;
+
+        errorMessage = null;
+        if (!staffLoaded)
+            await LoadStaffAsync();
+    }
+
+    private async Task LoadStaffAsync()
+    {
+        staffLoaded = true;
+        var result = await SupportApi.GetStaffAsync();
+        staffMembers = result.Success && result.Data != null
+            ? result.Data.Where(m => m.Active).OrderBy(m => GetStaffLabel(m)).ToList()
+            : [];
+
+        if (staffMembers.Count > 0 && selectedAgentId == Guid.Empty)
+            selectedAgentId = staffMembers[0].Id;
+    }
+
+    private void SetTarget(EscalateTarget next) => target = next;
+
+    private static string GetStaffLabel(StaffMemberDto member) =>
+        string.IsNullOrWhiteSpace(member.DisplayName) ? member.Email : member.DisplayName!;
+
+    private string GetTargetLabel()
+    {
+        return target switch
+        {
+            EscalateTarget.Engineering => "Engineering Team",
+            EscalateTarget.SupportManager => "Support Team (Manager)",
+            EscalateTarget.Agent => $"Agent: {GetSelectedAgentName()}",
+            _ => "Engineering Team"
+        };
+    }
+
+    private string GetSelectedAgentName()
+    {
+        var member = staffMembers.FirstOrDefault(m => m.Id == selectedAgentId);
+        return member is null ? "Unassigned" : GetStaffLabel(member);
+    }
+
+    private string GetTargetValue() =>
+        target switch
+        {
+            EscalateTarget.SupportManager => "support_manager",
+            EscalateTarget.Agent => "agent",
+            _ => "engineering"
+        };
+
+    private async Task ConfirmEscalateAsync()
+    {
+        if (!SessionId.HasValue || isSubmitting || string.IsNullOrWhiteSpace(reason))
+            return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var targetLabel = GetTargetLabel();
+            var request = new EscalateChatRequest
+            {
+                Target = GetTargetValue(),
+                Severity = severity,
+                Reason = reason.Trim()
+            };
+
+            if (target == EscalateTarget.Agent && selectedAgentId != Guid.Empty)
+            {
+                request.AssigneeUserId = selectedAgentId;
+                request.AssigneeName = GetSelectedAgentName();
+            }
+
+            var result = await SupportApi.EscalateChatToIncidentAsync(SessionId.Value, request);
+
+            if (!result.Success || result.Data == null)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Failed to escalate conversation."
+                    : result.Message;
+                return;
+            }
+
+            var incidentRef = string.IsNullOrWhiteSpace(result.Data.IncidentNumber)
+                ? result.Data.Id.ToString()[..8]
+                : result.Data.IncidentNumber;
+
+            successMessage = $"Escalated to {targetLabel} · {incidentRef}";
+            await OnEscalated.InvokeAsync(
+                $"Escalated to {targetLabel}. Incident {incidentRef} — view it in the Incidents tab.");
+
+            successTimer?.Dispose();
+            successTimer = new System.Threading.Timer(_ =>
+            {
+                _ = InvokeAsync(async () =>
+                {
+                    await Close(resetForm: true);
+                });
+            }, null, 1200, Timeout.Infinite);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task Close() => await Close(resetForm: false);
+
+    private async Task Close(bool resetForm)
+    {
+        successTimer?.Dispose();
+        successTimer = null;
+
+        if (resetForm)
+            ResetFormFields();
+
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private void ResetFormFields()
+    {
+        target = EscalateTarget.Engineering;
+        severity = "High";
+        reason = "";
+        errorMessage = null;
+        successMessage = null;
+        if (staffMembers.Count > 0)
+            selectedAgentId = staffMembers[0].Id;
+    }
+
+    public void Dispose()
+    {
+        successTimer?.Dispose();
+    }
+}

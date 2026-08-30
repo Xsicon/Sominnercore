@@ -1,0 +1,211 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<aside class="kn-s3-drawer kn-s3-incident-drawer">
+    <header class="kn-s3-drawer__head">
+        <div class="kn-s3-incident-drawer__heading">
+            <p class="kn-s3-eyebrow">@Incident.IncidentNumber · @GetSeverityLabel(Incident.Severity)</p>
+            <h3 class="kn-s3-drawer__title">@Incident.Title</h3>
+        </div>
+        <button type="button" class="kn-s3-icon-btn" aria-label="Close incident drawer" @onclick="OnClose">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+    </header>
+
+    <div class="kn-s3-drawer__body">
+        @if (IsLoading)
+        {
+            <div class="kn-s3-loading-block" role="status" aria-busy="true">
+                <span class="kn-s3-spinner" aria-hidden="true"></span>
+                <p>Loading incident…</p>
+            </div>
+        }
+        else
+        {
+            <div class="kn-s3-incident-drawer__meta">
+                <span class="kn-chip kn-chip--neutral">
+                    Commander @(string.IsNullOrWhiteSpace(Incident.CommanderName) ? "unassigned" : Incident.CommanderName)
+                </span>
+                <span class="kn-chip kn-chip--neutral">Updated @FormatTimeAgo(Incident.UpdatedAt ?? Incident.CreatedAt)</span>
+                @if (Incident.SourceChatSessionId.HasValue)
+                {
+                    <span class="kn-chip kn-chip--neutral">From live chat</span>
+                }
+            </div>
+
+            <div class="kn-s3-field kn-s3-incident-drawer__status">
+                <label class="kn-s3-field__label">Status</label>
+                <div class="kn-s3-pills kn-s3-incident-drawer__status-pills">
+                    @foreach (var s in Statuses)
+                    {
+                        var stat = GetStatusStyle(s);
+                        <button type="button"
+                                class="kn-s3-pill @(Incident.Status == s ? "is-active" : "")"
+                                style="@(Incident.Status == s ? $"background:{stat.Bg};color:{stat.Text};border-color:{stat.Bg}" : "")"
+                                disabled="@IsSaving"
+                                @onclick="() => SetStatusAsync(s)">
+                            @GetStatusLabel(s)
+                        </button>
+                    }
+                </div>
+                <select class="kn-s3-field__select kn-s3-incident-drawer__status-select"
+                        value="@Incident.Status"
+                        disabled="@IsSaving"
+                        @onchange="OnStatusSelectChanged">
+                    @foreach (var s in Statuses)
+                    {
+                        <option value="@s">@GetStatusLabel(s)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="kn-s3-field">
+                <label class="kn-s3-field__label">Postmortem notes</label>
+                <textarea class="kn-s3-field__select kn-s3-incident-drawer__notes"
+                          rows="5"
+                          @bind="postmortem"
+                          disabled="@IsSaving"
+                          placeholder="Root cause, mitigation steps, follow-ups…"></textarea>
+                <button type="button"
+                        class="kn-btn kn-btn--primary kn-btn--sm kn-s3-incident-drawer__save"
+                        disabled="@IsSaving || string.Equals(postmortem, Incident.PostmortemNotes ?? "", StringComparison.Ordinal)"
+                        @onclick="SavePostmortemAsync">
+                    @(IsSaving ? "Saving…" : "Save notes")
+                </button>
+            </div>
+
+            <h4 class="kn-s3-section-title">Timeline</h4>
+            @if (Incident.Timeline.Count == 0)
+            {
+                <p class="kn-s3-empty kn-s3-empty--compact">No activity yet.</p>
+            }
+            else
+            {
+                <ul class="kn-s3-incident__timeline">
+                    @foreach (var evt in Incident.Timeline.OrderByDescending(e => e.CreatedAt))
+                    {
+                        <li class="kn-s3-incident-timeline-item">
+                            <div class="kn-s3-incident-timeline-item__dot" aria-hidden="true"></div>
+                            <div class="kn-s3-incident-timeline-item__body">
+                                <strong>@FormatEventType(evt.EventType)</strong>
+                                @if (!string.IsNullOrWhiteSpace(evt.Detail))
+                                {
+                                    <p>@evt.Detail</p>
+                                }
+                                <small>@(evt.ActorName ?? "System") · @(evt.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </div>
+</aside>
+
+@code {
+    private static readonly string[] Statuses = ["open", "investigating", "mitigated", "resolved", "closed"];
+
+    [Parameter, EditorRequired] public IncidentDto Incident { get; set; } = default!;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<IncidentDto> OnIncidentUpdated { get; set; }
+    [Parameter] public EventCallback<(string Message, bool IsError)> OnNotify { get; set; }
+
+    private string postmortem = "";
+    private bool IsSaving;
+
+    protected override void OnParametersSet() =>
+        postmortem = Incident.PostmortemNotes ?? "";
+
+    private async Task SetStatusAsync(string next) =>
+        await PatchAsync(new UpdateIncidentRequest { Status = next }, "Status updated");
+
+    private async Task OnStatusSelectChanged(ChangeEventArgs e)
+    {
+        var next = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(next) || next == Incident.Status)
+            return;
+        await SetStatusAsync(next);
+    }
+
+    private async Task SavePostmortemAsync() =>
+        await PatchAsync(new UpdateIncidentRequest { PostmortemNotes = postmortem }, "Postmortem saved");
+
+    private async Task PatchAsync(UpdateIncidentRequest request, string successMessage)
+    {
+        IsSaving = true;
+        try
+        {
+            var result = await SupportApi.UpdateIncidentAsync(Incident.Id, request);
+            if (result.Success && result.Data != null)
+            {
+                Incident = result.Data;
+                postmortem = Incident.PostmortemNotes ?? "";
+                await OnIncidentUpdated.InvokeAsync(Incident);
+                await NotifyAsync(successMessage);
+            }
+            else
+            {
+                await NotifyAsync(
+                    string.IsNullOrWhiteSpace(result.Message) ? "Failed to update incident." : result.Message,
+                    isError: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            await NotifyAsync(ex.Message, isError: true);
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task NotifyAsync(string message, bool isError = false)
+    {
+        if (OnNotify.HasDelegate)
+            await OnNotify.InvokeAsync((message, isError));
+    }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "investigating" => "Investigating",
+        "mitigated" => "Mitigated",
+        "resolved" => "Resolved",
+        "closed" => "Closed",
+        _ => "Open"
+    };
+
+    private static string GetSeverityLabel(string severity) => severity switch
+    {
+        "sev1" => "SEV-1",
+        "sev2" => "SEV-2",
+        "sev3" => "SEV-3",
+        "sev4" => "SEV-4",
+        _ => severity.ToUpperInvariant()
+    };
+
+    private static string FormatEventType(string type) =>
+        string.Join(' ', type.Split('_', StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
+
+    private static (string Bg, string Text) GetStatusStyle(string status) => status switch
+    {
+        "investigating" => ("#FEF3C7", "#92400E"),
+        "mitigated" => ("#EDE9FE", "#5B21B6"),
+        "resolved" => ("#D1FAE5", "#065F46"),
+        "closed" => ("#E5E7EB", "#374151"),
+        _ => ("#FEE2E2", "#991B1B")
+    };
+
+    private static string FormatTimeAgo(DateTime? dt)
+    {
+        if (dt == null)
+            return "—";
+        var mins = Math.Max(0, (int)(DateTime.UtcNow - dt.Value.ToUniversalTime()).TotalMinutes);
+        if (mins < 60) return $"{mins}m ago";
+        var hrs = mins / 60;
+        if (hrs < 24) return $"{hrs}h ago";
+        return dt.Value.ToLocalTime().ToString("MMM d, yyyy");
+    }
+}

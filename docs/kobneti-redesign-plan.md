@@ -44,7 +44,7 @@ Delete or revert the “paint” layer so we are not fighting half-finished styl
 - [x] **T2** Rebuild `Components/Ui/*` primitives (Button, Chip, Metric, Empty, PageHeader, Card) — no orphan paint utilities.
 - [x] **T3** Public rebuilt in **S1** from `PublicWebsiteRoot` + `PublicHomePage` (not theme swap).
 - [x] **T4** `OpsShell.razor` reset to minimal `ops-*` chrome (routes/logic kept); full Studio Sidebar/Header = **S2**.
-- [x] **T5** `index.html` links only foundations + public + minimal ops; legacy hub CSS kept until S3+ ports.
+- [x] **T5** `index.html` links foundations + public + ops + kn-hub + kn-support; legacy `admin-dashboard` / dark hub shell CSS removed.
 - [x] **T6** Keep `kobneti-design/` in repo as reference; keep csproj exclude-from-publish.
 
 ### 2.2 What we keep
@@ -123,7 +123,14 @@ Studio: `OverviewView`, `LiveChatView`, `SupportTicketsView` / `TicketListView` 
 - [x] **S3.3** Rebuild Tickets list + detail/drawer.
 - [x] **S3.4** Rebuild Incidents + KB.
 
-**Exit:** Daily Support path matches Studio; APIs unchanged.
+**Exit:** Daily Support path matches Studio; legacy hub shell removed; APIs unchanged.
+
+### Wave S3.5 — Legacy hub shell teardown (admin-dashboard)
+
+- [x] **S3.5.1** Delete `AdminDashboard.razor.css` and `SupportHub.razor.css` (dark `#101922` shell).
+- [x] **S3.5.2** Add `KnHubShell` + `kn-hub.css`; migrate all hub pages off `admin-dashboard` / `dashboard-header`.
+- [x] **S3.5.3** Admin overview/projects/pages use `kn-s3-*` only (no legacy charts/cards).
+- [x] **S3.5.4** Drop remaining `support-*.css` once ticket/chat/KB drawers are fully `kn-*` (S4+).
 
 ---
 
@@ -225,5 +232,6 @@ A screen is done only if:
 | 2.0 | 2026-08-24 | From-scratch structural port plan; teardown required |
 | 2.1 | 2026-08-24 | S1 public done; S0 teardown + foundations completed |
 | 2.2 | 2026-08-25 | S2 login + ops chrome; Postmark password reset |
+| 2.3 | 2026-08-30 | S3 Support views + S3.5 legacy shell teardown complete |
 
 *When implementing, check boxes here. Do not mark a wave done for “CSS light mode only.”*

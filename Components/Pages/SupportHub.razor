@@ -12,74 +12,55 @@
 
 @if (isCheckingAuth)
 {
-    <div class="sh-loading">
-        <p>Loading...</p>
-    </div>
+    <div class="kn-hub-loading"><p>Loading...</p></div>
 }
 else if (!isAuthenticated)
 {
-    <div class="sh-loading">
-        <p>Redirecting to login...</p>
-    </div>
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
 }
 else
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <nav class="ops-subnav">
-            <button type="button" class="ops-subnav__item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetTab("chat"))">Live Chat</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "tickets" ? "active" : "")" @onclick="@(() => SetTab("tickets"))">Tickets</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "incidents" ? "active" : "")" @onclick="@(() => SetTab("incidents"))">Incidents</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "kb" ? "active" : "")" @onclick="@(() => SetTab("kb"))">Knowledge Base</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "internal" ? "active" : "")" @onclick="@(() => SetTab("internal"))">Internal Chat</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "settings" ? "active" : "")" @onclick="@(() => SetTab("settings"))">Settings</button>
-        </nav>
-
+<KnHubShell HubClass="@HubShellClass" BodyClass="@HubBodyClass">
+    <Tabs>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "overview" ? "is-active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "chat" ? "is-active" : "")" @onclick="@(() => SetTab("chat"))">Live Chat</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "tickets" ? "is-active" : "")" @onclick="@(() => SetTab("tickets"))">Tickets</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "incidents" ? "is-active" : "")" @onclick="@(() => SetTab("incidents"))">Incidents</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "kb" ? "is-active" : "")" @onclick="@(() => SetTab("kb"))">Knowledge Base</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "internal" ? "is-active" : "")" @onclick="@(() => SetTab("internal"))">Internal Chat</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "settings" ? "is-active" : "")" @onclick="@(() => SetTab("settings"))">Settings</button>
+    </Tabs>
+    <ChildContent>
         @if (activeTab == "overview")
         {
-            <div class="sh-scroll" @key="workspaceKey">
-                <SupportOverviewView />
-            </div>
+            <SupportOverviewView @key="workspaceKey" />
         }
         else if (activeTab == "tickets")
         {
-            <div class="sh-scroll" @key="workspaceKey">
-                <SupportTicketsView />
-            </div>
+            <SupportTicketsView @key="workspaceKey" />
         }
         else if (activeTab == "incidents")
         {
-            <div class="sh-scroll" @key="workspaceKey">
-                <SupportIncidentsView />
-            </div>
+            <SupportIncidentsView @key="workspaceKey" />
         }
         else if (activeTab == "kb")
         {
-            <div class="sh-scroll" @key="workspaceKey">
-                <SupportKbView />
-            </div>
+            <SupportKbView @key="workspaceKey" />
         }
         else if (activeTab == "internal")
         {
-            <div class="sh-scroll" @key="workspaceKey">
-                <SupportInternalView />
-            </div>
+            <SupportInternalView @key="workspaceKey" />
         }
         else if (activeTab == "settings")
         {
-            <div class="sh-scroll" @key="@($"settings-{workspaceKey}")">
-                <SupportSettingsView OnTenantSelected="SelectTenantAsync" />
-            </div>
+            <SupportSettingsView @key="@($"settings-{workspaceKey}")" OnTenantSelected="SelectTenantAsync" />
         }
         else
         {
-            <div class="sh-scroll sh-scroll--chat" @key="workspaceKey">
-                <SupportLiveChatView />
-            </div>
+            <SupportLiveChatView @key="workspaceKey" />
         }
-    </main>
-</div>
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {
@@ -89,6 +70,10 @@ else
     private int workspaceEpoch;
 
     private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
+
+    private string HubShellClass => activeTab == "chat" ? "kn-hub--live-chat" : "";
+
+    private string HubBodyClass => activeTab == "chat" ? "kn-hub__body--live-chat" : "kn-hub__body--scroll";
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,6 +89,7 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
         ApplyTabFromQuery();
+        Navigation.LocationChanged += OnLocationChanged;
         SupportApi.TenantChanged += OnTenantChanged;
 
         try
@@ -129,12 +115,22 @@ else
         return Task.CompletedTask;
     }
 
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() =>
+        {
+            ApplyTabFromQuery();
+            StateHasChanged();
+        });
+
     private void ApplyTabFromQuery()
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var query = uri.Query.TrimStart('?');
         if (string.IsNullOrEmpty(query))
+        {
+            activeTab = "overview";
             return;
+        }
 
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -146,7 +142,7 @@ else
             var tab = Uri.UnescapeDataString(pair[1]);
             if (tab is "overview" or "chat" or "live" or "tickets" or "incidents" or "kb" or "internal" or "settings")
                 activeTab = tab == "live" ? "chat" : tab;
-            break;
+            return;
         }
     }
 
@@ -158,27 +154,9 @@ else
         return Task.CompletedTask;
     }
 
-    private string GetTabTitle() => activeTab switch
+    public void Dispose()
     {
-        "chat" => "Live Chat",
-        "tickets" => "Tickets",
-        "incidents" => "Incidents",
-        "kb" => "Knowledge Base",
-        "internal" => "Internal Chat",
-        "settings" => "Settings",
-        _ => "Overview"
-    };
-
-    private string GetTabSubtitle() => activeTab switch
-    {
-        "chat" => $"Respond to {SupportApi.DisplayName} customers in real time",
-        "tickets" => $"Route and resolve {SupportApi.DisplayName} tickets",
-        "incidents" => $"Track escalations for {SupportApi.DisplayName}",
-        "kb" => $"Help articles for {SupportApi.DisplayName}",
-        "internal" => "Coming soon",
-        "settings" => "Project desks and API connection",
-        _ => $"Support analytics for {SupportApi.DisplayName}"
-    };
-
-    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+        SupportApi.TenantChanged -= OnTenantChanged;
+    }
 }

@@ -19,17 +19,20 @@
 
     @if (!string.IsNullOrEmpty(loadError))
     {
-        <p class="cs-error-banner">@loadError</p>
+        <p class="kn-s3-alert">@loadError</p>
     }
 
     @if (!string.IsNullOrEmpty(listWarning))
     {
-        <p class="cs-list-warning">@listWarning</p>
+        <p class="kn-s3-hint">@listWarning</p>
     }
 
     @if (isLoading)
     {
-        <p class="kn-s3-empty">Loading tickets…</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading tickets…</p>
+        </div>
     }
 
     <div class="kn-s3-summary-row">
@@ -105,12 +108,12 @@
                                 }
                             </td>
                             <td>
-                                <span class="cs-badge cs-badge--round" style="background:@ss.Bg;color:@ss.Text">
+                                <span class="kn-chip" style="background:@ss.Bg;color:@ss.Text">
                                     @GetStatusLabel(ticket.Status)
                                 </span>
                             </td>
                             <td>
-                                <span class="cs-badge cs-badge--round" style="background:@ps.Bg;color:@ps.Text">
+                                <span class="kn-chip" style="background:@ps.Bg;color:@ps.Text">
                                     @GetPriorityLabel(ticket.Priority)
                                 </span>
                             </td>
@@ -131,10 +134,10 @@
 
     @if (!string.IsNullOrEmpty(toast))
     {
-        <div class="cs-toast @(toastIsError ? "cs-toast--error" : "")">
+        <div class="kn-s3-toast @(toastIsError ? "kn-s3-toast--error" : "")">
             @if (!toastIsError)
             {
-                <svg class="cs-toast__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+                <svg class="kn-s3-toast__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
             }
             @toast
         </div>
@@ -154,7 +157,7 @@
 
     @if (showKbPanel)
     {
-        <button type="button" class="cs-kb-backdrop" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
+        <button type="button" class="kn-s3-kb-backdrop" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
         <SupportKbQuickPanel OnClose="CloseKbPanel" />
     }
 </div>
@@ -177,9 +180,6 @@
     private bool toastIsError;
     private bool showKbPanel;
     private System.Threading.Timer? toastTimer;
-
-    private string ShellClass =>
-        showKbPanel ? "cs-tab-shell cs-tab-shell--kb-open" : "cs-tab-shell";
 
     private static readonly (string Key, string Label)[] StatusFilters =
     [

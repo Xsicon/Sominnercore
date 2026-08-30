@@ -266,6 +266,49 @@ public class SupportApiClient
         }
     }
 
+    public async Task<ApiResponse<List<ProductRegistryDto>>> GetProductRegistryAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/products");
+            return await ReadEnvelopeAsync<List<ProductRegistryDto>>(res, "Failed to load products.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ProductRegistryDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ProductRegistryDto>> UpdateProductUpstreamUrlAsync(
+        string slug, string? upstreamApiBaseUrl)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Patch,
+                $"api/products/{Uri.EscapeDataString(slug)}/upstream-api",
+                new UpdateProductUpstreamRequest { UpstreamApiBaseUrl = upstreamApiBaseUrl });
+            return await ReadEnvelopeAsync<ProductRegistryDto>(res, "Failed to save product API URL.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ProductRegistryDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ProductUpstreamStatusDto>> GetProductUpstreamStatusAsync(string slug)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/products/{Uri.EscapeDataString(slug)}/upstream-status");
+            return await ReadEnvelopeAsync<ProductUpstreamStatusDto>(res, "Failed to check product API status.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ProductUpstreamStatusDto> { Success = false, Message = ex.Message };
+        }
+    }
+
     private static async Task<ApiResponse<T>> ReadEnvelopeAsync<T>(HttpResponseMessage res, string fallback)
     {
         var body = await res.Content.ReadFromJsonAsync<ApiResponse<T>>(JsonOptions)
@@ -317,11 +360,38 @@ public class SupportApiClient
         return body?.Data ?? new SupportCountsDto();
     }
 
+    public async Task<ApiResponse<List<ChatSessionDto>>> GetActiveSessionsResultAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Chat/active-sessions");
+            var body = await res.Content.ReadFromJsonAsync<ApiResponse<List<ChatSessionDto>>>(JsonOptions)
+                       ?? new ApiResponse<List<ChatSessionDto>>();
+            if (!res.IsSuccessStatusCode)
+            {
+                body.Success = false;
+                body.Data ??= [];
+                if (string.IsNullOrWhiteSpace(body.Message))
+                {
+                    body.Message = res.StatusCode == System.Net.HttpStatusCode.Forbidden
+                        ? $"No access to product '{DisplayName}'."
+                        : $"Failed to load active sessions ({(int)res.StatusCode}).";
+                }
+            }
+
+            body.Data ??= [];
+            return body;
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ChatSessionDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<List<ChatSessionDto>> GetActiveSessionsAsync()
     {
-        var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Chat/active-sessions");
-        var body = await res.Content.ReadFromJsonAsync<ApiResponse<List<ChatSessionDto>>>(JsonOptions);
-        return body?.Data ?? [];
+        var result = await GetActiveSessionsResultAsync();
+        return result.Success ? result.Data ?? [] : [];
     }
 
     public async Task<ApiResponse<ChatSessionDto>> GetSessionByIdAsync(Guid sessionId)
@@ -622,6 +692,76 @@ public class SupportApiClient
         }
     }
 
+    public async Task<ApiResponse<ChatStickyNoteDto?>> GetChatStickyNoteAsync(Guid sessionId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Get,
+                $"api/Chat/session/{sessionId}/sticky-note");
+
+            if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return new ApiResponse<ChatStickyNoteDto?>
+                {
+                    Success = true,
+                    Data = null,
+                    Message = "No sticky note"
+                };
+            }
+
+            var body = await res.Content.ReadFromJsonAsync<ApiResponse<ChatStickyNoteDto?>>(JsonOptions)
+                       ?? new ApiResponse<ChatStickyNoteDto?>();
+
+            if (!res.IsSuccessStatusCode)
+            {
+                body.Success = false;
+                if (string.IsNullOrWhiteSpace(body.Message))
+                    body.Message = "Failed to load sticky note.";
+                return body;
+            }
+
+            body.Success = body.Success || res.IsSuccessStatusCode;
+            return body;
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ChatStickyNoteDto?> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ChatStickyNoteDto>> SaveChatStickyNoteAsync(
+        Guid sessionId, SaveChatStickyNoteRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Put,
+                $"api/Chat/session/{sessionId}/sticky-note",
+                request);
+            return await ReadEnvelopeAsync<ChatStickyNoteDto>(res, "Failed to save sticky note.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ChatStickyNoteDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<bool>> DeleteChatStickyNoteAsync(Guid sessionId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Delete,
+                $"api/Chat/session/{sessionId}/sticky-note");
+            return await ReadEnvelopeAsync<bool>(res, "Failed to delete sticky note.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<List<IncidentDto>>> GetIncidentsAsync(string? status = null)
     {
         try
@@ -668,12 +808,38 @@ public class SupportApiClient
         }
     }
 
+    public async Task<ApiResponse<IncidentDto>> EscalateChatToIncidentAsync(
+        Guid sessionId, EscalateChatRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Post,
+                $"api/Incidents/from-chat/{sessionId}",
+                request);
+            return await ReadEnvelopeAsync<IncidentDto>(res, "Failed to escalate chat.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<IncidentDto> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<IncidentDto>> UpdateIncidentAsync(Guid id, UpdateIncidentRequest request)
     {
         try
         {
             var res = await SendAuthorizedAsync(HttpMethod.Patch, $"api/Incidents/{id}", request);
-            return await ReadEnvelopeAsync<IncidentDto>(res, "Failed to update incident.");
+            var body = await res.Content.ReadFromJsonAsync<ApiResponse<IncidentDto>>(JsonOptions)
+                       ?? new ApiResponse<IncidentDto>();
+            if (!res.IsSuccessStatusCode)
+            {
+                body.Success = false;
+                if (string.IsNullOrWhiteSpace(body.Message))
+                    body.Message = "Failed to update incident.";
+            }
+
+            return body;
         }
         catch (Exception ex)
         {

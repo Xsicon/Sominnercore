@@ -1,4 +1,4 @@
-@page "/admin/platform"
+﻿@page "/admin/platform"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
 @using KobNeti.Services.Support
@@ -10,35 +10,26 @@
 
 @if (ready)
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>@TabTitle</h1>
-                    <p class="header-subtitle">@SupportApi.DisplayName</p>
-                </div>
-            </div>
-        </header>
-        <nav class="ops-subnav">
-            <button type="button" class="ops-subnav__item @(tab=="audit"?"active":"")" @onclick="@(() => SetTab("audit"))">Audit</button>
-            <button type="button" class="ops-subnav__item @(tab=="notifications"?"active":"")" @onclick="@(() => SetTab("notifications"))">Notifications</button>
-            <button type="button" class="ops-subnav__item @(tab=="files"?"active":"")" @onclick="@(() => SetTab("files"))">Files</button>
-            <button type="button" class="ops-subnav__item @(tab=="integrations"?"active":"")" @onclick="@(() => SetTab("integrations"))">Integrations</button>
-        </nav>
-        <div class="sh-scroll">
-            <div class="sh-page">
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <Tabs>
+        <button type="button" class="kn-hub-subnav__item @(tab=="audit"?"is-active":"")" @onclick="@(() => SetTab("audit"))">Audit</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="notifications"?"is-active":"")" @onclick="@(() => SetTab("notifications"))">Notifications</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="files"?"is-active":"")" @onclick="@(() => SetTab("files"))">Files</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="integrations"?"is-active":"")" @onclick="@(() => SetTab("integrations"))">Integrations</button>
+    </Tabs>
+    <ChildContent>
+        <div class="kn-s3-page">
                 @if (tab == "audit")
                 {
                     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                        <input class="cs-ticket-field__select" placeholder="Search" @bind="auditSearch" />
-                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="LoadAudit">Search</button>
+                        <input class="kn-field" placeholder="Search" @bind="auditSearch" />
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="LoadAudit">Search</button>
                     </div>
                     @foreach (var a in audit)
                     {
                         <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.9rem;">
-                            <strong>@a.Action</strong> · @a.EntityType/@a.EntityId
-                            <div><small>@(a.ActorName ?? "—") · @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
+                            <strong>@a.Action</strong> Â· @a.EntityType/@a.EntityId
+                            <div><small>@(a.ActorName ?? "â€”") Â· @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
                         </div>
                     }
                 }
@@ -49,7 +40,7 @@
                         <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.ApprovalEnabled" /> Approval</label>
                         <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.EscalationEnabled" /> Escalation</label>
                         <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.ReminderEnabled" /> Reminder</label>
-                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" style="margin-left:0.75rem;" @onclick="SavePrefs">Save prefs</button>
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" style="margin-left:0.75rem;" @onclick="SavePrefs">Save prefs</button>
                     </div>
                     @foreach (var n in notes)
                     {
@@ -57,7 +48,7 @@
                             <strong>@n.Title</strong>
                             @if (!n.IsRead && n.ReadAt is null)
                             {
-                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="() => MarkRead(n.Id)">Mark read</button>
+                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => MarkRead(n.Id)">Mark read</button>
                             }
                             <div><small>@n.CreatedAt.ToLocalTime().ToString("g")</small></div>
                         </div>
@@ -67,14 +58,14 @@
                 {
                     <p class="sh-empty-list">Product-scoped files (separate from ticket/chat uploads).</p>
                     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                        <input class="cs-ticket-field__select" placeholder="folder e.g. /docs/" @bind="folder" />
-                        <input class="cs-ticket-field__select" placeholder="file name" @bind="fileName" />
-                        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" @onclick="AddFile">Register</button>
+                        <input class="kn-field" placeholder="folder e.g. /docs/" @bind="folder" />
+                        <input class="kn-field" placeholder="file name" @bind="fileName" />
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="AddFile">Register</button>
                     </div>
                     @foreach (var f in files)
                     {
                         <div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                            @f.FolderPath@f.FileName <span class="cs-ticket-chip">@f.StoragePath</span>
+                            @f.FolderPath@f.FileName <span class="kn-chip kn-chip--neutral">@f.StoragePath</span>
                         </div>
                     }
                 }
@@ -90,25 +81,24 @@
                         {
                             <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                                 <strong>@i.DisplayName</strong>
-                                <span class="cs-ticket-chip">@i.Status</span>
-                                @if (i.HasSecrets) { <span class="cs-ticket-chip">secrets</span> }
+                                <span class="kn-chip kn-chip--neutral">@i.Status</span>
+                                @if (i.HasSecrets) { <span class="kn-chip kn-chip--neutral">secrets</span> }
                                 @if (i.Status != "connected")
                                 {
-                                    <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" @onclick="() => Connect(i.Provider)">Connect</button>
+                                    <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="() => Connect(i.Provider)">Connect</button>
                                 }
                                 else
                                 {
-                                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="() => Disconnect(i.Provider)">Disconnect</button>
+                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => Disconnect(i.Provider)">Disconnect</button>
                                 }
                             </div>
                         }
                     }
                 }
                 @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
-            </div>
         </div>
-    </main>
-</div>
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {

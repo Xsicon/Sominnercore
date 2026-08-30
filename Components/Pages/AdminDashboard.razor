@@ -15,51 +15,25 @@
 
 @if (isCheckingAuth)
 {
-    <div class="loading-container">
-        <p>Loading...</p>
-    </div>
+    <div class="kn-hub-loading"><p>Loading...</p></div>
 }
 else if (!isAuthenticated)
 {
-    <div class="loading-container">
-        <p>Redirecting to login...</p>
-    </div>
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
 }
 else
 {
-<div class="admin-dashboard admin-dashboard--embedded">
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>@GetTabTitle()</h1>
-                    <p class="header-subtitle">@GetTabSubtitle()</p>
-                </div>
-                <button class="admin-access-btn" @onclick="NavigateHome">Admin Access</button>
-            </div>
-        </header>
-
-        <nav class="ops-subnav">
-            <button type="button" class="ops-subnav__item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetActiveTab("overview"))">Overview</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "products" ? "active" : "")" @onclick="@(() => SetActiveTab("products"))">Projects</button>
-            <button type="button" class="ops-subnav__item @(activeTab == "pages" ? "active" : "")" @onclick="@(() => SetActiveTab("pages"))">Content Pages</button>
-            <a href="/admin/support" class="ops-subnav__item">Support Hub</a>
-        </nav>
-
-        <div class="dashboard-content">
+<KnHubShell>
+    <Tabs>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "overview" ? "is-active" : "")" @onclick="@(() => SetActiveTab("overview"))">Overview</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "products" ? "is-active" : "")" @onclick="@(() => SetActiveTab("products"))">Projects</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "pages" ? "is-active" : "")" @onclick="@(() => SetActiveTab("pages"))">Content Pages</button>
+        <a href="/admin/support" class="kn-hub-subnav__item">Support Hub</a>
+    </Tabs>
+    <ChildContent>
             @if (activeTab == "overview")
             {
-                <KnPageHeader Title="Overview" Subtitle="@($"Live ops for {SupportApi.DisplayName}")" />
-                <div class="kn-metric-grid" style="margin-bottom:1.5rem;">
-                    <KnMetric Label="Active chats" Value="@($"{overview?.ActiveChats ?? 0}")" />
-                    <KnMetric Label="Open tickets" Value="@($"{overview?.OpenTickets ?? 0}")" />
-                    <KnMetric Label="Open incidents" Value="@($"{overview?.OpenIncidents ?? 0}")" />
-                    <KnMetric Label="Eng in progress" Value="@($"{overview?.EngTasksInProgress ?? 0}")" />
-                    <KnMetric Label="Pending approvals" Value="@($"{overview?.PendingApprovals ?? 0}")" />
-                    <KnMetric Label="Unread alerts" Value="@($"{overview?.UnreadNotifications ?? 0}")" />
-                </div>
-                <div class="kn-s3-page" style="margin-top:0.5rem;">
+                <div class="kn-s3-page">
                     <div class="kn-s3-status">
                         <div class="kn-s3-status__left">
                             <span class="kn-s3-status__dot" aria-hidden="true"></span>
@@ -135,158 +109,109 @@ else
             }
             else if (activeTab == "products")
             {
-                <!-- Search and Add Button -->
-                <div class="products-toolbar">
-                    <div class="search-bar">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"/>
-                            <path d="m21 21-4.3-4.3"/>
-                        </svg>
-                        <input type="text" placeholder="Search software..." @bind="searchQuery" @bind:event="oninput" />
+                <div class="kn-s3-page">
+                    <div class="kn-s3-toolbar">
+                        <div class="kn-s3-search">
+                            <span class="material-symbols-outlined">search</span>
+                            <input type="text" placeholder="Search software…" @bind="searchQuery" @bind:event="oninput" />
+                        </div>
+                        <div class="kn-s3-actions">
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="ExportBackup">Export</button>
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="OpenAddModal">Add Project</button>
+                        </div>
                     </div>
-                    <button class="export-btn" @onclick="ExportBackup" title="Export products as JSON backup">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" x2="12" y1="15" y2="3"/>
-                        </svg>
-                        <span>Export</span>
-                    </button>
-                    <button class="add-product-btn" @onclick="OpenAddModal">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="12" x2="12" y1="5" y2="19"/>
-                            <line x1="5" x2="19" y1="12" y2="12"/>
-                        </svg>
-                        <span>Add Project</span>
-                    </button>
+
+                    @if (isLoadingProducts)
+                    {
+                        <p class="kn-s3-empty">Loading projects…</p>
+                    }
+                    else if (!softwareProducts.Any())
+                    {
+                        <p class="kn-s3-empty">No projects yet. Click Add Project to create one.</p>
+                    }
+                    else
+                    {
+                        <div class="kn-s3-table-wrap">
+                            <table class="kn-s3-table">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Category</th>
+                                        <th>Status</th>
+                                        <th>Version</th>
+                                        <th>Users</th>
+                                        <th>Downloads</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var product in FilteredSoftwareProducts)
+                                    {
+                                        <tr>
+                                            <td class="kn-s3-table__subject">@product.Name</td>
+                                            <td>@product.Category</td>
+                                            <td>@product.Status</td>
+                                            <td>@product.Version</td>
+                                            <td>@product.ActiveUsers.ToString("N0")</td>
+                                            <td>@product.TotalDownloads.ToString("N0")</td>
+                                            <td>
+                                                <div class="kn-s3-actions">
+                                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => OpenEditModal(product)">Edit</button>
+                                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => ConfirmDelete(product)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(productError))
+                    {
+                        <p class="kn-s3-empty" style="color:var(--kn-danger);">@productError</p>
+                    }
                 </div>
 
-                <!-- Products Grid -->
-                @if (isLoadingProducts)
-                {
-                    <div class="loading-products">
-                        <p>Loading products...</p>
-                    </div>
-                }
-                else if (!softwareProducts.Any())
-                {
-                    <div class="empty-products">
-                        <p>No projects yet. Click "Add Project" to create one.</p>
-                    </div>
-                }
-                else
-                {
-                    <div class="products-grid">
-                        @foreach (var product in FilteredSoftwareProducts)
-                        {
-                            <div class="product-card">
-                                <div class="product-header">
-                                    <div class="product-icon" style="background: @product.IconColor">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="product-title">
-                                        <h3>@product.Name</h3>
-                                        <p>@product.Category</p>
-                                    </div>
-                                    <span class="product-status @product.Status">@product.Status</span>
-                                </div>
-                                <div class="product-stats">
-                                    <div class="product-stat">
-                                        <span class="stat-label">Version</span>
-                                        <span class="stat-value">@product.Version</span>
-                                    </div>
-                                    <div class="product-stat">
-                                        <span class="stat-label">Release Date</span>
-                                        <span class="stat-value">@FormatReleaseDate(product.ReleaseDate)</span>
-                                    </div>
-                                </div>
-                                <div class="product-stats">
-                                    <div class="product-stat">
-                                        <span class="stat-label">Active Users</span>
-                                        <span class="stat-value">@product.ActiveUsers.ToString("N0")</span>
-                                    </div>
-                                    <div class="product-stat">
-                                        <span class="stat-label">Total Downloads</span>
-                                        <span class="stat-value">@product.TotalDownloads.ToString("N0")</span>
-                                    </div>
-                                </div>
-                                <div class="product-footer">
-                                    <span class="last-update">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                                            <line x1="16" x2="16" y1="2" y2="6"/>
-                                            <line x1="8" x2="8" y1="2" y2="6"/>
-                                            <line x1="3" x2="21" y1="10" y2="10"/>
-                                        </svg>
-                                        @FormatTimeAgo(product.UpdatedAt)
-                                    </span>
-                                    <div class="product-actions">
-                                        <button class="action-btn edit" @onclick="() => OpenEditModal(product)" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                                                <path d="m15 5 4 4"/>
-                                            </svg>
-                                        </button>
-                                        <button class="action-btn delete" @onclick="() => ConfirmDelete(product)" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M3 6h18"/>
-                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(productError))
-                {
-                    <div class="product-error">@productError</div>
-                }
-
-                <!-- Add/Edit Product Modal -->
+                @* Modals below — same @code handlers *@
                 @if (showProductModal)
                 {
-                    <div class="modal-overlay" @onclick="CloseProductModal">
-                        <div class="modal-card" @onclick:stopPropagation>
-                            <div class="modal-header">
+                    <div class="kn-modal-backdrop" @onclick="CloseProductModal">
+                        <div class="kn-modal" @onclick:stopPropagation>
+                            <div class="kn-modal__head">
                                 <h2>@(isEditingProduct ? "Edit Project" : "Add Project")</h2>
-                                <button class="modal-close" @onclick="CloseProductModal">
+                                <button class="kn-modal__close" @onclick="CloseProductModal">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" x2="6" y1="6" y2="18"/>
                                         <line x1="6" x2="18" y1="6" y2="18"/>
                                     </svg>
                                 </button>
                             </div>
-                            <div class="modal-body">
-                                <div class="form-row">
-                                    <div class="form-field">
+                            <div class="kn-modal__body">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Name *</label>
                                         <input type="text" @bind="formName" placeholder="Product name" />
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-field">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Short Description</label>
                                         <input type="text" @bind="formShortDesc" placeholder="Brief description" />
                                     </div>
                                 </div>
-                                <div class="form-row two-col">
-                                    <div class="form-field">
+                                <div class="kn-kn-form-row kn-kn-form-row--2">
+                                    <div class="kn-field">
                                         <label>Category</label>
                                         <input type="text" @bind="formCategory" placeholder="e.g. Data & Analytics" />
                                     </div>
-                                    <div class="form-field">
+                                    <div class="kn-field">
                                         <label>Version</label>
                                         <input type="text" @bind="formVersion" placeholder="e.g. v1.0.0" />
                                     </div>
                                 </div>
-                                <div class="form-row two-col">
-                                    <div class="form-field">
+                                <div class="kn-kn-form-row kn-kn-form-row--2">
+                                    <div class="kn-field">
                                         <label>Status</label>
                                         <select @bind="formStatus">
                                             <option value="active">Active</option>
@@ -294,7 +219,7 @@ else
                                             <option value="deprecated">Deprecated</option>
                                         </select>
                                     </div>
-                                    <div class="form-field">
+                                    <div class="kn-field">
                                         <label>Visibility</label>
                                         <select @bind="formVisibility">
                                             <option value="public">Public</option>
@@ -302,18 +227,18 @@ else
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-row two-col">
-                                    <div class="form-field">
+                                <div class="kn-kn-form-row kn-kn-form-row--2">
+                                    <div class="kn-field">
                                         <label>Release Date</label>
                                         <input type="date" value="@formReleaseDate" @onchange="@(e => formReleaseDate = e.Value?.ToString() ?? "")" />
                                     </div>
-                                    <div class="form-field">
+                                    <div class="kn-field">
                                         <label>Icon Color</label>
-                                        <div class="color-picker">
+                                        <div class="kn-color-picker">
                                             @foreach (var color in colorOptions)
                                             {
                                                 <button type="button"
-                                                        class="color-option @(formIconColor == color ? "selected" : "")"
+                                                        class="kn-color-option @(formIconColor == color ? "is-selected" : "")"
                                                         style="background: @color"
                                                         @onclick="() => formIconColor = color">
                                                 </button>
@@ -321,26 +246,26 @@ else
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-row two-col">
-                                    <div class="form-field">
+                                <div class="kn-kn-form-row kn-kn-form-row--2">
+                                    <div class="kn-field">
                                         <label>Active Users</label>
                                         <input type="number" @bind="formActiveUsers" placeholder="0" />
                                     </div>
-                                    <div class="form-field">
+                                    <div class="kn-field">
                                         <label>Total Downloads</label>
                                         <input type="number" @bind="formTotalDownloads" placeholder="0" />
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-field">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Full Description</label>
                                         <textarea @bind="formFullDesc" placeholder="Detailed product description..." rows="3"></textarea>
                                     </div>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button class="modal-btn cancel" @onclick="CloseProductModal">Cancel</button>
-                                <button class="modal-btn save" @onclick="SaveProduct" disabled="@isSavingProduct">
+                            <div class="kn-modal__foot">
+                                <button class="kn-btn kn-btn--outline" @onclick="CloseProductModal">Cancel</button>
+                                <button class="kn-btn kn-btn--primary" @onclick="SaveProduct" disabled="@isSavingProduct">
                                     @if (isSavingProduct)
                                     {
                                         <span>Saving...</span>
@@ -358,8 +283,8 @@ else
                 <!-- Delete Confirmation Modal -->
                 @if (showDeleteConfirm)
                 {
-                    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
-                        <div class="confirm-dialog" @onclick:stopPropagation>
+                    <div class="kn-modal-backdrop" @onclick="() => showDeleteConfirm = false">
+                        <div class="kn-modal kn-modal--sm" @onclick:stopPropagation>
                             <div class="confirm-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 6h18"/>
@@ -369,9 +294,9 @@ else
                             </div>
                             <h3>Delete Product</h3>
                             <p>Are you sure you want to delete <strong>@deletingProduct?.Name</strong>? This action cannot be undone.</p>
-                            <div class="confirm-actions">
-                                <button class="modal-btn cancel" @onclick="() => showDeleteConfirm = false">Cancel</button>
-                                <button class="modal-btn delete" @onclick="DeleteProduct" disabled="@isDeletingProduct">
+                            <div class="kn-modal__foot">
+                                <button class="kn-btn kn-btn--outline" @onclick="() => showDeleteConfirm = false">Cancel</button>
+                                <button class="kn-btn kn-btn--danger" @onclick="DeleteProduct" disabled="@isDeletingProduct">
                                     @(isDeletingProduct ? "Deleting..." : "Delete")
                                 </button>
                             </div>
@@ -381,135 +306,99 @@ else
             }
             else if (activeTab == "pages")
             {
-                <!-- Content Pages Management -->
-                <div class="products-toolbar">
-                    <div class="search-bar">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="11" cy="11" r="8"/>
-                            <path d="m21 21-4.3-4.3"/>
-                        </svg>
-                        <input type="text" placeholder="Search pages..." @bind="pageSearchQuery" @bind:event="oninput" />
+                <div class="kn-s3-page">
+                    <div class="kn-s3-toolbar">
+                        <div class="kn-s3-search">
+                            <span class="material-symbols-outlined">search</span>
+                            <input type="text" placeholder="Search pages…" @bind="pageSearchQuery" @bind:event="oninput" />
+                        </div>
+                        <div class="kn-s3-actions">
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="OpenAddPageModal">Add Page</button>
+                        </div>
                     </div>
-                    <button class="add-product-btn" @onclick="OpenAddPageModal">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="12" x2="12" y1="5" y2="19"/>
-                            <line x1="5" x2="19" y1="12" y2="12"/>
-                        </svg>
-                        <span>Add Page</span>
-                    </button>
+
+                    @if (isLoadingPages)
+                    {
+                        <p class="kn-s3-empty">Loading pages…</p>
+                    }
+                    else if (!contentPages.Any())
+                    {
+                        <p class="kn-s3-empty">No content pages yet. Click Add Page to create one.</p>
+                    }
+                    else
+                    {
+                        <div class="kn-s3-table-wrap">
+                            <table class="kn-s3-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Slug</th>
+                                        <th>Updated</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var contentPage in FilteredContentPages)
+                                    {
+                                        <tr>
+                                            <td class="kn-s3-table__subject">@contentPage.Title</td>
+                                            <td>/page/@contentPage.Slug</td>
+                                            <td>@FormatTimeAgo(contentPage.UpdatedAt)</td>
+                                            <td>
+                                                <div class="kn-s3-actions">
+                                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => OpenEditPageModal(contentPage)">Edit</button>
+                                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => ConfirmDeletePage(contentPage)">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(pageError))
+                    {
+                        <p class="kn-s3-empty" style="color:var(--kn-danger);">@pageError</p>
+                    }
                 </div>
 
-                @if (isLoadingPages)
-                {
-                    <div class="loading-products">
-                        <p>Loading pages...</p>
-                    </div>
-                }
-                else if (!contentPages.Any())
-                {
-                    <div class="empty-products">
-                        <p>No content pages yet. Click "Add Page" to create one.</p>
-                    </div>
-                }
-                else
-                {
-                    <div class="products-grid pages-grid">
-                        @foreach (var page in FilteredContentPages)
-                        {
-                            <div class="product-card">
-                                <div class="product-header">
-                                    <div class="product-icon" style="background: #6366f1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                                            <polyline points="14 2 14 8 20 8"/>
-                                        </svg>
-                                    </div>
-                                    <div class="product-title">
-                                        <h3>@(page.Title)</h3>
-                                        <p>/@(page.Slug)</p>
-                                    </div>
-                                </div>
-                                <div class="product-stats">
-                                    <div class="product-stat">
-                                        <span class="stat-label">URL</span>
-                                        <span class="stat-value">/page/@(page.Slug)</span>
-                                    </div>
-                                    <div class="product-stat">
-                                        <span class="stat-label">Updated</span>
-                                        <span class="stat-value">@FormatTimeAgo(page.UpdatedAt)</span>
-                                    </div>
-                                </div>
-                                <div class="product-footer">
-                                    <span class="last-update">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                                            <polyline points="14 2 14 8 20 8"/>
-                                        </svg>
-                                        @(page.Content.Length > 50 ? page.Content.Substring(0, 50) + "..." : page.Content)
-                                    </span>
-                                    <div class="product-actions">
-                                        <button class="action-btn edit" @onclick="() => OpenEditPageModal(page)" title="Edit">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                                                <path d="m15 5 4 4"/>
-                                            </svg>
-                                        </button>
-                                        <button class="action-btn delete" @onclick="() => ConfirmDeletePage(page)" title="Delete">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M3 6h18"/>
-                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(pageError))
-                {
-                    <div class="product-error">@pageError</div>
-                }
-
-                <!-- Add/Edit Page Modal -->
                 @if (showPageModal)
                 {
-                    <div class="modal-overlay" @onclick="ClosePageModal">
-                        <div class="modal-card" @onclick:stopPropagation>
-                            <div class="modal-header">
+                    <div class="kn-modal-backdrop" @onclick="ClosePageModal">
+                        <div class="kn-modal" @onclick:stopPropagation>
+                            <div class="kn-modal__head">
                                 <h2>@(isEditingPage ? "Edit Page" : "Add Page")</h2>
-                                <button class="modal-close" @onclick="ClosePageModal">
+                                <button class="kn-modal__close" @onclick="ClosePageModal">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="18" x2="6" y1="6" y2="18"/>
                                         <line x1="6" x2="18" y1="6" y2="18"/>
                                     </svg>
                                 </button>
                             </div>
-                            <div class="modal-body">
-                                <div class="form-row">
-                                    <div class="form-field">
+                            <div class="kn-modal__body">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Title *</label>
                                         <input type="text" @bind="pageFormTitle" placeholder="e.g. Terms of Service" />
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-field">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Slug *</label>
                                         <input type="text" @bind="pageFormSlug" placeholder="e.g. terms-of-service" disabled="@isEditingPage" />
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-field">
+                                <div class="kn-form-row">
+                                    <div class="kn-field">
                                         <label>Content *</label>
                                         <textarea @bind="pageFormContent" placeholder="Write the page content here..." rows="12"></textarea>
                                     </div>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button class="modal-btn cancel" @onclick="ClosePageModal">Cancel</button>
-                                <button class="modal-btn save" @onclick="SavePage" disabled="@isSavingPage">
+                            <div class="kn-modal__foot">
+                                <button class="kn-btn kn-btn--outline" @onclick="ClosePageModal">Cancel</button>
+                                <button class="kn-btn kn-btn--primary" @onclick="SavePage" disabled="@isSavingPage">
                                     @if (isSavingPage)
                                     {
                                         <span>Saving...</span>
@@ -527,8 +416,8 @@ else
                 <!-- Delete Page Confirmation -->
                 @if (showDeletePageConfirm)
                 {
-                    <div class="modal-overlay" @onclick="() => showDeletePageConfirm = false">
-                        <div class="confirm-dialog" @onclick:stopPropagation>
+                    <div class="kn-modal-backdrop" @onclick="() => showDeletePageConfirm = false">
+                        <div class="kn-modal kn-modal--sm" @onclick:stopPropagation>
                             <div class="confirm-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 6h18"/>
@@ -538,9 +427,9 @@ else
                             </div>
                             <h3>Delete Page</h3>
                             <p>Are you sure you want to delete <strong>@deletingPage?.Title</strong>? This action cannot be undone.</p>
-                            <div class="confirm-actions">
-                                <button class="modal-btn cancel" @onclick="() => showDeletePageConfirm = false">Cancel</button>
-                                <button class="modal-btn delete" @onclick="DeletePage" disabled="@isDeletingPage">
+                            <div class="kn-modal__foot">
+                                <button class="kn-btn kn-btn--outline" @onclick="() => showDeletePageConfirm = false">Cancel</button>
+                                <button class="kn-btn kn-btn--danger" @onclick="DeletePage" disabled="@isDeletingPage">
                                     @(isDeletingPage ? "Deleting..." : "Delete")
                                 </button>
                             </div>
@@ -550,24 +439,19 @@ else
             }
             else if (activeTab == "chat")
             {
-                <div class="chat-section-header">
-                    <h2 class="chat-title">Customer Support Chat</h2>
-                    <p class="chat-subtitle">Live chat moved to Support Hub (MuuqWear Support API)</p>
-                </div>
-                <div style="padding: 2rem;">
-                    <p>Use the multi-tenant Support Hub for live chat, tickets, and knowledge base.</p>
-                    <a href="/admin/support?tab=chat" class="admin-access-btn">Open Support Hub</a>
+                <div class="kn-s3-panel kn-s3-empty">
+                    <p>Live chat lives in Support Hub.</p>
+                    <a class="kn-btn kn-btn--primary kn-btn--sm" href="/admin/support?tab=chat">Open Support Hub</a>
                 </div>
             }
-        </div>
-    </main>
-</div>
+    </ChildContent>
+</KnHubShell>
 
 <!-- Toast Notification -->
 @if (showToast)
 {
-    <div class="toast-container">
-        <div class="toast @toastType">
+    <div class="kn-toast-wrap">
+        <div class="kn-toast kn-toast--@toastType">
             @if (toastType == "success")
             {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>

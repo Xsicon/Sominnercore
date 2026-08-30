@@ -1,42 +1,50 @@
 @using Microsoft.AspNetCore.Components.Web
 @using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
+@implements IDisposable
 
-<div @onkeydown="HandleWindowKeyDown">
-<aside class="cs-kb-panel">
-    <header class="cs-kb-panel__header">
-        <div>
-            <p class="cs-drawer__eyebrow">Quick help</p>
-            <h3 class="cs-drawer__title">Knowledge Base</h3>
-        </div>
-        <button type="button" class="cs-btn cs-btn--icon" @onclick="Close" aria-label="Close knowledge base panel">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
-    </header>
+<div @onkeydown="HandleWindowKeyDown" class="kn-s3-kb-panel-root">
+<aside class="kn-s3-kb-panel @(ShowHeader ? "" : "kn-s3-kb-panel--embedded")">
+    @if (ShowHeader)
+    {
+        <header class="kn-s3-kb-panel__header">
+            <div>
+                <p class="kn-s3-eyebrow">Quick help</p>
+                <h3 class="kn-s3-drawer__title">Knowledge Base · @SupportApi.DisplayName</h3>
+            </div>
+            @if (OnClose.HasDelegate)
+            {
+                <button type="button" class="kn-s3-btn-icon" @onclick="Close" aria-label="Close knowledge base panel">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            }
+        </header>
+    }
 
     @if (!string.IsNullOrEmpty(listWarning))
     {
-        <p class="cs-list-warning">@listWarning</p>
+        <p class="kn-s3-hint">@listWarning</p>
     }
 
-    <div class="cs-kb-panel__search">
-        <svg class="cs-search__icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input class="cs-kb-panel__search-input"
+    <div class="kn-s3-kb-panel__search">
+        <span class="material-symbols-outlined">search</span>
+        <input class="kn-s3-kb-panel__search-input"
                placeholder="Search articles while you work…"
                @bind="search"
                @bind:event="oninput" />
     </div>
 
-    <div class="cs-kb-panel__list">
+    <div class="kn-s3-kb-panel__list">
         @if (isLoading)
         {
-            <div class="cs-empty" style="padding:64px 16px">
-                <p>Loading articles…</p>
+            <div class="kn-s3-loading-block" role="status" aria-busy="true">
+                <span class="kn-s3-spinner" aria-hidden="true"></span>
+                <p>Loading articles for @SupportApi.DisplayName…</p>
             </div>
         }
         else if (!string.IsNullOrEmpty(loadError))
         {
-            <div class="cs-empty" style="padding:64px 16px">
+            <div class="kn-s3-empty" style="padding:64px 16px">
                 <p>@loadError</p>
             </div>
         }
@@ -49,15 +57,15 @@
 
                 var meta = HelpCategoryMeta.Get(article.Category);
                 <button type="button"
-                        class="cs-kb-panel__item"
+                        class="kn-s3-kb-panel__item"
                         @key="article.Id"
                         @onclick="@(() => OpenArticleAsync(article))">
-                    <div class="cs-row__icon" style="background:@meta.Bg">
+                    <div class="kn-s3-data-row__icon" style="background:@meta.Bg">
                         @((MarkupString)HelpKbIcons.GetCategoryIconSvg(meta.IconKey, meta.Dot))
                     </div>
-                    <div class="cs-row__body">
-                        <p class="cs-row__title">@article.Title</p>
-                        <p class="cs-row__meta">
+                    <div class="kn-s3-data-row__body">
+                        <p class="kn-s3-data-row__title">@article.Title</p>
+                        <p class="kn-s3-data-row__meta">
                             @article.Category
                             @if (article.Steps.Count > 0)
                             {
@@ -71,9 +79,14 @@
 
             @if (!HasSearchResults)
             {
-                <div class="cs-empty" style="padding:64px 16px">
-                    <svg class="cs-empty__icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-                    <p>No published articles match.</p>
+                <div class="kn-s3-empty" style="padding:2rem 1rem">
+                    <svg class="kn-s3-empty__icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                    <p>@(
+                        string.IsNullOrWhiteSpace(search)
+                            ? (string.IsNullOrEmpty(loadError)
+                                ? $"No published articles for {SupportApi.DisplayName}. Set the product API URL in Settings if articles live in the product API."
+                                : loadError)
+                            : "No articles match your search.")</p>
                 </div>
             }
         }
@@ -91,6 +104,7 @@
 
 @code {
     [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool ShowHeader { get; set; } = true;
 
     private IReadOnlyList<HelpArticleDto> _publishedArticles = [];
     private string search = "";
@@ -103,15 +117,37 @@
 
     protected override async Task OnInitializedAsync()
     {
+        SupportApi.TenantChanged += OnTenantChanged;
+        await LoadArticlesAsync();
+    }
+
+    private void OnTenantChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            ViewArticle = null;
+            search = "";
+            await LoadArticlesAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadArticlesAsync()
+    {
+        isLoading = true;
+        loadError = null;
+        listWarning = null;
+        _publishedArticles = [];
+
         try
         {
+            await SupportApi.EnsureAgentTokenAsync();
             var (items, error, truncation) = await SupportPaginatedLoader.LoadAllPagesAsync(
                 (page, pageSize) => SupportApi.GetPublishedArticlesPageAsync(page, pageSize));
 
             if (error != null && items.Count == 0)
             {
                 loadError = string.IsNullOrWhiteSpace(error) ? "Failed to load knowledge base." : error;
-                _publishedArticles = [];
                 return;
             }
 
@@ -124,7 +160,6 @@
         catch (Exception ex)
         {
             loadError = ex.Message;
-            _publishedArticles = [];
         }
         finally
         {
@@ -173,8 +208,10 @@
         {
             if (ViewArticle != null)
                 CloseArticle();
-            else
+            else if (OnClose.HasDelegate)
                 await Close();
         }
     }
+
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
 }

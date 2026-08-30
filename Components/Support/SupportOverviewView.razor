@@ -8,6 +8,12 @@
             <h2>Overview</h2>
             <p>Live support analytics for @SupportApi.DisplayName</p>
         </div>
+        <div class="kn-s3-actions">
+            <button type="button" class="kn-btn kn-btn--ghost kn-btn--sm" disabled="@loading" @onclick="LoadAsync">
+                <span class="material-symbols-outlined" style="font-size:1rem;">refresh</span>
+                Refresh
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(error))
@@ -16,36 +22,45 @@
     }
     else if (loading)
     {
-        <p class="kn-s3-empty">Loading counts…</p>
+        <div class="kn-s3-loading-block kn-s3-loading-block--center" role="status" aria-busy="true">
+            <span class="kn-s3-spinner kn-s3-spinner--lg" aria-hidden="true"></span>
+            <p>Loading overview…</p>
+        </div>
     }
     else
     {
+        var activeChats = overview?.ActiveChats ?? counts.ActiveChats;
+        var openTickets = overview?.OpenTickets ?? counts.OpenTickets;
+        var openIncidentCount = overview?.OpenIncidents ?? openIncidents.Count;
+        var statusLabel = openIncidentCount > 0 ? "Incidents under review" : "Support desk online";
+        var statusHint = lastUpdated.HasValue
+            ? $"Updated {lastUpdated.Value.ToLocalTime():t}"
+            : $"{SupportApi.DisplayName} · {SupportApi.TenantId}";
+
         <div class="kn-s3-status">
             <div class="kn-s3-status__left">
-                <span class="kn-s3-status__dot" aria-hidden="true"></span>
+                <span class="kn-s3-status__dot @(openIncidentCount > 0 ? "kn-s3-status__dot--warn" : "")" aria-hidden="true"></span>
                 <div>
-                    <strong>Support desk online</strong>
-                    <p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--kn-text-muted);">
-                        @SupportApi.DisplayName · @SupportApi.TenantId
-                    </p>
+                    <strong>@statusLabel</strong>
+                    <p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--kn-text-muted);">@statusHint</p>
                 </div>
             </div>
             <div class="kn-s3-status__metrics">
-                <span><strong>@counts.ActiveChats</strong>Active chats</span>
-                <span><strong>@counts.OpenTickets</strong>Open tickets</span>
-                <span><strong>@stats.TotalCount</strong>Total tickets</span>
+                <span><strong>@activeChats</strong>Active chats</span>
+                <span><strong>@openTickets</strong>Open tickets</span>
+                <span><strong>@openIncidentCount</strong>Open incidents</span>
             </div>
         </div>
 
         <div class="kn-s3-metric-row">
             <div class="kn-s3-metric">
                 <div class="kn-s3-metric__label">Active chats</div>
-                <div class="kn-s3-metric__value">@counts.ActiveChats</div>
-                <div class="kn-s3-metric__hint">Waiting for agent reply</div>
+                <div class="kn-s3-metric__value">@activeChats</div>
+                <div class="kn-s3-metric__hint">@activeSessions.Count waiting now</div>
             </div>
             <div class="kn-s3-metric">
                 <div class="kn-s3-metric__label">Open tickets</div>
-                <div class="kn-s3-metric__value">@counts.OpenTickets</div>
+                <div class="kn-s3-metric__value">@openTickets</div>
                 <div class="kn-s3-metric__hint">New + in progress</div>
             </div>
             <div class="kn-s3-metric">
@@ -57,6 +72,73 @@
                 <div class="kn-s3-metric__label">Total volume</div>
                 <div class="kn-s3-metric__value">@stats.TotalCount</div>
                 <div class="kn-s3-metric__hint">All ticket states</div>
+            </div>
+        </div>
+
+        <div class="kn-s3-grid-2 kn-s3-grid-60-40">
+            <div class="kn-s3-panel">
+                <div class="kn-s3-panel__head">
+                    <h3>Recent tickets</h3>
+                    <a class="kn-btn kn-btn--ghost kn-btn--sm" href="/admin/support?tab=tickets">View all</a>
+                </div>
+                @if (recentTickets.Count == 0)
+                {
+                    <p class="kn-s3-empty">No tickets yet.</p>
+                }
+                else
+                {
+                    <div class="kn-s3-table-wrap">
+                        <table class="kn-s3-table kn-s3-table--compact">
+                            <thead>
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ticket in recentTickets)
+                                {
+                                    <tr>
+                                        <td>@ticket.TicketNumber</td>
+                                        <td class="kn-s3-table__subject">@ticket.Subject</td>
+                                        <td>@ticket.Status</td>
+                                        <td>@(ticket.UpdatedAt?.ToLocalTime().ToString("g") ?? ticket.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="kn-s3-panel">
+                <div class="kn-s3-panel__head">
+                    <h3>Active conversations</h3>
+                    <a class="kn-btn kn-btn--ghost kn-btn--sm" href="/admin/support?tab=chat">Open chat</a>
+                </div>
+                @if (activeSessions.Count == 0)
+                {
+                    <p class="kn-s3-empty">No active chats right now.</p>
+                }
+                else
+                {
+                    @foreach (var session in activeSessions)
+                    {
+                        <div class="kn-s3-list-row kn-s3-list-row--stack">
+                            <div>
+                                <strong>@session.CustomerName</strong>
+                                <p style="margin:0.15rem 0 0;font-size:0.82rem;color:var(--kn-text-muted);">
+                                    @(string.IsNullOrWhiteSpace(session.LastMessagePreview) ? "No messages yet" : session.LastMessagePreview)
+                                </p>
+                            </div>
+                            <span style="font-size:0.78rem;color:var(--kn-text-muted);white-space:nowrap;">
+                                @session.LastActivity.ToLocalTime().ToString("t")
+                            </span>
+                        </div>
+                    }
+                }
             </div>
         </div>
 
@@ -75,11 +157,23 @@
                     <span>Waiting on customer</span>
                     <strong>@stats.WaitingCount</strong>
                 </div>
-                <div class="kn-s3-list-row">
-                    <span>Total volume</span>
-                    <strong>@stats.TotalCount</strong>
-                </div>
+                @if (overview is not null)
+                {
+                    <div class="kn-s3-list-row">
+                        <span>Eng tasks in progress</span>
+                        <strong>@overview.EngTasksInProgress</strong>
+                    </div>
+                    <div class="kn-s3-list-row">
+                        <span>Pending approvals</span>
+                        <strong>@overview.PendingApprovals</strong>
+                    </div>
+                    <div class="kn-s3-list-row">
+                        <span>Unread alerts</span>
+                        <strong>@overview.UnreadNotifications</strong>
+                    </div>
+                }
             </div>
+
             <div class="kn-s3-panel">
                 <h3>Quick actions</h3>
                 <div class="kn-s3-actions">
@@ -90,22 +184,96 @@
                 </div>
             </div>
         </div>
+
+        @if (openIncidents.Count > 0)
+        {
+            <div class="kn-s3-panel">
+                <div class="kn-s3-panel__head">
+                    <h3>Open incidents</h3>
+                    <a class="kn-btn kn-btn--ghost kn-btn--sm" href="/admin/support?tab=incidents">Manage</a>
+                </div>
+                <div class="kn-s3-table-wrap">
+                    <table class="kn-s3-table kn-s3-table--compact">
+                        <thead>
+                            <tr>
+                                <th>Number</th>
+                                <th>Title</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var incident in openIncidents)
+                            {
+                                <tr>
+                                    <td>@incident.IncidentNumber</td>
+                                    <td class="kn-s3-table__subject">@incident.Title</td>
+                                    <td>@incident.Severity</td>
+                                    <td>@incident.Status</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
     }
 </div>
 
 @code {
     private bool loading = true;
     private string? error;
+    private OverviewDto? overview;
     private SupportCountsDto counts = new();
     private TicketStatsDto stats = new();
+    private List<SupportTicketDto> recentTickets = [];
+    private List<IncidentDto> openIncidents = [];
+    private List<ChatSessionDto> activeSessions = [];
+    private DateTime? lastUpdated;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
+        loading = true;
+        error = null;
+
         try
         {
             await SupportApi.EnsureAgentTokenAsync();
-            counts = await SupportApi.GetCountsAsync();
-            stats = await SupportApi.GetTicketStatsAsync() ?? new();
+
+            var countsTask = SupportApi.GetCountsAsync();
+            var statsTask = SupportApi.GetTicketStatsAsync();
+            var overviewTask = SupportApi.GetOverviewAsync();
+            var ticketsTask = SupportApi.GetTicketsPageAsync(1, 5);
+            var incidentsTask = SupportApi.GetIncidentsAsync();
+            var sessionsTask = SupportApi.GetActiveSessionsAsync();
+
+            await Task.WhenAll(countsTask, statsTask, overviewTask, ticketsTask, incidentsTask, sessionsTask);
+
+            counts = await countsTask;
+            stats = await statsTask ?? new();
+
+            var overviewResult = await overviewTask;
+            overview = overviewResult.Success ? overviewResult.Data : null;
+
+            var ticketsResult = await ticketsTask;
+            recentTickets = ticketsResult.Success ? ticketsResult.Data?.Data ?? [] : [];
+
+            var incidentsResult = await incidentsTask;
+            var allIncidents = incidentsResult.Success ? incidentsResult.Data ?? [] : [];
+            openIncidents = allIncidents
+                .Where(i => i.Status is "open" or "investigating")
+                .OrderByDescending(i => i.UpdatedAt ?? i.CreatedAt)
+                .Take(5)
+                .ToList();
+
+            activeSessions = (await sessionsTask)
+                .OrderByDescending(s => s.LastActivity)
+                .Take(5)
+                .ToList();
+
+            lastUpdated = DateTime.UtcNow;
         }
         catch (Exception ex)
         {

@@ -1,0 +1,20 @@
+@* Shared hub layout — tabs + body inside OpsShell (no legacy admin-dashboard wrapper) *@
+<div class="kn-hub @HubClass">
+    @if (Tabs is not null)
+    {
+        <nav class="kn-hub-subnav" aria-label="@SubnavLabel">
+            @Tabs
+        </nav>
+    }
+    <div class="kn-hub__body @BodyClass">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? Tabs { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string SubnavLabel { get; set; } = "Section tabs";
+    [Parameter] public string? BodyClass { get; set; }
+    [Parameter] public string? HubClass { get; set; }
+}

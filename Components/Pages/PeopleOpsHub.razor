@@ -12,7 +12,7 @@
 
 @if (isCheckingAuth)
 {
-    <div class="sh-loading"><p>Loading...</p></div>
+    <div class="kn-hub-loading"><p>Loading...</p></div>
 }
 else if (!isAuthenticated)
 {
@@ -20,24 +20,11 @@ else if (!isAuthenticated)
 }
 else
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>Payroll</h1>
-                    <p class="header-subtitle">Rates &amp; pay periods for @SupportApi.DisplayName</p>
-                </div>
-                <div class="sh-header-actions">
-                    <span class="sh-active-project">@SupportApi.DisplayName</span>
-                </div>
-            </div>
-        </header>
-        <div class="sh-scroll" @key="workspaceKey">
-            <PeoplePayrollView />
-        </div>
-    </main>
-</div>
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <ChildContent>
+        <PeoplePayrollView @key="workspaceKey" />
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {

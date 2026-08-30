@@ -1,4 +1,4 @@
-@page "/admin/insights"
+﻿@page "/admin/insights"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
 @using KobNeti.Services.Support
@@ -11,35 +11,23 @@
 
 @if (ready)
 {
-<div class="admin-dashboard support-hub admin-dashboard--embedded">
-    <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>@TabTitle</h1>
-                    <p class="header-subtitle">@SupportApi.DisplayName</p>
-                </div>
-                <div class="sh-header-actions">
-                    <span class="sh-active-project">@SupportApi.DisplayName</span>
-                </div>
-            </div>
-        </header>
-        <nav class="ops-subnav">
-            <button type="button" class="ops-subnav__item @(tab=="overview"?"active":"")" @onclick="@(() => SetTab("overview"))">Overview</button>
-            <button type="button" class="ops-subnav__item @(tab=="cross"?"active":"")" @onclick="@(() => SetTab("cross"))">All products</button>
-            <button type="button" class="ops-subnav__item @(tab=="reports"?"active":"")" @onclick="@(() => SetTab("reports"))">Reports</button>
-            <button type="button" class="ops-subnav__item @(tab=="help"?"active":"")" @onclick="@(() => SetTab("help"))">Platform help</button>
-            <button type="button" class="ops-subnav__item @(tab=="assets"?"active":"")" @onclick="@(() => SetTab("assets"))">Assets</button>
-        </nav>
-        <div class="sh-scroll" @key="workspaceKey">
-            <div class="sh-page">
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <Tabs>
+        <button type="button" class="kn-hub-subnav__item @(tab=="overview"?"is-active":"")" @onclick="@(() => SetTab("overview"))">Overview</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="cross"?"is-active":"")" @onclick="@(() => SetTab("cross"))">All products</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="reports"?"is-active":"")" @onclick="@(() => SetTab("reports"))">Reports</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="help"?"is-active":"")" @onclick="@(() => SetTab("help"))">Platform help</button>
+        <button type="button" class="kn-hub-subnav__item @(tab=="assets"?"is-active":"")" @onclick="@(() => SetTab("assets"))">Assets</button>
+    </Tabs>
+    <ChildContent>
+        <div class="kn-s3-page" @key="workspaceKey">
                 @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
 
                 @if (tab == "overview")
                 {
                     @if (overview is null)
                     {
-                        <p class="sh-empty-list">Loading…</p>
+                        <p class="sh-empty-list">Loadingâ€¦</p>
                     }
                     else
                     {
@@ -75,21 +63,21 @@
                 {
                     @if (cross is null)
                     {
-                        <p class="sh-empty-list">Loading…</p>
+                        <p class="sh-empty-list">Loadingâ€¦</p>
                     }
                     else
                     {
                         <p class="sh-empty-list" style="margin-bottom:1rem;">
-                            Totals — tickets @cross.TotalOpenTickets · chats @cross.TotalActiveChats ·
-                            incidents @cross.TotalOpenIncidents · approvals @cross.TotalPendingApprovals
+                            Totals â€” tickets @cross.TotalOpenTickets Â· chats @cross.TotalActiveChats Â·
+                            incidents @cross.TotalOpenIncidents Â· approvals @cross.TotalPendingApprovals
                         </p>
                         @foreach (var p in cross.Products)
                         {
                             <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
                                 <strong>@p.DisplayName</strong>
                                 <div><small>
-                                    tickets @p.OpenTickets · chats @p.ActiveChats · incidents @p.OpenIncidents ·
-                                    eng @p.EngTasksInProgress · approvals @p.PendingApprovals
+                                    tickets @p.OpenTickets Â· chats @p.ActiveChats Â· incidents @p.OpenIncidents Â·
+                                    eng @p.EngTasksInProgress Â· approvals @p.PendingApprovals
                                 </small></div>
                             </div>
                         }
@@ -98,22 +86,22 @@
                 else if (tab == "reports")
                 {
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                        <select class="cs-ticket-field__select" @bind="reportType">
+                        <select class="kn-field" @bind="reportType">
                             <option value="tickets">Tickets</option>
                             <option value="time">Time</option>
                             <option value="payroll">Payroll</option>
                             <option value="audit">Audit</option>
                         </select>
-                        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="RunReport">Run export</button>
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="RunReport">Run export</button>
                     </div>
                     @foreach (var r in reports)
                     {
                         <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                             <strong>@r.Label</strong>
-                            <span class="cs-ticket-chip">@r.ReportType</span>
-                            <span class="cs-ticket-chip">@r.RowCount rows</span>
+                            <span class="kn-chip kn-chip--neutral">@r.ReportType</span>
+                            <span class="kn-chip kn-chip--neutral">@r.RowCount rows</span>
                             <small>@r.CreatedAt.ToLocalTime().ToString("g")</small>
-                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="() => ShowCsv(r.Id)">View CSV</button>
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => ShowCsv(r.Id)">View CSV</button>
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(csvPreview))
@@ -126,7 +114,7 @@
                     @foreach (var a in helpArticles)
                     {
                         <details style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                            <summary><strong>@a.Title</strong> <span class="cs-ticket-chip">@a.Category</span></summary>
+                            <summary><strong>@a.Title</strong> <span class="kn-chip kn-chip--neutral">@a.Category</span></summary>
                             <p style="margin:0.5rem 0 0;opacity:0.9;">@a.Body</p>
                         </details>
                     }
@@ -134,35 +122,34 @@
                 else
                 {
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                        <input class="cs-ticket-field__select" placeholder="Asset name" @bind="assetName" />
-                        <select class="cs-ticket-field__select" @bind="assetType">
+                        <input class="kn-field" placeholder="Asset name" @bind="assetName" />
+                        <select class="kn-field" @bind="assetType">
                             <option value="hardware">Hardware</option>
                             <option value="license">License</option>
                             <option value="other">Other</option>
                         </select>
-                        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="CreateAsset">Add</button>
-                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="RemindRenewals">Renewal reminders</button>
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="CreateAsset">Add</button>
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="RemindRenewals">Renewal reminders</button>
                     </div>
                     @foreach (var a in assets)
                     {
                         <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
                             <strong>@a.Name</strong>
-                            <span class="cs-ticket-chip">@a.AssetType</span>
-                            <span class="cs-ticket-chip">@a.Status</span>
-                            @if (!string.IsNullOrEmpty(a.AssignedUserName)) { <span>→ @a.AssignedUserName</span> }
+                            <span class="kn-chip kn-chip--neutral">@a.AssetType</span>
+                            <span class="kn-chip kn-chip--neutral">@a.Status</span>
+                            @if (!string.IsNullOrEmpty(a.AssignedUserName)) { <span>â†’ @a.AssignedUserName</span> }
                             @if (a.RenewalDate is not null) { <small>renew @a.RenewalDate</small> }
                             @if (a.Status != "retired")
                             {
-                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => AssignAsset(a.Id)">Assign me</button>
-                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="() => RetireAsset(a.Id)">Retire</button>
+                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => AssignAsset(a.Id)">Assign me</button>
+                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => RetireAsset(a.Id)">Retire</button>
                             }
                         </div>
                     }
                 }
-            </div>
         </div>
-    </main>
-</div>
+    </ChildContent>
+</KnHubShell>
 }
 
 @code {

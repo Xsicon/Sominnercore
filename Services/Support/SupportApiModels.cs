@@ -54,6 +54,26 @@ public class ChatMessageDto
     public bool IsRead { get; set; }
 }
 
+public class ChatStickyNoteDto
+{
+    public Guid SessionId { get; set; }
+    public string AgentName { get; set; } = "";
+    public string ReasonForContact { get; set; } = "";
+    public List<string> KeyActionsTaken { get; set; } = [];
+    public string ColorHex { get; set; } = "#F29D68";
+    public bool Pinned { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class SaveChatStickyNoteRequest
+{
+    public string? AgentName { get; set; }
+    public string? ReasonForContact { get; set; }
+    public List<string>? KeyActionsTaken { get; set; }
+    public string? ColorHex { get; set; }
+    public bool Pinned { get; set; }
+}
+
 public class SupportTicketDto
 {
     public Guid Id { get; set; }
@@ -263,6 +283,34 @@ public class SupportTenantDto
     public string PublicHelpCenterUrl { get; set; } = "";
 }
 
+public class ProductRegistryDto
+{
+    public Guid Id { get; set; }
+    public string TenantId { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string ProductType { get; set; } = "";
+    public string Status { get; set; } = "";
+    public string SupportTier { get; set; } = "";
+    public string PublicKey { get; set; } = "";
+    public string PublicHelpCenterUrl { get; set; } = "";
+    public string? UpstreamApiBaseUrl { get; set; }
+    public string? GithubRepoUrl { get; set; }
+    public bool Enabled { get; set; }
+}
+
+public class ProductUpstreamStatusDto
+{
+    public bool Configured { get; set; }
+    public bool Reachable { get; set; }
+    public string Message { get; set; } = "";
+    public string? UpstreamApiBaseUrl { get; set; }
+}
+
+public class UpdateProductUpstreamRequest
+{
+    public string? UpstreamApiBaseUrl { get; set; }
+}
+
 public class StaffMemberDto
 {
     public Guid Id { get; set; }
@@ -308,6 +356,7 @@ public class IncidentDto
     public string? CommanderName { get; set; }
     public Guid? CommanderUserId { get; set; }
     public Guid? SourceTicketId { get; set; }
+    public Guid? SourceChatSessionId { get; set; }
     public string? PostmortemNotes { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -329,6 +378,15 @@ public class EscalateTicketRequest
     public string? Title { get; set; }
     public string Severity { get; set; } = "sev2";
     public string? CommanderName { get; set; }
+}
+
+public class EscalateChatRequest
+{
+    public string Target { get; set; } = "engineering";
+    public string Severity { get; set; } = "High";
+    public string Reason { get; set; } = "";
+    public Guid? AssigneeUserId { get; set; }
+    public string? AssigneeName { get; set; }
 }
 
 public class UpdateIncidentRequest

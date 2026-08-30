@@ -1,4 +1,4 @@
-@using KobNeti.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -9,10 +9,10 @@
     </div>
 
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="ClockIn">Clock in</button>
-        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="ClockOut">Clock out</button>
-        <input class="cs-ticket-field__select" style="width:5rem;" type="number" min="1" @bind="manualMinutes" />
-        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy" @onclick="AddManual">Add manual mins</button>
+        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="ClockIn">Clock in</button>
+        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="ClockOut">Clock out</button>
+        <input class="kn-field" style="width:5rem;" type="number" min="1" @bind="manualMinutes" />
+        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="AddManual">Add manual mins</button>
     </div>
 
     @if (!string.IsNullOrEmpty(msg))
@@ -22,7 +22,7 @@
 
     @if (loading)
     {
-        <p class="sh-empty-list">Loading…</p>
+        <p class="sh-empty-list">Loadingâ€¦</p>
     }
     else if (entries.Count == 0)
     {
@@ -38,12 +38,12 @@
                 <tr>
                     <td>@(e.ClockIn?.ToLocalTime().ToString("g") ?? e.CreatedAt.ToLocalTime().ToString("g"))</td>
                     <td>@e.EntryType</td>
-                    <td>@(e.Minutes?.ToString() ?? "—")</td>
+                    <td>@(e.Minutes?.ToString() ?? "â€”")</td>
                     <td>@e.Status</td>
                     <td>
                         @if (e.Status == "approved")
                         {
-                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@busy"
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy"
                                     @onclick="() => RequestEdit(e)">Request edit</button>
                         }
                     </td>

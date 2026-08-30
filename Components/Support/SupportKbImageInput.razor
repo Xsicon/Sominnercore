@@ -2,22 +2,22 @@
 @using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="cs-kb-image-input">
+<div class="kn-s3-kb-image-input">
     @if (!string.IsNullOrWhiteSpace(Label))
     {
-        <label class="cs-field__label">@Label</label>
+        <label class="kn-s3-form-field__label">@Label</label>
     }
 
-    <div class="cs-kb-image-input__row">
+    <div class="kn-s3-kb-image-input__row">
         @if (!string.IsNullOrWhiteSpace(Url))
         {
-            <div class="cs-kb-image-input__thumb-wrap">
-                <img src="@Url" alt="" class="cs-kb-image-input__thumb" />
+            <div class="kn-s3-kb-image-input__thumb-wrap">
+                <img src="@Url" alt="" class="kn-s3-kb-image-input__thumb" />
             </div>
         }
         else
         {
-            <div class="cs-kb-image-input__thumb-wrap cs-kb-image-input__thumb-wrap--empty" aria-hidden="true">
+            <div class="kn-s3-kb-image-input__thumb-wrap kn-s3-kb-image-input__thumb-wrap--empty" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
                     <circle cx="9" cy="9" r="2"></circle>
@@ -26,15 +26,15 @@
             </div>
         }
 
-        <div class="cs-kb-image-input__controls">
-            <div class="cs-kb-image-input__tabs">
+        <div class="kn-s3-kb-image-input__controls">
+            <div class="kn-s3-kb-image-input__tabs">
                 <button type="button"
-                        class="cs-kb-image-input__tab @(tab == "url" ? "cs-kb-image-input__tab--active" : "")"
+                        class="kn-s3-kb-image-input__tab @(tab == "url" ? "kn-s3-kb-image-input__tab--active" : "")"
                         @onclick='() => tab = "url"'>
                     URL
                 </button>
                 <button type="button"
-                        class="cs-kb-image-input__tab @(tab == "upload" ? "cs-kb-image-input__tab--active" : "")"
+                        class="kn-s3-kb-image-input__tab @(tab == "upload" ? "kn-s3-kb-image-input__tab--active" : "")"
                         @onclick='() => tab = "upload"'>
                     Upload
                 </button>
@@ -45,15 +45,15 @@
                 <input value="@Url"
                        @onchange="OnUrlChanged"
                        placeholder="https://…"
-                       class="cs-field__input" />
+                       class="kn-s3-form-field__input" />
             }
             else
             {
-                <label class="cs-kb-image-input__upload">
+                <label class="kn-s3-kb-image-input__upload">
                     <InputFile OnChange="HandleUploadAsync"
                                accept="image/jpeg,image/png,image/webp,image/gif"
-                               class="cs-kb-image-input__upload-input" />
-                    <span class="cs-kb-image-input__upload-label">
+                               class="kn-s3-kb-image-input__upload-input" />
+                    <span class="kn-s3-kb-image-input__upload-label">
                         @(isUploading ? "Uploading…" : "Choose image (JPEG, PNG, WebP · max 5 MB)")
                     </span>
                 </label>
@@ -61,7 +61,7 @@
 
             @if (!string.IsNullOrEmpty(uploadError))
             {
-                <p class="cs-kb-image-input__error">@uploadError</p>
+                <p class="kn-s3-kb-image-input__error">@uploadError</p>
             }
         </div>
     </div>

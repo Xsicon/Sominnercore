@@ -23,9 +23,6 @@
             {
                 <div class="ops-sidebar__mark ops-sidebar__mark--solo">K</div>
             }
-            <button type="button" class="ops-sidebar__collapse" title="Toggle sidebar" @onclick="ToggleCollapse">
-                <span class="material-symbols-outlined">@(sidebarCollapsed ? "chevron_right" : "chevron_left")</span>
-            </button>
         </div>
 
         <div class="ops-sidebar__user-wrap">
@@ -45,39 +42,6 @@
             else
             {
                 <div class="ops-sidebar__avatar ops-sidebar__avatar--lg ops-sidebar__avatar--center" title="@GetUserDisplayName()">@GetUserInitials()</div>
-            }
-        </div>
-
-        <div class="ops-product @(sidebarCollapsed ? "is-collapsed" : "")">
-            @if (!sidebarCollapsed)
-            {
-                <p class="ops-product__label">Product</p>
-                @if (tenantsLoading)
-                {
-                    <p class="ops-product__hint">Loading…</p>
-                }
-                else if (!string.IsNullOrEmpty(tenantsError))
-                {
-                    <p class="ops-product__hint" style="color:#FCA5A5;">@tenantsError</p>
-                }
-                else
-                {
-                    <div class="ops-product__list" role="list">
-                        @foreach (var t in tenants)
-                        {
-                            var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
-                            <button type="button" role="listitem"
-                                    class="ops-product__chip @(active ? "is-active" : "")"
-                                    @onclick="() => SelectTenantAsync(t)">
-                                @t.DisplayName
-                            </button>
-                        }
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="ops-product__collapsed" title="@SupportApi.DisplayName">@GetProductInitial()</div>
             }
         </div>
 
@@ -119,7 +83,7 @@
                         <div class="ops-nav-cat__subs">
                             @foreach (var item in cat.Items)
                             {
-                                <a href="@item.Href" class="ops-nav-link ops-nav-link--sub @(IsActive(item.Match) ? "is-active" : "")">
+                                <a href="@item.Href" class="ops-nav-link ops-nav-link--sub @(IsNavLinkActive(item) ? "is-active" : "")">
                                     <span>@item.Label</span>
                                 </a>
                             }
@@ -167,6 +131,43 @@
             </div>
 
             <div class="ops-topbar__right">
+                <div class="ops-product-menu">
+                    <button type="button" class="ops-product-menu__btn" @onclick="ToggleProductMenu" aria-expanded="@showProductMenu">
+                        <span class="material-symbols-outlined">layers</span>
+                        <span>@SupportApi.DisplayName</span>
+                        <span class="material-symbols-outlined" style="font-size:1rem;">expand_more</span>
+                    </button>
+                    @if (showProductMenu)
+                    {
+                        <div class="ops-dropdown ops-dropdown--product">
+                            <div class="ops-dropdown__head"><strong>Switch product</strong></div>
+                            @if (tenantsLoading)
+                            {
+                                <p class="ops-dropdown__empty">Loading desks…</p>
+                            }
+                            else if (!string.IsNullOrEmpty(tenantsError))
+                            {
+                                <p class="ops-dropdown__empty" style="color:#DC2626;">@tenantsError</p>
+                            }
+                            else
+                            {
+                                @foreach (var t in tenants)
+                                {
+                                    var active = string.Equals(t.TenantId, SupportApi.TenantId, StringComparison.OrdinalIgnoreCase);
+                                    <button type="button"
+                                            class="ops-dropdown__item @(active ? "is-active" : "")"
+                                            @onclick="() => SelectTenantAsync(t)">
+                                        <span>@t.DisplayName</span>
+                                        @if (active)
+                                        {
+                                            <span class="material-symbols-outlined" style="font-size:1rem;">check</span>
+                                        }
+                                    </button>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
                 <a class="ops-public-link" href="/" target="_blank" rel="noopener">
                     <span class="material-symbols-outlined">public</span>
                     <span>Public Website</span>
@@ -285,6 +286,7 @@
     private bool showNotifs;
     private bool showMsgs;
     private bool showUserMenu;
+    private bool showProductMenu;
     private bool isDark;
 
     private sealed record NavLink(string Label, string Href, string Match);
@@ -422,7 +424,7 @@
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         ExpandForCurrentRoute();
-        showNotifs = showMsgs = showUserMenu = false;
+        showNotifs = showMsgs = showUserMenu = showProductMenu = false;
         mobileOpen = false;
         _ = InvokeAsync(StateHasChanged);
     }
@@ -466,25 +468,31 @@
         catch { /* ignore */ }
     }
 
+    private void ToggleProductMenu()
+    {
+        showProductMenu = !showProductMenu;
+        if (showProductMenu)
+        {
+            showNotifs = showMsgs = showUserMenu = false;
+        }
+    }
+
     private void ToggleNotifs()
     {
         showNotifs = !showNotifs;
-        showMsgs = false;
-        showUserMenu = false;
+        showMsgs = showUserMenu = showProductMenu = false;
     }
 
     private void ToggleMsgs()
     {
         showMsgs = !showMsgs;
-        showNotifs = false;
-        showUserMenu = false;
+        showNotifs = showUserMenu = showProductMenu = false;
     }
 
     private void ToggleUserMenu()
     {
         showUserMenu = !showUserMenu;
-        showNotifs = false;
-        showMsgs = false;
+        showNotifs = showMsgs = showProductMenu = false;
     }
 
     private async Task ToggleTheme()
@@ -544,6 +552,41 @@
         return relative.StartsWith(target, StringComparison.OrdinalIgnoreCase);
     }
 
+    private bool IsNavLinkActive(NavLink item)
+    {
+        if (!IsActive(item.Match))
+            return false;
+
+        var current = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var target = Navigation.ToAbsoluteUri(item.Href);
+        if (string.IsNullOrEmpty(target.Query))
+            return string.IsNullOrEmpty(current.Query);
+
+        var targetTab = GetTabQueryValue(target.Query);
+        var currentTab = GetTabQueryValue(current.Query);
+        if (string.IsNullOrEmpty(targetTab))
+            return string.IsNullOrEmpty(currentTab);
+
+        if (string.Equals(targetTab, currentTab, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return (targetTab is "live" or "chat") && (currentTab is "live" or "chat");
+    }
+
+    private static string? GetTabQueryValue(string query)
+    {
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var pair = part.Split('=', 2);
+            if (pair.Length != 2)
+                continue;
+            if (string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(pair[1]);
+        }
+
+        return null;
+    }
+
     private void ApplyTenantIfMissingFromList()
     {
         if (tenants.Count == 0) return;
@@ -587,7 +630,9 @@
     {
         SupportApi.SetTenant(tenant.TenantId, tenant.PublicKey, tenant.DisplayName, tenant.PublicHelpCenterUrl);
         await PersistSelectedTenantAsync(tenant);
+        showProductMenu = false;
         mobileOpen = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleLogout()

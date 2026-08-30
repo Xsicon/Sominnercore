@@ -1,0 +1,375 @@
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+@inject SupabaseAuthService Auth
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@if (IsOpen && SessionId.HasValue)
+{
+    var theme = SupportStickyNoteTheme.Resolve(colorHex);
+    var panelId = $"kn-sticky-note-{SessionId}";
+    <div id="@panelId"
+         class="kn-sticky-note"
+         style="left: @(posX)px; top: @(posY)px; background-color: @theme.Hex; color: @theme.TextHex;">
+        <div class="kn-sticky-note__head" data-sticky-handle>
+            <div class="kn-sticky-note__title" style="color: @theme.TextHex">
+                <span aria-hidden="true">📝</span>
+                <span>Docket Note — @CustomerName</span>
+            </div>
+            <div class="kn-sticky-note__head-actions">
+                <button type="button"
+                        class="kn-sticky-note__icon-btn @(pinned ? "kn-sticky-note__icon-btn--pinned" : "")"
+                        title="@(pinned ? "Pinned note" : "Pin note")"
+                        disabled="@isSaving"
+                        @onclick="TogglePinAsync">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1z"/></svg>
+                </button>
+                <button type="button"
+                        class="kn-sticky-note__icon-btn"
+                        title="Close"
+                        @onclick="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="kn-sticky-note__swatches">
+            @foreach (var color in SupportStickyNoteTheme.Palette)
+            {
+                <button type="button"
+                        class="kn-sticky-note__swatch @(colorHex.Equals(color.Hex, StringComparison.OrdinalIgnoreCase) ? "kn-sticky-note__swatch--active" : "")"
+                        style="background-color: @color.Hex"
+                        title="@color.Name"
+                        disabled="@isSaving"
+                        @onclick="() => SelectColorAsync(color.Hex)"></button>
+            }
+        </div>
+
+        <div class="kn-sticky-note__meta" style="color: @theme.SubtextHex">
+            <span>Agent: <strong>@displayAgentName</strong></span>
+            <span>@displayDate</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="kn-sticky-note__error">@errorMessage</p>
+        }
+
+        <div class="kn-sticky-note__body">
+            @if (isEditing)
+            {
+                <label class="kn-sticky-note__label" style="color: @theme.TextHex">Reason for Contact:</label>
+                <textarea class="kn-sticky-note__input" rows="2" @bind="editReason" disabled="@isSaving"></textarea>
+
+                <label class="kn-sticky-note__label" style="color: @theme.TextHex">Key Actions Taken (one per line):</label>
+                <textarea class="kn-sticky-note__input" rows="3" @bind="editActions" disabled="@isSaving"></textarea>
+
+                <div class="kn-sticky-note__edit-actions">
+                    <button type="button" class="kn-sticky-note__btn kn-sticky-note__btn--ghost" @onclick="CancelEdit" disabled="@isSaving">Cancel</button>
+                    <button type="button" class="kn-sticky-note__btn kn-sticky-note__btn--dark" @onclick="SaveEditAsync" disabled="@isSaving">
+                        @(isSaving ? "Saving…" : "Save")
+                    </button>
+                </div>
+            }
+            else if (isLoading)
+            {
+                <p class="kn-sticky-note__loading" style="color: @theme.SubtextHex">Loading note…</p>
+            }
+            else
+            {
+                <div class="kn-sticky-note__section">
+                    <div class="kn-sticky-note__section-title" style="color: @theme.TextHex">Reason for Contact:</div>
+                    <div class="kn-sticky-note__section-text" style="color: @theme.TextHex">
+                        @(string.IsNullOrWhiteSpace(reasonForContact) ? "This is Docket note." : reasonForContact)
+                    </div>
+                </div>
+
+                <div class="kn-sticky-note__section">
+                    <div class="kn-sticky-note__section-title" style="color: @theme.TextHex">Key Actions Taken:</div>
+                    @if (keyActions.Count == 0)
+                    {
+                        <p class="kn-sticky-note__section-text" style="color: @theme.SubtextHex">No actions recorded yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="kn-sticky-note__list" style="color: @theme.TextHex">
+                            @foreach (var action in keyActions)
+                            {
+                                <li><span aria-hidden="true">•</span> @action</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (!isEditing && !isLoading)
+        {
+            <div class="kn-sticky-note__foot">
+                <div class="kn-sticky-note__foot-actions">
+                    <button type="button" class="kn-sticky-note__btn kn-sticky-note__btn--ghost" @onclick="StartEdit" disabled="@isSaving">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        Edit
+                    </button>
+                    <button type="button" class="kn-sticky-note__btn kn-sticky-note__btn--ghost" @onclick="DeleteAsync" disabled="@isSaving">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? SessionId { get; set; }
+    [Parameter] public string CustomerName { get; set; } = "Customer";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private string agentName = "Admin";
+    private string displayAgentName = "Admin";
+    private string reasonForContact = "";
+    private List<string> keyActions = [];
+    private string colorHex = SupportStickyNoteTheme.DefaultHex;
+    private bool pinned;
+    private DateTime? updatedAt;
+    private string editReason = "";
+    private string editActions = "";
+    private bool isEditing;
+    private bool isLoading;
+    private bool isSaving;
+    private string? errorMessage;
+    private int posX = 320;
+    private int posY = 130;
+    private Guid? loadedSessionId;
+    private bool dragAttached;
+
+    private string displayDate =>
+        updatedAt.HasValue
+            ? updatedAt.Value.ToLocalTime().ToString("MMM d, yyyy h:mm tt")
+            : "Just now";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen || !SessionId.HasValue)
+            return;
+
+        if (loadedSessionId == SessionId)
+            return;
+
+        loadedSessionId = SessionId;
+        isEditing = false;
+        errorMessage = null;
+        dragAttached = false;
+        await LoadNoteAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!IsOpen || !SessionId.HasValue || dragAttached)
+            return;
+
+        try
+        {
+            var savedColor = await JS.InvokeAsync<string>("stickyNote.getSavedColorHex");
+            if (!string.IsNullOrWhiteSpace(savedColor) && loadedSessionId == SessionId && string.IsNullOrWhiteSpace(reasonForContact))
+                colorHex = savedColor;
+
+            await JS.InvokeVoidAsync(
+                "stickyNote.attachDrag",
+                $"kn-sticky-note-{SessionId}",
+                "[data-sticky-handle]");
+            dragAttached = true;
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task LoadNoteAsync()
+    {
+        if (!SessionId.HasValue)
+            return;
+
+        isLoading = true;
+        errorMessage = null;
+        agentName = await Auth.GetAgentDisplayNameAsync();
+
+        try
+        {
+            var savedColor = await JS.InvokeAsync<string>("stickyNote.getSavedColorHex");
+            if (!string.IsNullOrWhiteSpace(savedColor))
+                colorHex = savedColor;
+        }
+        catch (JSException)
+        {
+        }
+
+        var result = await SupportApi.GetChatStickyNoteAsync(SessionId.Value);
+        if (result.Success)
+        {
+            if (result.Data != null)
+                ApplyNote(result.Data);
+            else
+                ResetToEmpty();
+        }
+        else
+        {
+            ResetToEmpty();
+            errorMessage = string.IsNullOrWhiteSpace(result.Message)
+                ? "Unable to load sticky note."
+                : result.Message;
+        }
+
+        isLoading = false;
+        SyncEditBuffers();
+    }
+
+    private void ApplyNote(ChatStickyNoteDto note)
+    {
+        agentName = string.IsNullOrWhiteSpace(note.AgentName) ? agentName : note.AgentName;
+        displayAgentName = agentName;
+        reasonForContact = note.ReasonForContact ?? "";
+        keyActions = note.KeyActionsTaken?.Where(a => !string.IsNullOrWhiteSpace(a)).ToList() ?? [];
+        colorHex = string.IsNullOrWhiteSpace(note.ColorHex) ? colorHex : note.ColorHex;
+        pinned = note.Pinned;
+        updatedAt = note.UpdatedAt == default ? null : note.UpdatedAt;
+    }
+
+    private void ResetToEmpty()
+    {
+        displayAgentName = agentName;
+        reasonForContact = "";
+        keyActions = [];
+        pinned = false;
+        updatedAt = null;
+    }
+
+    private void SyncEditBuffers()
+    {
+        editReason = reasonForContact;
+        editActions = string.Join('\n', keyActions);
+    }
+
+    private void StartEdit()
+    {
+        SyncEditBuffers();
+        isEditing = true;
+        errorMessage = null;
+    }
+
+    private void CancelEdit()
+    {
+        SyncEditBuffers();
+        isEditing = false;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        await PersistAsync(reasonOverride: editReason, actionsOverride: ParseActions(editActions));
+        isEditing = false;
+    }
+
+    private async Task TogglePinAsync()
+    {
+        pinned = !pinned;
+        await PersistAsync();
+    }
+
+    private async Task SelectColorAsync(string hex)
+    {
+        colorHex = hex;
+        try
+        {
+            await JS.InvokeVoidAsync("stickyNote.saveColorHex", hex);
+        }
+        catch (JSException)
+        {
+        }
+
+        await PersistAsync();
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!SessionId.HasValue)
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+        try
+        {
+            var result = await SupportApi.DeleteChatStickyNoteAsync(SessionId.Value);
+            if (!result.Success)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Unable to delete sticky note."
+                    : result.Message;
+                return;
+            }
+
+            ResetToEmpty();
+            SyncEditBuffers();
+            await Close();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task PersistAsync(string? reasonOverride = null, List<string>? actionsOverride = null)
+    {
+        if (!SessionId.HasValue)
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        var request = new SaveChatStickyNoteRequest
+        {
+            AgentName = agentName,
+            ReasonForContact = reasonOverride ?? reasonForContact,
+            KeyActionsTaken = actionsOverride ?? keyActions,
+            ColorHex = colorHex,
+            Pinned = pinned
+        };
+
+        try
+        {
+            var result = await SupportApi.SaveChatStickyNoteAsync(SessionId.Value, request);
+            if (!result.Success || result.Data == null)
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Unable to save sticky note."
+                    : result.Message;
+                return;
+            }
+
+            ApplyNote(result.Data);
+            SyncEditBuffers();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static List<string> ParseActions(string text) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.TrimStart('•', '-', '*').Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        loadedSessionId = null;
+        dragAttached = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+}

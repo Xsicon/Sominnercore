@@ -2,65 +2,136 @@
 @using Microsoft.AspNetCore.Components.Web
 @inject SupportApiClient SupportApi
 
-<div class="sh-page internal">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Team Collaboration</p>
-        <h2>Internal Chat</h2>
-        <p>Private channels for agents — not visible to customers</p>
+<div class="kn-s3-page kn-s3-page--internal">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Team Collaboration</p>
+            <h2>Internal Chat</h2>
+            <p>Private channels for agents — not visible to customers</p>
+        </div>
+        <div class="kn-s3-actions">
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="FocusNewChannel">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                New channel
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(msg))
     {
-        <p class="sh-empty-list">@msg</p>
+        <p class="kn-s3-alert">@msg</p>
     }
 
-    <div style="display:grid;grid-template-columns:minmax(180px,240px) 1fr;gap:1rem;min-height:320px;">
-        <div>
-            <div style="display:flex;gap:0.35rem;margin-bottom:0.75rem;">
-                <input class="cs-ticket-field__select" placeholder="New channel" @bind="newChannel" />
-                <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@busy" @onclick="CreateChannel">+</button>
+    <div class="kn-s3-internal">
+        <aside class="kn-s3-internal__sidebar">
+            <div class="kn-s3-search kn-s3-internal__search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input placeholder="Search channels…"
+                       @bind="channelSearch"
+                       @bind:event="oninput" />
             </div>
-            @foreach (var c in channels)
-            {
+
+            <div class="kn-s3-internal__section-head">
+                <span>Channels</span>
                 <button type="button"
-                        class="ops-subnav__item @(selected?.Id == c.Id ? "active" : "")"
-                        style="display:block;width:100%;text-align:left;margin-bottom:0.25rem;"
-                        @onclick="() => SelectChannel(c)">
-                    #@c.Name
+                        class="kn-s3-internal__icon-btn"
+                        title="Create channel"
+                        disabled="@busy"
+                        @onclick="FocusNewChannel">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
                 </button>
-            }
-            @if (channels.Count == 0)
-            {
-                <p class="sh-empty-list">No channels yet.</p>
-            }
-        </div>
-        <div>
+            </div>
+
+            <div class="kn-s3-internal__new">
+                <input @ref="newChannelInputRef"
+                       class="kn-s3-field__select"
+                       placeholder="New channel name"
+                       @bind="newChannel"
+                       @onkeydown="OnNewChannelKey" />
+                <button type="button"
+                        class="kn-btn kn-btn--primary kn-btn--sm"
+                        disabled="@(busy || string.IsNullOrWhiteSpace(newChannel))"
+                        @onclick="CreateChannel">
+                    Create
+                </button>
+            </div>
+
+            <div class="kn-s3-internal__channels">
+                @foreach (var c in FilteredChannels)
+                {
+                    <button type="button"
+                            class="kn-s3-internal__channel @(selected?.Id == c.Id ? "is-active" : "")"
+                            @onclick="() => SelectChannel(c)">
+                        <span class="kn-s3-internal__channel-hash material-symbols-outlined" aria-hidden="true">tag</span>
+                        <span class="kn-s3-internal__channel-name">@c.Name</span>
+                    </button>
+                }
+                @if (!FilteredChannels.Any())
+                {
+                    <p class="kn-s3-empty kn-s3-internal__empty">No channels yet.</p>
+                }
+            </div>
+        </aside>
+
+        <section class="kn-s3-internal__room">
             @if (selected is null)
             {
-                <p class="sh-empty-list">Select or create a channel.</p>
+                <div class="kn-s3-internal__placeholder">
+                    <span class="material-symbols-outlined" aria-hidden="true">forum</span>
+                    <p>Select or create a channel to start chatting.</p>
+                </div>
             }
             else
             {
-                <div style="max-height:280px;overflow:auto;margin-bottom:0.75rem;">
-                    @foreach (var m in messages)
-                    {
-                        <div style="padding:0.35rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-                            <strong>@m.SenderName</strong>
-                            <small style="opacity:0.6;margin-left:0.35rem;">@m.CreatedAt.ToLocalTime().ToString("g")</small>
-                            <div>@m.Body</div>
+                <header class="kn-s3-internal__room-head">
+                    <div class="kn-s3-internal__room-title">
+                        <span class="kn-s3-internal__room-icon material-symbols-outlined" aria-hidden="true">tag</span>
+                        <div>
+                            <h3>#@selected.Name</h3>
+                            <p>Team-only channel for @SupportApi.DisplayName</p>
                         </div>
+                    </div>
+                </header>
+
+                <div class="kn-s3-internal__messages">
+                    @if (messages.Count == 0)
+                    {
+                        <p class="kn-s3-empty">No messages yet. Say hello.</p>
+                    }
+                    else
+                    {
+                        @foreach (var m in messages)
+                        {
+                            <article class="kn-s3-internal__msg">
+                                <div class="kn-s3-internal__avatar" aria-hidden="true">@GetInitials(m.SenderName)</div>
+                                <div class="kn-s3-internal__msg-body">
+                                    <div class="kn-s3-internal__msg-meta">
+                                        <strong>@m.SenderName</strong>
+                                        <time datetime="@m.CreatedAt.ToString("O")">@m.CreatedAt.ToLocalTime().ToString("g")</time>
+                                    </div>
+                                    <p>@m.Body</p>
+                                </div>
+                            </article>
+                        }
                     }
                 </div>
-                <div style="display:flex;gap:0.5rem;">
-                    <input class="cs-ticket-field__select" style="flex:1;" placeholder="Message…" @bind="draft"
-                           @onkeydown="OnKey" />
-                    <button type="button" class="cs-btn cs-btn--primary cs-btn--sm"
-                            disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Send">
+
+                <footer class="kn-s3-internal__composer">
+                    <textarea class="kn-s3-field__select kn-s3-internal__composer-input"
+                              rows="2"
+                              placeholder="Message #@selected.Name…"
+                              @bind="draft"
+                              @onkeydown="OnKey"></textarea>
+                    <button type="button"
+                            class="kn-btn kn-btn--primary kn-btn--sm"
+                            disabled="@(busy || string.IsNullOrWhiteSpace(draft))"
+                            @onclick="Send">
+                        <span class="material-symbols-outlined" aria-hidden="true">send</span>
                         Send
                     </button>
-                </div>
+                </footer>
             }
-        </div>
+        </section>
     </div>
 </div>
 
@@ -69,11 +140,29 @@
     private List<ImMessageDto> messages = [];
     private ImChannelDto? selected;
     private string newChannel = "";
+    private string channelSearch = "";
     private string draft = "";
     private string? msg;
     private bool busy;
+    private ElementReference newChannelInputRef;
+
+    private IEnumerable<ImChannelDto> FilteredChannels =>
+        string.IsNullOrWhiteSpace(channelSearch)
+            ? channels
+            : channels.Where(c => c.Name.Contains(channelSearch.Trim(), StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync() => await LoadChannels();
+
+    private async Task FocusNewChannel()
+    {
+        try
+        {
+            await newChannelInputRef.FocusAsync();
+        }
+        catch (Exception)
+        {
+        }
+    }
 
     private async Task LoadChannels()
     {
@@ -85,6 +174,8 @@
             selected = channels.FirstOrDefault(c => c.Id == selected.Id);
             if (selected is not null)
                 await LoadMessages();
+            else
+                messages = [];
         }
     }
 
@@ -92,6 +183,7 @@
     {
         if (string.IsNullOrWhiteSpace(newChannel)) return;
         busy = true;
+        msg = null;
         try
         {
             var r = await SupportApi.CreateImChannelAsync(newChannel.Trim());
@@ -107,6 +199,7 @@
     private async Task SelectChannel(ImChannelDto c)
     {
         selected = c;
+        msg = null;
         await LoadMessages();
     }
 
@@ -122,6 +215,7 @@
     {
         if (selected is null || string.IsNullOrWhiteSpace(draft)) return;
         busy = true;
+        msg = null;
         try
         {
             var r = await SupportApi.SendImMessageAsync(selected.Id, draft.Trim());
@@ -134,7 +228,23 @@
 
     private async Task OnKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !e.ShiftKey)
             await Send();
+    }
+
+    private async Task OnNewChannelKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await CreateChannel();
+    }
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        return parts[0].Length >= 2 ? parts[0][..2].ToUpperInvariant() : parts[0].ToUpperInvariant();
     }
 }

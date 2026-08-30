@@ -1,4 +1,4 @@
-@using KobNeti.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -9,9 +9,9 @@
     </div>
 
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <input class="cs-ticket-field__select" style="min-width:12rem;" placeholder="Milestone title" @bind="newTitle" @bind:event="oninput" />
-        <input class="cs-ticket-field__select" type="date" @bind="newTarget" />
-        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
+        <input class="kn-field" style="min-width:12rem;" placeholder="Milestone title" @bind="newTitle" @bind:event="oninput" />
+        <input class="kn-field" type="date" @bind="newTarget" />
+        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
             Add milestone
         </button>
     </div>
@@ -22,7 +22,7 @@
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loading…</p>
+        <p class="sh-empty-list">Loadingâ€¦</p>
     }
     else
     {
@@ -38,12 +38,12 @@
                 {
                     <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
                         <strong>@m.Title</strong>
-                        <span class="cs-ticket-chip">@m.Status</span>
-                        <span class="cs-ticket-chip">@(m.TargetDate?.ToString("yyyy-MM-dd") ?? "no date")</span>
-                        <span class="cs-ticket-chip">@m.TaskCount tasks</span>
+                        <span class="kn-chip kn-chip--neutral">@m.Status</span>
+                        <span class="kn-chip kn-chip--neutral">@(m.TargetDate?.ToString("yyyy-MM-dd") ?? "no date")</span>
+                        <span class="kn-chip kn-chip--neutral">@m.TaskCount tasks</span>
                         @if (m.CalendarEventId.HasValue)
                         {
-                            <span class="cs-ticket-chip">on calendar</span>
+                            <span class="kn-chip kn-chip--neutral">on calendar</span>
                         }
                     </li>
                 }
@@ -62,7 +62,7 @@
                 {
                     <li style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
                         <strong>@e.Title</strong>
-                        <span> — @e.StartsAt.ToLocalTime().ToString("d")</span>
+                        <span> â€” @e.StartsAt.ToLocalTime().ToString("d")</span>
                     </li>
                 }
             </ul>

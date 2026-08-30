@@ -7,37 +7,45 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="kn-s3-page">
+<div class="kn-s3-page kn-s3-page--live-chat">
     <div class="kn-s3-head">
         <div>
             <p class="kn-s3-eyebrow">Customer Support</p>
             <h2>Live Chat</h2>
-            <p>Respond to customers in real time</p>
+            <p>Respond to customers in real time · @SupportApi.DisplayName</p>
         </div>
         <div class="kn-s3-actions">
             <SupportKbButton OnClick="OpenKbPanel" />
         </div>
     </div>
 
-    @if (isLoading)
-    {
-        <p class="kn-s3-empty">Loading conversations…</p>
-    }
-
     @if (!string.IsNullOrEmpty(loadError))
     {
-        <p class="cs-error-banner">@loadError</p>
+        <p class="kn-s3-alert">@loadError</p>
     }
 
-    <div class="kn-s3-chat">
+    <div class="@ChatGridClass">
         <aside class="kn-s3-chat__col">
-            <div class="kn-s3-chat__head">Active Conversations (@sessions.Count)</div>
-            <div class="kn-s3-chat__list cs-chat-sidebar__list">
-                @if (sessions.Count == 0)
+            <div class="kn-s3-chat__head">
+                Active Conversations@(isLoading ? "" : $" ({sessions.Count})")
+            </div>
+            <div class="kn-s3-chat__list">
+                @if (isLoading)
                 {
-                    <div class="cs-empty" style="padding:40px 16px">
-                        <span class="material-symbols-outlined cs-empty__icon">forum</span>
-                        <p>@(string.IsNullOrEmpty(loadError) ? "No active chats" : "Unable to load conversations")</p>
+                    <div class="kn-s3-loading-block" role="status" aria-live="polite" aria-busy="true">
+                        <span class="kn-s3-spinner" aria-hidden="true"></span>
+                        <p>Loading conversations@(string.IsNullOrWhiteSpace(SupportApi.DisplayName) ? "…" : $" for {SupportApi.DisplayName}…")</p>
+                        @for (var i = 0; i < 5; i++)
+                        {
+                            <div class="kn-s3-skeleton kn-s3-skeleton--conv" aria-hidden="true"></div>
+                        }
+                    </div>
+                }
+                else if (sessions.Count == 0)
+                {
+                    <div class="kn-s3-empty">
+                        <span class="material-symbols-outlined" aria-hidden="true">forum</span>
+                        <p>@(string.IsNullOrEmpty(loadError) ? "No active chats. Set the product API URL in Settings and ensure the product API is running." : "Unable to load conversations")</p>
                     </div>
                 }
                 else
@@ -45,31 +53,31 @@
                     @foreach (var s in sessions)
                     {
                         <button type="button"
-                                class="cs-conv-item @(selectedSessionId == s.Id ? "cs-conv-item--active" : "")"
+                                class="kn-s3-conv @(selectedSessionId == s.Id ? "kn-s3-conv--active" : "")"
                                 @onclick="() => SelectSession(s.Id)"
                                 @key="s.Id">
-                            <div class="cs-conv-item__top">
-                                <span class="cs-conv-item__name">@s.CustomerName</span>
-                                <div class="cs-conv-item__meta">
+                            <div class="kn-s3-conv__top">
+                                <span class="kn-s3-conv__name">@s.CustomerName</span>
+                                <div class="kn-s3-conv__meta">
                                     @if (GetSidebarMessageCount(s) > 0)
                                     {
-                                        <span class="cs-conv-item__msg-count @(ShouldHighlightSidebarCount(s) ? "cs-conv-item__msg-count--unread" : "")">
+                                        <span class="kn-s3-conv__count @(ShouldHighlightSidebarCount(s) ? "kn-s3-conv__count--unread" : "")">
                                             @GetSidebarMessageCount(s)
                                         </span>
                                     }
-                                    <span class="cs-conv-item__time">@GetRelativeTime(s.LastActivity)</span>
+                                    <span class="kn-s3-conv__time">@GetRelativeTime(s.LastActivity)</span>
                                 </div>
                             </div>
                             @if (!string.IsNullOrWhiteSpace(s.ContactEmail))
                             {
-                                <span class="cs-contact-email cs-conv-item__email">@s.ContactEmail</span>
+                                <span class="kn-s3-conv__email">@s.ContactEmail</span>
                             }
                             @if (!string.IsNullOrEmpty(s.LastMessagePreview))
                             {
-                                <p class="cs-conv-item__preview">@s.LastMessagePreview</p>
+                                <p class="kn-s3-conv__preview">@s.LastMessagePreview</p>
                             }
-                            <div class="cs-conv-item__status">
-                                <span class="cs-status-dot" style="background:@(IsWaiting(s) ? "#F59E0B" : "#22C55E")"></span>
+                            <div class="kn-s3-conv__status">
+                                <span class="kn-s3-status-dot kn-s3-status-dot--@(IsWaiting(s) ? "waiting" : "active")" aria-hidden="true"></span>
                                 @(IsWaiting(s) ? "waiting" : "active")
                             </div>
                         </button>
@@ -80,45 +88,59 @@
 
         @if (selectedSessionId.HasValue && selectedSession != null)
         {
-            <aside class="kn-s3-chat__col cs-drawer cs-chat-drawer @(showKbPanel ? "cs-drawer--shifted" : "")">
-                <header class="cs-drawer__header cs-chat-drawer__header">
-                    <div class="cs-chat-drawer__mobile-top">
+            <aside class="kn-s3-chat__col kn-s3-thread">
+                <header class="kn-s3-thread__head">
+                    <div class="kn-s3-thread__mobile-top">
                         <button type="button"
-                                class="cs-chat-drawer__back"
+                                class="kn-s3-thread__mobile-back kn-s3-icon-btn"
                                 aria-label="Back to conversations"
                                 @onclick="DeselectSession">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
-                        <div class="cs-chat-drawer__mobile-center">
-                            <h3 class="cs-chat-drawer__mobile-name">@selectedSession.CustomerName</h3>
-                            <p class="cs-chat-drawer__mobile-status">
+                        <div class="kn-s3-thread__mobile-center">
+                            <h3 class="kn-s3-thread__mobile-name">@selectedSession.CustomerName</h3>
+                            <p class="kn-s3-thread__mobile-status">
                                 @(IsWaiting(selectedSession) ? "Waiting" : "Active")
                                 · @GetRelativeTime(selectedSession.LastActivity)
                             </p>
                         </div>
-                        <div class="cs-chat-drawer__mobile-actions">
-                            <button type="button" class="cs-chat-drawer__mobile-icon-btn" aria-label="Open knowledge base" @onclick="OpenKbPanel">
+                        <div class="kn-s3-thread__mobile-actions">
+                            <button type="button"
+                                    class="kn-s3-sticky-btn @(stickyNoteOpen ? "kn-s3-sticky-btn--active" : "")"
+                                    @onclick="ToggleStickyNote">
+                                Sticky Note
+                            </button>
+                            @if (selectedSession.Status == "active")
+                            {
+                                <button type="button"
+                                        class="kn-s3-ghost-btn kn-s3-ghost-btn--compact"
+                                        @onclick="OpenEscalateModal"
+                                        disabled="@isClosingSession">
+                                    Escalate
+                                </button>
+                            }
+                            <button type="button" class="kn-s3-icon-btn" aria-label="Open knowledge base" @onclick="OpenKbPanel">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
                             </button>
                         </div>
                     </div>
 
-                    <div class="cs-chat-drawer__desktop-only">
-                        <div class="cs-chat-drawer__heading">
-                            <h3 class="cs-drawer__title">@selectedSession.CustomerName</h3>
-                            <p class="cs-chat-drawer__subtitle">
+                    <div class="kn-s3-thread__desktop">
+                        <div class="kn-s3-thread__heading">
+                            <h3 class="kn-s3-thread__title">@selectedSession.CustomerName</h3>
+                            <p class="kn-s3-thread__subtitle">
                                 @(IsWaiting(selectedSession) ? "Waiting" : "Active")
                                 · last message @GetRelativeTime(selectedSession.LastActivity)
                             </p>
                             @if (!string.IsNullOrWhiteSpace(selectedSession.ContactEmail))
                             {
-                                <div class="cs-chat-panel__email-row">
-                                    <span class="cs-contact-email cs-chat-panel__email-text"
+                                <div class="kn-s3-thread__email-row">
+                                    <span class="kn-s3-thread__email"
                                           title="@selectedSession.ContactEmail">
                                         @selectedSession.ContactEmail
                                     </span>
                                     <button type="button"
-                                            class="cs-chat-panel__copy-btn"
+                                            class="kn-s3-icon-btn"
                                             title="@(emailCopied ? "Copied!" : "Copy email")"
                                             aria-label="Copy customer email"
                                             @onclick="CopyCustomerEmail">
@@ -135,28 +157,34 @@
                             }
                             else
                             {
-                                <p class="cs-chat-panel__email-missing">No email provided</p>
+                                <p class="kn-s3-thread__email-missing">No email provided</p>
                             }
                         </div>
-                        <div class="cs-ticket-drawer__header-actions">
-                            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="OpenKbPanel">
+                        <div class="kn-s3-thread__actions">
+                            <button type="button"
+                                    class="kn-s3-sticky-btn @(stickyNoteOpen ? "kn-s3-sticky-btn--active" : "")"
+                                    @onclick="ToggleStickyNote">
+                                Sticky Note
+                            </button>
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="OpenKbPanel">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
                                 KB
                             </button>
                             @if (selectedSession.Status == "active")
                             {
-                                <button type="button" class="cs-btn cs-btn--outline cs-btn--sm"
-                                        @onclick="ConvertSelectedToTicket"
-                                        disabled="@(isConvertingSession || isClosingSession)">
-                                    @(isConvertingSession ? "Creating…" : "Create Ticket")
+                                <button type="button"
+                                        class="kn-s3-ghost-btn"
+                                        @onclick="OpenEscalateModal"
+                                        disabled="@isClosingSession">
+                                    Escalate
                                 </button>
-                                <button type="button" class="cs-btn cs-btn--danger cs-btn--sm"
+                                <button type="button" class="kn-s3-ghost-btn kn-s3-ghost-btn--danger"
                                         @onclick="CloseSelectedSession"
                                         disabled="@isClosingSession">
                                     @(isClosingSession ? "Closing…" : "Close Chat")
                                 </button>
                             }
-                            <button type="button" class="cs-icon-btn" aria-label="Close chat panel" @onclick="DeselectSession">
+                            <button type="button" class="kn-s3-icon-btn" aria-label="Close chat panel" @onclick="DeselectSession">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                             </button>
                         </div>
@@ -164,9 +192,9 @@
 
                     @if (selectedSession.Status == "active")
                     {
-                        <div class="cs-chat-drawer__mobile-close-row">
+                        <div class="kn-s3-thread__mobile-close-row">
                             <button type="button"
-                                    class="cs-chat-drawer__mobile-close-btn"
+                                    class="kn-btn kn-btn--danger kn-btn--sm kn-s3-thread__mobile-close-btn"
                                     @onclick="CloseSelectedSession"
                                     disabled="@isClosingSession">
                                 @(isClosingSession ? "Closing…" : "Close Chat")
@@ -175,68 +203,82 @@
                     }
                 </header>
 
-                <div class="cs-drawer__body cs-chat-drawer__body">
+                <div class="kn-s3-thread__body">
                     @if (!string.IsNullOrEmpty(loadError))
                     {
-                        <p class="cs-error-banner cs-error-banner--inline cs-chat-drawer__sync-error">@loadError</p>
+                        <p class="kn-s3-alert kn-s3-alert--inline">@loadError</p>
                     }
-                    <div class="cs-chat-panel__messages" @ref="messagesContainerRef">
+                    <div class="kn-s3-thread__messages" @ref="messagesContainerRef">
                         @if (!string.IsNullOrEmpty(messagesError))
                         {
-                            <p class="cs-error-banner cs-error-banner--inline">@messagesError</p>
+                            <p class="kn-s3-alert kn-s3-alert--inline">@messagesError</p>
                         }
                         else if (isLoadingMessages)
                         {
-                            <p class="cs-row__meta">Loading messages…</p>
+                            <div class="kn-s3-loading-block kn-s3-loading-block--inline" role="status" aria-live="polite" aria-busy="true">
+                                <span class="kn-s3-spinner" aria-hidden="true"></span>
+                                <p>Loading messages…</p>
+                            </div>
                         }
                         else if (messagesLoadSucceeded && messages.Count == 0)
                         {
-                            <p class="cs-row__meta">No messages yet.</p>
+                            <p class="kn-s3-empty kn-s3-empty--inline">No messages yet.</p>
                         }
                         else
                         {
                             @foreach (var m in messages)
                             {
                                 var isAgent = m.SenderType is "admin" or "agent";
-                                <div class="cs-bubble-row @(isAgent ? "cs-bubble-row--agent" : "cs-bubble-row--customer")">
-                                    @if (!isAgent)
-                                    {
-                                        <span class="cs-bubble-avatar" aria-hidden="true">@CustomerInitials</span>
-                                    }
-                                    <div class="cs-bubble @(isAgent ? "cs-bubble--agent" : "cs-bubble--customer")">
-                                        <p class="cs-bubble__text">@m.Message</p>
-                                        <span class="cs-bubble__time">@m.CreatedAt.ToLocalTime().ToString("h:mm tt")</span>
+                                <div class="kn-s3-msg @(isAgent ? "kn-s3-msg--agent" : "kn-s3-msg--customer")">
+                                    <div class="kn-s3-bubble @(isAgent ? "kn-s3-bubble--agent" : "kn-s3-bubble--customer")">
+                                        <p class="kn-s3-bubble__text">@m.Message</p>
+                                        <span class="kn-s3-bubble__time">@m.CreatedAt.ToLocalTime().ToString("h:mm tt")</span>
                                     </div>
                                 </div>
                             }
+                            <div class="kn-s3-thread__anchor" @ref="messagesEndRef" aria-hidden="true"></div>
                         }
                     </div>
                 </div>
 
-                <footer class="cs-drawer__footer cs-chat-drawer__footer">
+                <footer class="kn-s3-thread__foot">
+                    @if (!string.IsNullOrEmpty(actionMessage))
+                    {
+                        <p class="kn-s3-hint kn-s3-hint--inline">@actionMessage</p>
+                    }
                     @if (!string.IsNullOrEmpty(actionError))
                     {
-                        <p class="cs-error-banner cs-error-banner--inline">@actionError</p>
+                        <p class="kn-s3-alert kn-s3-alert--inline">@actionError</p>
                     }
                     <SupportMacrosBar @ref="macrosBar" OnApply="ApplyMacro" />
-                    <div class="cs-chat-panel__input">
-                        <input type="text"
-                               class="cs-chat-panel__input-field"
-                               placeholder="Type a message…"
-                               @bind="adminMessageInput"
-                               @bind:event="oninput"
-                               @onkeydown="HandleAdminKeyDown"
-                               disabled="@(selectedSession.Status == "closed" || isSendingAdminMessage)" />
+                    <div class="kn-s3-thread__composer">
+                        <div class="kn-field">
+                            <textarea placeholder="Type a message…"
+                                      rows="2"
+                                      @bind="adminMessageInput"
+                                      @bind:event="oninput"
+                                      @onkeydown="HandleAdminKeyDown"
+                                      disabled="@(selectedSession.Status == "closed" || isSendingAdminMessage)"></textarea>
+                        </div>
                         <button type="button"
-                                class="cs-btn cs-btn--primary cs-chat-drawer__send-btn"
+                                class="kn-btn kn-btn--primary"
                                 @onclick="SendAdminMessage"
                                 disabled="@(selectedSession.Status == "closed" || isSendingAdminMessage || string.IsNullOrWhiteSpace(adminMessageInput))">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                            <span class="cs-chat-drawer__send-label">Send</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                            Send
                         </button>
                     </div>
                 </footer>
             </aside>
+        }
+        else if (isLoading)
+        {
+            <div class="kn-s3-chat__col kn-s3-chat__placeholder">
+                <div class="kn-s3-loading-block kn-s3-loading-block--center" role="status" aria-busy="true">
+                    <span class="kn-s3-spinner kn-s3-spinner--lg" aria-hidden="true"></span>
+                    <p>Fetching live chat from product API…</p>
+                </div>
+            </div>
         }
         else
         {
@@ -248,34 +290,34 @@
 
         <aside class="kn-s3-chat__col kn-s3-chat__col--kb">
             <div class="kn-s3-chat__head">Knowledge Base</div>
-            <div class="kn-s3-chat__list" style="padding:0.75rem;">
-                @if (showKbPanel)
-                {
-                    <SupportKbQuickPanel OnClose="CloseKbPanel" />
-                }
-                else
-                {
-                    <p style="font-size:0.85rem;color:var(--kn-text-muted);margin:0 0 0.75rem;">
-                        Search articles while chatting with customers.
-                    </p>
-                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="OpenKbPanel">
-                        Open KB panel
-                    </button>
-                }
+            <div class="kn-s3-chat__list kn-s3-chat__list--kb">
+                <SupportKbQuickPanel @key="@SupportApi.TenantId" ShowHeader="false" />
             </div>
         </aside>
     </div>
 
-    @if (showKbPanel && selectedSessionId.HasValue)
+    @if (showKbPanel)
     {
-        <button type="button" class="cs-kb-backdrop cs-kb-backdrop--mobile-only" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
+        <div class="kn-s3-kb-mobile-sheet">
+            <SupportKbQuickPanel @key="@($"{SupportApi.TenantId}-mobile")" OnClose="CloseKbPanel" />
+        </div>
+        <button type="button" class="kn-s3-overlay kn-s3-overlay--mobile-only" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
     }
+
+    <SupportChatStickyNote SessionId="selectedSessionId"
+                           CustomerName="@(selectedSession?.CustomerName ?? "Customer")"
+                           @bind-IsOpen="stickyNoteOpen" />
+
+    <SupportChatEscalateModal SessionId="selectedSessionId"
+                              CustomerName="@(selectedSession?.CustomerName ?? "Customer")"
+                              @bind-IsOpen="showEscalateModal"
+                              OnEscalated="HandleEscalated" />
 </div>
 
 @code {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan MessageLoadTimeout = TimeSpan.FromSeconds(30);
-    private const string ReadStateStorageKey = "support-hub-chat-read-at";
+    private const string ReadStateStorageKeyPrefix = "support-hub-chat-read-at";
 
     private List<ChatSessionDto> sessions = [];
     private List<ChatMessageDto> messages = [];
@@ -288,20 +330,21 @@
     private bool messagesLoadSucceeded;
     private bool isSendingAdminMessage;
     private bool isClosingSession;
-    private bool isConvertingSession;
     private string? loadError;
     private string? messagesError;
     private string? actionError;
+    private string? actionMessage;
     private bool showKbPanel;
+    private bool stickyNoteOpen;
+    private bool showEscalateModal;
     private bool emailCopied;
 
-    private string TabShellClass =>
-        SupportLiveChatUiHelper.BuildTabShellClass(showKbPanel, selectedSessionId.HasValue);
-
-    private string CustomerInitials => GetInitials(selectedSession?.CustomerName);
+    private string ChatGridClass =>
+        SupportLiveChatUiHelper.BuildChatGridClass(showKbPanel, selectedSessionId.HasValue);
 
     private SupportMacrosBar? macrosBar;
     private ElementReference messagesContainerRef;
+    private ElementReference messagesEndRef;
     private bool scrollMessagesPending;
     private bool scrollMessagesForce;
     private CancellationTokenSource? pollCts;
@@ -310,32 +353,23 @@
     private int _messagesLoadVersion;
     private System.Threading.Timer? emailCopiedTimer;
 
+    private string ReadStateStorageKey =>
+        $"{ReadStateStorageKeyPrefix}:{SupportApi.TenantId}";
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            pollCts = new CancellationTokenSource();
+            SupportApi.TenantChanged += OnTenantChanged;
             try
             {
-                await LoadReadStateAsync();
-                await SupportApi.EnsureAgentTokenAsync();
-                await LoadSessions();
-                StartSessionsPolling();
-
-                var focusSessionId = TryGetSessionIdFromUri();
-                if (focusSessionId.HasValue && sessions.Any(s => s.Id == focusSessionId.Value))
-                    await SelectSession(focusSessionId.Value);
-                else if (sessions.Count > 0)
-                    await SelectSession(sessions[0].Id);
+                await InitializeWorkspaceAsync();
             }
             catch (Exception ex)
             {
                 loadError = string.IsNullOrWhiteSpace(ex.Message)
                     ? "Failed to load live chat sessions."
                     : ex.Message;
-            }
-            finally
-            {
                 isLoading = false;
                 await InvokeAsync(StateHasChanged);
             }
@@ -363,7 +397,7 @@
 
         try
         {
-            await JS.InvokeVoidAsync("chatScroll.scrollToBottom", messagesContainerRef, force);
+            await JS.InvokeVoidAsync("chatScroll.scrollToBottom", messagesContainerRef, messagesEndRef, true);
         }
         catch (JSException)
         {
@@ -402,13 +436,85 @@
     private static bool IsWaiting(ChatSessionDto s) =>
         SupportLiveChatUnreadHelper.IsWaitingForAdmin(s);
 
+    private void OnTenantChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await InitializeWorkspaceAsync();
+            }
+            catch (Exception ex)
+            {
+                loadError = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Failed to load live chat sessions."
+                    : ex.Message;
+                isLoading = false;
+                StateHasChanged();
+            }
+        });
+    }
+
+    private async Task InitializeWorkspaceAsync()
+    {
+        isLoading = true;
+        loadError = null;
+        messagesError = null;
+        actionError = null;
+
+        StopSessionsPolling();
+        selectedSessionId = null;
+        selectedSession = null;
+        messages = [];
+        sessions = [];
+        messagesLoadSucceeded = false;
+        showKbPanel = false;
+        stickyNoteOpen = false;
+        showEscalateModal = false;
+
+        try
+        {
+            await LoadReadStateAsync();
+            await SupportApi.EnsureAgentTokenAsync();
+            await LoadSessions();
+
+            pollCts = new CancellationTokenSource();
+            StartSessionsPolling();
+
+            var focusSessionId = TryGetSessionIdFromUri();
+            if (focusSessionId.HasValue && sessions.Any(s => s.Id == focusSessionId.Value))
+                await SelectSession(focusSessionId.Value);
+            else if (sessions.Count > 0)
+                await SelectSession(sessions[0].Id);
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     private async Task LoadSessions()
     {
         try
         {
-            var data = await SupportApi.GetActiveSessionsAsync();
-            sessions = data;
+            var result = await SupportApi.GetActiveSessionsResultAsync();
+            if (!result.Success)
+            {
+                sessions = [];
+                loadError = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Failed to load live chat sessions."
+                    : result.Message;
+                return;
+            }
+
+            sessions = result.Data ?? [];
             loadError = null;
+            if (sessions.Count == 0 && !string.IsNullOrWhiteSpace(result.Message)
+                && !result.Message.Contains("loaded", StringComparison.OrdinalIgnoreCase))
+            {
+                loadError = result.Message;
+            }
 
             if (selectedSessionId.HasValue)
             {
@@ -513,6 +619,9 @@
         {
             if (loadVersion == _messagesLoadVersion && selectedSessionId == sessionId)
                 isLoadingMessages = false;
+
+            if (loadVersion == _messagesLoadVersion && selectedSessionId == sessionId)
+                QueueScrollMessages(force: true);
         }
     }
 
@@ -534,7 +643,7 @@
             return;
 
         messages = merged;
-        QueueScrollMessages();
+        QueueScrollMessages(force: true);
     }
 
     private void StartMessagesPolling()
@@ -595,6 +704,7 @@
         StartMessagesPolling();
         QueueScrollMessages(force: true);
         StateHasChanged();
+        QueueScrollMessages(force: true);
     }
 
     private async Task LoadSessionDetails(Guid sessionId)
@@ -703,11 +813,25 @@
 
     private void OpenKbPanel() => showKbPanel = true;
     private void CloseKbPanel() => showKbPanel = false;
+    private void ToggleStickyNote() => stickyNoteOpen = !stickyNoteOpen;
+    private void OpenEscalateModal() => showEscalateModal = true;
+
+    private Task HandleEscalated(string message)
+    {
+        actionError = null;
+        actionMessage = message;
+        loadError = null;
+        messagesError = null;
+        return Task.CompletedTask;
+    }
+
     private void DeselectSession() => ClearChatSessionState();
 
     private void ClearChatSessionState()
     {
         showKbPanel = false;
+        stickyNoteOpen = false;
+        showEscalateModal = false;
         _messagesLoadVersion++;
         emailCopied = false;
         StopMessagesPolling();
@@ -717,43 +841,11 @@
         messagesLoadSucceeded = false;
         messagesError = null;
         actionError = null;
+        actionMessage = null;
         adminMessageInput = string.Empty;
     }
 
     private void ApplyMacro(string text) => adminMessageInput = text;
-
-    private async Task ConvertSelectedToTicket()
-    {
-        if (!selectedSessionId.HasValue || isConvertingSession) return;
-
-        try
-        {
-            isConvertingSession = true;
-            actionError = null;
-            var result = await SupportApi.ConvertChatToTicketAsync(selectedSessionId.Value, "chat");
-            if (!result.Success)
-            {
-                actionError = string.IsNullOrWhiteSpace(result.Message)
-                    ? "Failed to create ticket from chat."
-                    : result.Message;
-                return;
-            }
-
-            actionError = null;
-            // Soft success via existing banner path
-            loadError = null;
-            messagesError = null;
-            actionError = $"Created ticket {result.Data?.TicketNumber}";
-        }
-        catch (Exception ex)
-        {
-            actionError = ex.Message;
-        }
-        finally
-        {
-            isConvertingSession = false;
-        }
-    }
 
     private async Task CloseSelectedSession()
     {
@@ -802,18 +894,6 @@
         return value.ToLocalTime().ToString("MMM d");
     }
 
-    private static string GetInitials(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return "?";
-
-        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2)
-            return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[^1][0])}";
-
-        return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
-    }
-
     private async Task LoadReadStateAsync()
     {
         try
@@ -855,6 +935,7 @@
 
     public void Dispose()
     {
+        SupportApi.TenantChanged -= OnTenantChanged;
         emailCopiedTimer?.Dispose();
         StopSessionsPolling();
     }

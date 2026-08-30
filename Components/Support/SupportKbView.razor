@@ -4,7 +4,7 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="kn-s3-page cs-tab-shell cs-kb-admin">
+<div class="kn-s3-page kn-s3-kb-admin">
     <div class="kn-s3-head">
         <div>
             <p class="kn-s3-eyebrow">Customer Support</p>
@@ -31,22 +31,22 @@
         }
     </div>
 
-    <div class="cs-kb-cat-carousel-wrap">
-        <div class="cs-kb-cat-carousel" role="list" aria-label="Article categories">
+    <div class="kn-s3-kb-cat-carousel-wrap">
+        <div class="kn-s3-kb-cat-carousel" role="list" aria-label="Article categories">
             @{
                 var allTotal = articles.Count;
                 var allPub = articles.Count(a => a.Status == HelpArticleDisplayStatus.Published);
             }
             <button type="button"
                     role="listitem"
-                    class="cs-kb-cat-chip @(catFilter == "All" ? "cs-kb-cat-chip--active" : "")"
+                    class="kn-s3-kb-cat-chip @(catFilter == "All" ? "kn-s3-kb-cat-chip--active" : "")"
                     @onclick='() => SetCatFilter("All")'>
-                <div class="cs-kb-cat-chip__icon cs-kb-cat-chip__icon--all">
+                <div class="kn-s3-kb-cat-chip__icon kn-s3-kb-cat-chip__icon--all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
                 </div>
-                <div class="cs-kb-cat-chip__body">
-                    <span class="cs-kb-cat-chip__name">All</span>
-                    <span class="cs-kb-cat-chip__count">@allPub/@allTotal</span>
+                <div class="kn-s3-kb-cat-chip__body">
+                    <span class="kn-s3-kb-cat-chip__name">All</span>
+                    <span class="kn-s3-kb-cat-chip__count">@allPub/@allTotal</span>
                 </div>
             </button>
             @foreach (var cat in HelpArticleCategories.All)
@@ -57,15 +57,15 @@
                 var active = catFilter == cat;
                 <button type="button"
                         role="listitem"
-                        class="cs-kb-cat-chip @(active ? "cs-kb-cat-chip--active" : "")"
+                        class="kn-s3-kb-cat-chip @(active ? "kn-s3-kb-cat-chip--active" : "")"
                         style="@(active ? $"--cat-bg:{meta.Bg};--cat-dot:{meta.Dot};--cat-text:{meta.Text}" : null)"
                         @onclick="() => ToggleCatFilter(cat)">
-                    <div class="cs-kb-cat-chip__icon" style="background:@meta.Bg;color:@meta.Dot">
+                    <div class="kn-s3-kb-cat-chip__icon" style="background:@meta.Bg;color:@meta.Dot">
                         @((MarkupString)HelpKbIcons.GetCategoryIconSvg(meta.IconKey, meta.Dot))
                     </div>
-                    <div class="cs-kb-cat-chip__body">
-                        <span class="cs-kb-cat-chip__name">@cat</span>
-                        <span class="cs-kb-cat-chip__count">@pub/@total</span>
+                    <div class="kn-s3-kb-cat-chip__body">
+                        <span class="kn-s3-kb-cat-chip__name">@cat</span>
+                        <span class="kn-s3-kb-cat-chip__count">@pub/@total</span>
                     </div>
                 </button>
             }
@@ -74,37 +74,37 @@
 
     @if (!string.IsNullOrEmpty(loadError))
     {
-        <div class="cs-empty" style="margin-bottom:16px">
+        <div class="kn-s3-empty" style="margin-bottom:16px">
             <p>@loadError</p>
-            <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="LoadArticles">Retry</button>
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="LoadArticles">Retry</button>
         </div>
     }
 
     @if (!string.IsNullOrEmpty(listWarning))
     {
-        <p class="cs-list-warning">@listWarning</p>
+        <p class="kn-s3-hint">@listWarning</p>
     }
 
     @if (isLoading)
     {
-        <div class="cs-empty">
+        <div class="kn-s3-empty">
             <p>Loading articles…</p>
         </div>
     }
     else
     {
-        <div class="cs-kb-toolbar">
-            <div class="cs-kb-search @(searchExpanded ? "cs-kb-search--open" : "")">
+        <div class="kn-s3-kb-toolbar">
+            <div class="kn-s3-kb-search @(searchExpanded ? "kn-s3-kb-search--open" : "")">
                 <button type="button"
-                        class="cs-kb-search__toggle @(searchExpanded ? "cs-kb-search__toggle--active" : "")"
+                        class="kn-s3-kb-search__toggle @(searchExpanded ? "kn-s3-kb-search__toggle--active" : "")"
                         aria-label="@(searchExpanded ? "Close search" : "Search articles")"
                         aria-expanded="@searchExpanded"
                         @onclick="ToggleSearchAsync">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 </button>
-                <div class="cs-kb-search__field">
+                <div class="kn-s3-kb-search__field">
                     <input @ref="searchInputRef"
-                           class="cs-kb-search__input"
+                           class="kn-s3-kb-search__input"
                            placeholder="Search articles…"
                            value="@search"
                            @oninput="OnSearchChanged"
@@ -112,7 +112,7 @@
                     @if (!string.IsNullOrEmpty(search))
                     {
                         <button type="button"
-                                class="cs-kb-search__clear"
+                                class="kn-s3-kb-search__clear"
                                 aria-label="Clear search"
                                 @onclick="ClearSearch">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -120,11 +120,11 @@
                     }
                 </div>
             </div>
-            <div class="cs-kb-toolbar__status">
+            <div class="kn-s3-kb-toolbar__status">
                 @foreach (var s in StatusPills)
                 {
                     <button type="button"
-                            class="cs-pill @(statusFilter == s ? "cs-pill--active-light" : "")"
+                            class="kn-s3-pill @(statusFilter == s ? "is-active" : "")"
                             @onclick="() => SetStatusFilter(s)">
                         @s
                     </button>
@@ -137,58 +137,58 @@
             {
                 var meta = HelpCategoryMeta.Get(article.Category);
                 <button type="button" class="kn-s3-kb-card" @onclick="() => OpenViewPanelAsync(article)">
-                    <span class="cs-badge" style="background:@meta.Bg;color:@meta.Text">@article.Category</span>
+                    <span class="kn-chip" style="background:@meta.Bg;color:@meta.Text">@article.Category</span>
                     <strong>@article.Title</strong>
                     <span style="font-size:0.75rem;color:var(--kn-text-muted);">@article.Status · @article.Views views</span>
                 </button>
             }
         </div>
 
-        <div class="cs-list">
+        <div class="kn-s3-data-list">
             @foreach (var article in PagedArticles)
             {
                 var meta = HelpCategoryMeta.Get(article.Category);
-                <div class="cs-row">
-                    <div class="cs-row__icon" style="background:@meta.Bg">
+                <div class="kn-s3-data-row">
+                    <div class="kn-s3-data-row__icon" style="background:@meta.Bg">
                         @((MarkupString)HelpKbIcons.GetCategoryIconSvg(meta.IconKey, meta.Dot))
                     </div>
-                    <div class="cs-row__body">
-                        <div class="cs-row__badges">
-                            <span class="cs-badge" style="background:@meta.Bg;color:@meta.Text">@article.Category</span>
-                            <span class="cs-badge cs-badge--round" style="background:@(article.Status == HelpArticleDisplayStatus.Published ? "#D1FAE5" : "#F3F4F6");color:@(article.Status == HelpArticleDisplayStatus.Published ? "#065F46" : "#374151")">
+                    <div class="kn-s3-data-row__body">
+                        <div class="kn-s3-data-row__badges">
+                            <span class="kn-chip" style="background:@meta.Bg;color:@meta.Text">@article.Category</span>
+                            <span class="kn-chip" style="background:@(article.Status == HelpArticleDisplayStatus.Published ? "#D1FAE5" : "#F3F4F6");color:@(article.Status == HelpArticleDisplayStatus.Published ? "#065F46" : "#374151")">
                                 @article.Status
                             </span>
                             @if (article.Steps.Count > 0)
                             {
-                                <span class="cs-badge cs-badge--round cs-badge--sky">@article.Steps.Count-step guide</span>
+                                <span class="kn-chip">@article.Steps.Count-step guide</span>
                             }
                         </div>
-                        <p class="cs-row__title">@article.Title</p>
-                        <p class="cs-row__meta">Updated @article.LastUpdated</p>
+                        <p class="kn-s3-data-row__title">@article.Title</p>
+                        <p class="kn-s3-data-row__meta">Updated @article.LastUpdated</p>
                     </div>
-                    <div class="cs-row__stats">
+                    <div class="kn-s3-data-row__stats">
                         <div>
-                            <p class="cs-row__stat-value">@article.Views.ToString("N0")</p>
-                            <p class="cs-row__stat-label">views</p>
+                            <p class="kn-s3-data-row__stat-value">@article.Views.ToString("N0")</p>
+                            <p class="kn-s3-data-row__stat-label">views</p>
                         </div>
                         <div>
-                            <p class="cs-row__stat-value cs-row__stat-value--green">@article.Helpful</p>
-                            <p class="cs-row__stat-label">helpful</p>
+                            <p class="kn-s3-data-row__stat-value kn-s3-data-row__stat-value--green">@article.Helpful</p>
+                            <p class="kn-s3-data-row__stat-label">helpful</p>
                         </div>
                     </div>
-                    <div class="cs-row__actions">
-                        <button type="button" class="cs-btn cs-btn--icon" title="View" @onclick="() => OpenViewPanelAsync(article)">
+                    <div class="kn-s3-data-row__actions">
+                        <button type="button" class="kn-s3-btn-icon" title="View" @onclick="() => OpenViewPanelAsync(article)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>
-                        <button type="button" class="cs-btn cs-btn--icon" title="Edit" @onclick="() => OpenEditPanelAsync(article)">
+                        <button type="button" class="kn-s3-btn-icon" title="Edit" @onclick="() => OpenEditPanelAsync(article)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
                         </button>
                         <button type="button"
-                                class="cs-btn cs-btn--outline cs-btn--sm"
+                                class="kn-btn kn-btn--outline kn-btn--sm"
                                 @onclick="() => TogglePublishAsync(article)">
                             @(article.Status == HelpArticleDisplayStatus.Published ? "Unpublish" : "Publish")
                         </button>
-                        <button type="button" class="cs-btn cs-btn--icon cs-btn--icon-danger" title="Delete" @onclick="() => deleteTarget = article">
+                        <button type="button" class="kn-s3-btn-icon kn-s3-btn-icon--danger" title="Delete" @onclick="() => deleteTarget = article">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                         </button>
                     </div>
@@ -197,8 +197,8 @@
 
             @if (!FilteredArticles.Any())
             {
-                <div class="cs-empty">
-                    <svg class="cs-empty__icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+                <div class="kn-s3-empty">
+                    <svg class="kn-s3-empty__icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
                     <p>No articles match your filters.</p>
                 </div>
             }
@@ -206,16 +206,16 @@
 
         @if (FilteredArticles.Any())
         {
-            <div class="cs-pagination">
+            <div class="kn-s3-pagination">
                 <button type="button"
-                        class="cs-btn cs-btn--outline cs-btn--sm"
+                        class="kn-btn kn-btn--outline kn-btn--sm"
                         disabled="@(CurrentPage <= 1)"
                         @onclick="() => GoToPage(CurrentPage - 1)">
                     Previous
                 </button>
-                <span class="cs-pagination__label">Page @CurrentPage of @TotalPages</span>
+                <span class="kn-s3-pagination__label">Page @CurrentPage of @TotalPages</span>
                 <button type="button"
-                        class="cs-btn cs-btn--outline cs-btn--sm"
+                        class="kn-btn kn-btn--outline kn-btn--sm"
                         disabled="@(CurrentPage >= TotalPages)"
                         @onclick="() => GoToPage(CurrentPage + 1)">
                     Next
@@ -227,7 +227,7 @@
 
 @if (viewingArticle != null)
 {
-    <div class="cs-overlay" @onclick="CloseViewPanel"></div>
+    <div class="kn-s3-overlay" @onclick="CloseViewPanel"></div>
     <SupportKbArticleViewPanel Article="viewingArticle"
                                ShowEditButton="true"
                                ShowAgentEngagement="true"
@@ -237,33 +237,33 @@
 
 @if (panelOpen)
 {
-    <div class="cs-overlay" @onclick="ClosePanel"></div>
-    <aside class="cs-drawer">
-        <header class="cs-drawer__header">
+    <div class="kn-s3-overlay" @onclick="ClosePanel"></div>
+    <aside class="kn-s3-drawer">
+        <header class="kn-s3-drawer__head">
             <div>
-                <p class="cs-drawer__eyebrow">Knowledge Base</p>
-                <h3 class="cs-drawer__title">@(editingArticle == null ? "New Article" : "Edit Article")</h3>
+                <p class="kn-s3-eyebrow">Knowledge Base</p>
+                <h3 class="kn-s3-drawer__title">@(editingArticle == null ? "New Article" : "Edit Article")</h3>
             </div>
-            <button type="button" class="cs-btn cs-btn--icon" @onclick="ClosePanel">
+            <button type="button" class="kn-s3-btn-icon" @onclick="ClosePanel">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </header>
-        <div class="cs-drawer__body">
+        <div class="kn-s3-drawer__body">
             @if (isLoadingArticle)
             {
-                <p class="cs-row__meta">Loading article…</p>
+                <p class="kn-s3-data-row__meta">Loading article…</p>
             }
             else
             {
                 <div>
-                    <label class="cs-field__label">Question / Title</label>
-                    <input class="cs-field__input" placeholder="e.g. How do I track my order?" @bind="draftTitle" />
+                    <label class="kn-s3-form-field__label">Question / Title</label>
+                    <input class="kn-s3-form-field__input" placeholder="e.g. How do I track my order?" @bind="draftTitle" />
                 </div>
-                <div class="cs-field-grid">
+                <div class="kn-s3-form-grid">
                     <div>
-                        <label class="cs-field__label">Category</label>
-                        <div class="cs-select-wrap">
-                            <select class="cs-field__select" @bind="draftCategory">
+                        <label class="kn-s3-form-field__label">Category</label>
+                        <div class="kn-s3-select-wrap">
+                            <select class="kn-s3-form-field__select" @bind="draftCategory">
                                 @foreach (var c in HelpArticleCategories.All)
                                 {
                                     <option value="@c">@c</option>
@@ -272,9 +272,9 @@
                         </div>
                     </div>
                     <div>
-                        <label class="cs-field__label">Status</label>
-                        <div class="cs-select-wrap">
-                            <select class="cs-field__select" @bind="draftStatus">
+                        <label class="kn-s3-form-field__label">Status</label>
+                        <div class="kn-s3-select-wrap">
+                            <select class="kn-s3-form-field__select" @bind="draftStatus">
                                 <option>Draft</option>
                                 <option>Published</option>
                             </select>
@@ -282,45 +282,45 @@
                     </div>
                 </div>
                 <div>
-                    <label class="cs-field__label">Answer / Content</label>
-                    <textarea class="cs-field__textarea" rows="8" placeholder="Write the full answer that customers will see…" @bind="draftContent"></textarea>
+                    <label class="kn-s3-form-field__label">Answer / Content</label>
+                    <textarea class="kn-s3-form-field__textarea" rows="8" placeholder="Write the full answer that customers will see…" @bind="draftContent"></textarea>
                 </div>
                 <div>
                     <SupportKbImageInput Label="Cover image (optional)"
                                          Url="@draftHeroImageUrl"
                                          UrlChanged="SetDraftHeroImageUrl" />
                 </div>
-                <div class="cs-kb-editor-steps">
-                    <div class="cs-kb-editor-steps__header">
-                        <label class="cs-field__label" style="margin:0">Agent step-by-step guide</label>
-                        <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" @onclick="AddDraftStep">
+                <div class="kn-s3-kb-editor-steps">
+                    <div class="kn-s3-kb-editor-steps__header">
+                        <label class="kn-s3-form-field__label" style="margin:0">Agent step-by-step guide</label>
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="AddDraftStep">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                             Add step
                         </button>
                     </div>
                     @if (draftSteps.Count == 0)
                     {
-                        <p class="cs-kb-editor-steps__empty">No steps yet — add the actions an agent takes to resolve this, in order.</p>
+                        <p class="kn-s3-kb-editor-steps__empty">No steps yet — add the actions an agent takes to resolve this, in order.</p>
                     }
                     @for (var i = 0; i < draftSteps.Count; i++)
                     {
                         var index = i;
                         var step = draftSteps[index];
-                        <div class="cs-kb-editor-step" @key="index">
-                            <div class="cs-kb-editor-step__main">
-                                <span class="cs-kb-steps__num">@(index + 1)</span>
-                                <textarea class="cs-field__textarea cs-kb-editor-step__detail"
+                        <div class="kn-s3-kb-editor-step" @key="index">
+                            <div class="kn-s3-kb-editor-step__main">
+                                <span class="kn-s3-kb-steps__num">@(index + 1)</span>
+                                <textarea class="kn-s3-form-field__textarea kn-s3-kb-editor-step__detail"
                                           rows="2"
                                           placeholder="Describe what the agent should do in this step…"
                                           @bind="step.Detail"></textarea>
                                 <button type="button"
-                                        class="cs-btn cs-btn--icon cs-btn--icon-danger"
+                                        class="kn-s3-btn-icon kn-s3-btn-icon--danger"
                                         title="Remove step"
                                         @onclick="() => RemoveDraftStep(index)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                                 </button>
                             </div>
-                            <div class="cs-kb-editor-step__image-row">
+                            <div class="kn-s3-kb-editor-step__image-row">
                                 <SupportKbImageInput Label="Step image (optional)"
                                                      Url="@(step.ImageUrl ?? string.Empty)"
                                                      UrlChanged="@(url => SetDraftStepImageUrl(index, url))" />
@@ -328,21 +328,21 @@
                         </div>
                     }
                 </div>
-                <div class="cs-preview-box">
-                    <p class="cs-preview-box__label">Customer-facing preview</p>
-                    <p class="cs-preview-box__title">@(string.IsNullOrWhiteSpace(draftTitle) ? "Article title…" : draftTitle)</p>
-                    <p class="cs-preview-box__content">@(string.IsNullOrWhiteSpace(draftContent) ? "Article content will appear here…" : draftContent)</p>
+                <div class="kn-s3-preview">
+                    <p class="kn-s3-preview__label">Customer-facing preview</p>
+                    <p class="kn-s3-preview__title">@(string.IsNullOrWhiteSpace(draftTitle) ? "Article title…" : draftTitle)</p>
+                    <p class="kn-s3-preview__content">@(string.IsNullOrWhiteSpace(draftContent) ? "Article content will appear here…" : draftContent)</p>
                 </div>
             }
         </div>
-        <footer class="cs-drawer__footer">
-            <button type="button" class="cs-btn cs-btn--ghost" @onclick="ClosePanel">Cancel</button>
-            <div class="cs-tab-actions">
+        <footer class="kn-s3-drawer__foot">
+            <button type="button" class="kn-btn kn-btn--ghost" @onclick="ClosePanel">Cancel</button>
+            <div class="kn-s3-actions">
                 <button type="button"
-                        class="cs-btn cs-btn--outline"
+                        class="kn-btn kn-btn--outline"
                         disabled="@(isSaving || isLoadingArticle || string.IsNullOrWhiteSpace(draftTitle))"
                         @onclick="() => SaveArticleAsync(false)">Save Draft</button>
-                <button type="button" class="cs-btn cs-btn--primary"
+                <button type="button" class="kn-btn kn-btn--primary"
                         disabled="@(isSaving || isLoadingArticle || string.IsNullOrWhiteSpace(draftTitle) || string.IsNullOrWhiteSpace(draftContent))"
                         @onclick="() => SaveArticleAsync(true)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
@@ -355,16 +355,16 @@
 
 @if (deleteTarget != null)
 {
-    <div class="cs-modal-overlay">
-        <div class="cs-modal">
-            <div class="cs-modal__icon">
+    <div class="kn-s3-modal-backdrop">
+        <div class="kn-s3-modal">
+            <div class="kn-s3-modal__icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
             </div>
-            <h3 class="cs-modal__title">Delete article?</h3>
-            <p class="cs-modal__text">"@deleteTarget.Title" will be permanently removed from the Help Center.</p>
-            <div class="cs-modal__actions">
-                <button type="button" class="cs-btn cs-btn--ghost" @onclick="() => deleteTarget = null">Cancel</button>
-                <button type="button" class="cs-btn cs-btn--primary" style="background:#C44545;border-color:#C44545" @onclick="ConfirmDeleteAsync">Delete</button>
+            <h3 class="kn-s3-modal__title">Delete article?</h3>
+            <p class="kn-s3-modal__text">"@deleteTarget.Title" will be permanently removed from the Help Center.</p>
+            <div class="kn-s3-modal__actions">
+                <button type="button" class="kn-btn kn-btn--ghost" @onclick="() => deleteTarget = null">Cancel</button>
+                <button type="button" class="kn-btn kn-btn--primary" style="background:#C44545;border-color:#C44545" @onclick="ConfirmDeleteAsync">Delete</button>
             </div>
         </div>
     </div>
@@ -372,8 +372,8 @@
 
 @if (!string.IsNullOrEmpty(toast))
 {
-    <div class="cs-toast">
-        <svg class="cs-toast__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
+    <div class="kn-s3-toast">
+        <svg class="kn-s3-toast__icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/></svg>
         @toast
     </div>
 }
@@ -408,7 +408,24 @@
     private string draftHeroImageUrl = "";
     private List<HelpArticleStepDto> draftSteps = [];
 
-    protected override async Task OnInitializedAsync() => await LoadArticles();
+    protected override async Task OnInitializedAsync()
+    {
+        SupportApi.TenantChanged += OnTenantChanged;
+        await LoadArticles();
+    }
+
+    private void OnTenantChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            panelOpen = false;
+            viewingArticle = null;
+            editingArticle = null;
+            deleteTarget = null;
+            await LoadArticles();
+            StateHasChanged();
+        });
+    }
 
     private IEnumerable<HelpArticleDto> FilteredArticles
     {
@@ -825,5 +842,9 @@
         }, null, 2400, Timeout.Infinite);
     }
 
-    public void Dispose() => toastTimer?.Dispose();
+    public void Dispose()
+    {
+        SupportApi.TenantChanged -= OnTenantChanged;
+        toastTimer?.Dispose();
+    }
 }

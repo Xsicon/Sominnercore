@@ -1,4 +1,4 @@
-@using KobNeti.Services.Support
+﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
 <div class="sh-page">
@@ -9,20 +9,20 @@
     </div>
 
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <input class="cs-ticket-field__select" style="min-width:14rem;" placeholder="New task title" @bind="newTitle" @bind:event="oninput" />
-        <select class="cs-ticket-field__select" @bind="newType">
+        <input class="kn-field" style="min-width:14rem;" placeholder="New task title" @bind="newTitle" @bind:event="oninput" />
+        <select class="kn-field" @bind="newType">
             @foreach (var t in Types)
             {
                 <option value="@t">@t</option>
             }
         </select>
-        <select class="cs-ticket-field__select" @bind="newPriority">
+        <select class="kn-field" @bind="newPriority">
             @foreach (var p in Priorities)
             {
                 <option value="@p">@p</option>
             }
         </select>
-        <button type="button" class="cs-btn cs-btn--primary cs-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
+        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
             Add task
         </button>
     </div>
@@ -33,7 +33,7 @@
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loading board…</p>
+        <p class="sh-empty-list">Loading boardâ€¦</p>
     }
     else
     {
@@ -45,7 +45,7 @@
                     @foreach (var task in tasks.Where(t => t.Status == col))
                     {
                         <div style="border:1px solid rgba(255,255,255,0.1);padding:0.5rem;margin-bottom:0.5rem;">
-                            <div style="font-size:0.75rem;opacity:0.7;">@task.TaskNumber · @task.Priority</div>
+                            <div style="font-size:0.75rem;opacity:0.7;">@task.TaskNumber Â· @task.Priority</div>
                             <strong>@task.Title</strong>
                             @if (!string.IsNullOrWhiteSpace(task.GithubPrUrl))
                             {
@@ -54,13 +54,13 @@
                             <div style="margin-top:0.4rem;display:flex;gap:0.25rem;flex-wrap:wrap;">
                                 @foreach (var next in NextStatuses(task.Status))
                                 {
-                                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="() => MoveAsync(task, next)">
-                                        → @next.Replace('_', ' ')
+                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="() => MoveAsync(task, next)">
+                                        â†’ @next.Replace('_', ' ')
                                     </button>
                                 }
                             </div>
                             <div style="margin-top:0.35rem;">
-                                <input class="cs-ticket-field__select"
+                                <input class="kn-field"
                                        style="width:100%;font-size:0.75rem;"
                                        placeholder="GitHub PR URL"
                                        value="@(task.GithubPrUrl ?? "")"

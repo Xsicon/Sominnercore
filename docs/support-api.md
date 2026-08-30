@@ -8,10 +8,18 @@ The multi-tenant **operations** API lives in a sibling repo (formerly Sominnerco
 
 ## Why chats looked empty
 
-MuuqWear still may store live chat on **MuuqWearApi** (`http://localhost:5243/`).  
-KobNeti Support Hub reads **KobNetiApi** (`http://localhost:5241/`). Those can be separate stores.
+MuuqWear live chat is served by **MuuqWearApi** (e.g. `http://localhost:5243/`), not directly from Supabase in the Support Hub.
 
-KobNetiApi uses the **ops store by default**. Optional bridge to MuuqWearApi only when `UpstreamApiBaseUrl` is set (emergency); Bridging DI is not registered in W3+.
+1. Open **Support Hub → Settings → Product API URLs**
+2. Set MuuqWear to `http://localhost:5243/` and click **Save URL**
+3. Start MuuqWearApi, click **Test connection** (should show **API online**)
+4. Open **Live Chat** — sessions load from the product API when it is running
+
+The same upstream URL is used for **Knowledge Base** articles (`api/Help/articles` and `api/Help/admin/articles` are forwarded when the product API URL is set).
+
+**Create Ticket** from Live Chat: the session is read from the product API (`api/Chat/session/{id}` + messages), but the ticket is always created in the **ops store** (`sominnercore.support_tickets`). Restart KobNetiApi after pulling bridge fixes.
+
+If no URL is configured, chat and KB use the KobNeti **ops store** (`sominnercore.support_chat_*`, `support_kb_*`) only.
 
 ## Run (all three)
 
