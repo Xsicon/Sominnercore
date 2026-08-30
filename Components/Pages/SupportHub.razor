@@ -26,18 +26,6 @@ else
 {
 <div class="admin-dashboard support-hub admin-dashboard--embedded">
     <main class="main-content">
-        <header class="dashboard-header">
-            <div class="header-content">
-                <div>
-                    <h1>@GetTabTitle()</h1>
-                    <p class="header-subtitle">@GetTabSubtitle()</p>
-                </div>
-                <div class="sh-header-actions">
-                    <span class="sh-active-project" title="@SupportApi.TenantKey">@SupportApi.DisplayName</span>
-                </div>
-            </div>
-        </header>
-
         <nav class="ops-subnav">
             <button type="button" class="ops-subnav__item @(activeTab == "overview" ? "active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
             <button type="button" class="ops-subnav__item @(activeTab == "chat" ? "active" : "")" @onclick="@(() => SetTab("chat"))">Live Chat</button>

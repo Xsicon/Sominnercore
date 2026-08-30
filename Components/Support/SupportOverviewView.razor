@@ -1,55 +1,93 @@
 ﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Support Workspace</p>
-        <h2>Overview</h2>
-        <p>Live support analytics for @SupportApi.DisplayName</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Support Workspace</p>
+            <h2>Overview</h2>
+            <p>Live support analytics for @SupportApi.DisplayName</p>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(error))
     {
-        <p class="sh-empty-list">@error</p>
+        <p class="kn-s3-empty">@error</p>
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loading counts...</p>
+        <p class="kn-s3-empty">Loading counts…</p>
     }
     else
     {
-        <div class="sh-stat-grid four">
-            <div class="sh-stat-card">
-                <div class="sh-stat-top">
-                    <span>Active Chats</span>
-                    <span class="material-symbols-outlined">forum</span>
+        <div class="kn-s3-status">
+            <div class="kn-s3-status__left">
+                <span class="kn-s3-status__dot" aria-hidden="true"></span>
+                <div>
+                    <strong>Support desk online</strong>
+                    <p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--kn-text-muted);">
+                        @SupportApi.DisplayName · @SupportApi.TenantId
+                    </p>
                 </div>
-                <strong>@counts.ActiveChats</strong>
-                <em>Project: @SupportApi.DisplayName</em>
             </div>
-            <div class="sh-stat-card">
-                <div class="sh-stat-top">
-                    <span>Open Tickets</span>
-                    <span class="material-symbols-outlined">confirmation_number</span>
-                </div>
-                <strong>@counts.OpenTickets</strong>
-                <em>open + in progress</em>
+            <div class="kn-s3-status__metrics">
+                <span><strong>@counts.ActiveChats</strong>Active chats</span>
+                <span><strong>@counts.OpenTickets</strong>Open tickets</span>
+                <span><strong>@stats.TotalCount</strong>Total tickets</span>
             </div>
-            <div class="sh-stat-card">
-                <div class="sh-stat-top">
-                    <span>Ticket Stats</span>
-                    <span class="material-symbols-outlined">inbox</span>
-                </div>
-                <strong>@stats.OpenCount</strong>
-                <em>@stats.InProgressCount in progress Â· @stats.TotalCount total</em>
+        </div>
+
+        <div class="kn-s3-metric-row">
+            <div class="kn-s3-metric">
+                <div class="kn-s3-metric__label">Active chats</div>
+                <div class="kn-s3-metric__value">@counts.ActiveChats</div>
+                <div class="kn-s3-metric__hint">Waiting for agent reply</div>
             </div>
-            <div class="sh-stat-card">
-                <div class="sh-stat-top">
-                    <span>Desk</span>
-                    <span class="material-symbols-outlined">storefront</span>
+            <div class="kn-s3-metric">
+                <div class="kn-s3-metric__label">Open tickets</div>
+                <div class="kn-s3-metric__value">@counts.OpenTickets</div>
+                <div class="kn-s3-metric__hint">New + in progress</div>
+            </div>
+            <div class="kn-s3-metric">
+                <div class="kn-s3-metric__label">In progress</div>
+                <div class="kn-s3-metric__value">@stats.InProgressCount</div>
+                <div class="kn-s3-metric__hint">@stats.OpenCount open in queue</div>
+            </div>
+            <div class="kn-s3-metric">
+                <div class="kn-s3-metric__label">Total volume</div>
+                <div class="kn-s3-metric__value">@stats.TotalCount</div>
+                <div class="kn-s3-metric__hint">All ticket states</div>
+            </div>
+        </div>
+
+        <div class="kn-s3-grid-2">
+            <div class="kn-s3-panel">
+                <h3>Queue snapshot</h3>
+                <div class="kn-s3-list-row">
+                    <span>Open</span>
+                    <strong>@stats.OpenCount</strong>
                 </div>
-                <strong>@SupportApi.DisplayName</strong>
-                <em>@SupportApi.TenantId</em>
+                <div class="kn-s3-list-row">
+                    <span>In progress</span>
+                    <strong>@stats.InProgressCount</strong>
+                </div>
+                <div class="kn-s3-list-row">
+                    <span>Waiting on customer</span>
+                    <strong>@stats.WaitingCount</strong>
+                </div>
+                <div class="kn-s3-list-row">
+                    <span>Total volume</span>
+                    <strong>@stats.TotalCount</strong>
+                </div>
+            </div>
+            <div class="kn-s3-panel">
+                <h3>Quick actions</h3>
+                <div class="kn-s3-actions">
+                    <a class="kn-btn kn-btn--primary kn-btn--sm" href="/admin/support?tab=chat">Live Chat</a>
+                    <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/support?tab=tickets">Tickets</a>
+                    <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/support?tab=incidents">Incidents</a>
+                    <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/support?tab=kb">Knowledge Base</a>
+                </div>
             </div>
         </div>
     }

@@ -118,10 +118,10 @@ Studio: `LoginPage`, `Sidebar`, `Header`.
 
 Studio: `OverviewView`, `LiveChatView`, `SupportTicketsView` / `TicketListView` / `TicketDetailView`, `EscalationsView`, `KnowledgeBaseView`.
 
-- [ ] **S3.1** Rebuild Overview (`AdminDashboard` overview tab or dedicated page).
-- [ ] **S3.2** Rebuild Live Chat view.
-- [ ] **S3.3** Rebuild Tickets list + detail/drawer.
-- [ ] **S3.4** Rebuild Incidents + KB.
+- [x] **S3.1** Rebuild Overview (`AdminDashboard` overview tab or dedicated page).
+- [x] **S3.2** Rebuild Live Chat view.
+- [x] **S3.3** Rebuild Tickets list + detail/drawer.
+- [x] **S3.4** Rebuild Incidents + KB.
 
 **Exit:** Daily Support path matches Studio; APIs unchanged.
 

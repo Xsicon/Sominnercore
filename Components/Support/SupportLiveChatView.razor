@@ -7,21 +7,21 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="@TabShellClass">
-    <div class="cs-tab-header-row">
-        <div class="cs-tab-header" style="margin-bottom:0">
-            <p class="cs-tab-eyebrow">Customer Support</p>
-            <h2 class="cs-tab-title">Live Chat</h2>
-            <p class="cs-tab-subtitle">Respond to customers in real time</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Customer Support</p>
+            <h2>Live Chat</h2>
+            <p>Respond to customers in real time</p>
         </div>
-        <div class="cs-tab-actions">
+        <div class="kn-s3-actions">
             <SupportKbButton OnClick="OpenKbPanel" />
         </div>
     </div>
 
     @if (isLoading)
     {
-        <p class="cs-loading">Loading conversations…</p>
+        <p class="kn-s3-empty">Loading conversations…</p>
     }
 
     @if (!string.IsNullOrEmpty(loadError))
@@ -29,10 +29,10 @@
         <p class="cs-error-banner">@loadError</p>
     }
 
-    <div class="cs-chat-layout">
-        <aside class="cs-chat-sidebar">
-            <div class="cs-chat-sidebar__header">Active Conversations (@sessions.Count)</div>
-            <div class="cs-chat-sidebar__list">
+    <div class="kn-s3-chat">
+        <aside class="kn-s3-chat__col">
+            <div class="kn-s3-chat__head">Active Conversations (@sessions.Count)</div>
+            <div class="kn-s3-chat__list cs-chat-sidebar__list">
                 @if (sessions.Count == 0)
                 {
                     <div class="cs-empty" style="padding:40px 16px">
@@ -80,7 +80,7 @@
 
         @if (selectedSessionId.HasValue && selectedSession != null)
         {
-            <aside class="cs-drawer cs-chat-drawer @(showKbPanel ? "cs-drawer--shifted" : "")">
+            <aside class="kn-s3-chat__col cs-drawer cs-chat-drawer @(showKbPanel ? "cs-drawer--shifted" : "")">
                 <header class="cs-drawer__header cs-chat-drawer__header">
                     <div class="cs-chat-drawer__mobile-top">
                         <button type="button"
@@ -240,19 +240,35 @@
         }
         else
         {
-            <div class="cs-chat-empty">
-                <div>
-                    <span class="material-symbols-outlined cs-empty__icon" style="font-size:40px">forum</span>
-                    <p>Select a conversation</p>
-                </div>
+            <div class="kn-s3-chat__col kn-s3-empty">
+                <span class="material-symbols-outlined" style="font-size:2.5rem;">forum</span>
+                <p>Select a conversation</p>
             </div>
         }
+
+        <aside class="kn-s3-chat__col kn-s3-chat__col--kb">
+            <div class="kn-s3-chat__head">Knowledge Base</div>
+            <div class="kn-s3-chat__list" style="padding:0.75rem;">
+                @if (showKbPanel)
+                {
+                    <SupportKbQuickPanel OnClose="CloseKbPanel" />
+                }
+                else
+                {
+                    <p style="font-size:0.85rem;color:var(--kn-text-muted);margin:0 0 0.75rem;">
+                        Search articles while chatting with customers.
+                    </p>
+                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="OpenKbPanel">
+                        Open KB panel
+                    </button>
+                }
+            </div>
+        </aside>
     </div>
 
-    @if (showKbPanel)
+    @if (showKbPanel && selectedSessionId.HasValue)
     {
-        <button type="button" class="cs-kb-backdrop" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
-        <SupportKbQuickPanel OnClose="CloseKbPanel" />
+        <button type="button" class="cs-kb-backdrop cs-kb-backdrop--mobile-only" @onclick="CloseKbPanel" aria-label="Close knowledge base panel"></button>
     }
 </div>
 

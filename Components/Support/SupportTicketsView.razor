@@ -5,14 +5,14 @@
 @inject SupabaseAuthService AuthService
 @implements IDisposable
 
-<div class="@ShellClass">
-    <div class="cs-tab-header-row">
-        <div class="cs-tab-header" style="margin-bottom:0">
-            <p class="cs-tab-eyebrow">Customer Support</p>
-            <h2 class="cs-tab-title">Support Tickets</h2>
-            <p class="cs-tab-subtitle">Route to a team, assign an agent, and resolve fast</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Customer Support</p>
+            <h2>Support Tickets</h2>
+            <p>Route to a team, assign an agent, and resolve fast</p>
         </div>
-        <div class="cs-tab-actions">
+        <div class="kn-s3-actions">
             <SupportKbButton OnClick="OpenKbPanel" />
         </div>
     </div>
@@ -29,70 +29,43 @@
 
     @if (isLoading)
     {
-        <p class="cs-loading">Loading tickets…</p>
+        <p class="kn-s3-empty">Loading tickets…</p>
     }
 
-    <div class="cs-stats cs-stats--3">
-        <div class="cs-stat-card" style="background:#DBEAFE;border-color:#3B82F630">
-            <div class="cs-stat-card__bar" style="background:#3B82F6"></div>
-            <div>
-                <p class="cs-stat-card__value">@(stats?.OpenCount ?? tickets.Count(t => t.Status is "new" or "open"))</p>
-                <p class="cs-stat-card__label">Open</p>
-            </div>
+    <div class="kn-s3-summary-row">
+        <div class="kn-s3-summary">
+            <div class="kn-s3-metric__label">Open</div>
+            <div class="kn-s3-metric__value">@(stats?.OpenCount ?? tickets.Count(t => t.Status is "new" or "open"))</div>
         </div>
-        <div class="cs-stat-card" style="background:#FEF3C7;border-color:#F59E0B30">
-            <div class="cs-stat-card__bar" style="background:#F59E0B"></div>
-            <div>
-                <p class="cs-stat-card__value">@(stats?.InProgressCount ?? tickets.Count(t => t.Status == "in_progress"))</p>
-                <p class="cs-stat-card__label">In Progress</p>
-            </div>
+        <div class="kn-s3-summary kn-s3-summary--warn">
+            <div class="kn-s3-metric__label">In progress</div>
+            <div class="kn-s3-metric__value">@(stats?.InProgressCount ?? tickets.Count(t => t.Status == "in_progress"))</div>
         </div>
-        <div class="cs-stat-card" style="background:#D1FAE5;border-color:#22C55E30">
-            <div class="cs-stat-card__bar" style="background:#22C55E"></div>
-            <div>
-                <p class="cs-stat-card__value">@tickets.Count(t => t.Status == "resolved")</p>
-                <p class="cs-stat-card__label">Resolved</p>
-            </div>
+        <div class="kn-s3-summary">
+            <div class="kn-s3-metric__label">Resolved</div>
+            <div class="kn-s3-metric__value">@tickets.Count(t => t.Status == "resolved")</div>
         </div>
     </div>
 
-    <div class="cs-kb-toolbar">
-        <div class="cs-kb-search @(searchExpanded ? "cs-kb-search--open" : "")">
-            <button type="button"
-                    class="cs-kb-search__toggle @(searchExpanded ? "cs-kb-search__toggle--active" : "")"
-                    aria-label="@(searchExpanded ? "Close search" : "Search tickets")"
-                    aria-expanded="@searchExpanded"
-                    @onclick="ToggleSearchAsync">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            </button>
-            <div class="cs-kb-search__field">
-                <input @ref="searchInputRef"
-                       class="cs-kb-search__input"
-                       placeholder="Search tickets…"
-                       value="@search"
-                       @oninput="OnSearchChanged"
-                       @onkeydown="HandleSearchKeyDown" />
-                @if (!string.IsNullOrEmpty(search))
-                {
-                    <button type="button"
-                            class="cs-kb-search__clear"
-                            aria-label="Clear search"
-                            @onclick="ClearSearch">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                }
-            </div>
+    <div class="kn-s3-toolbar">
+        <div class="kn-s3-search">
+            <span class="material-symbols-outlined">search</span>
+            <input @ref="searchInputRef"
+                   placeholder="Search tickets…"
+                   value="@search"
+                   @oninput="OnSearchChanged"
+                   @onkeydown="HandleSearchKeyDown" />
         </div>
-        <div class="cs-kb-toolbar__filters">
+        <div class="kn-s3-pills">
             <button type="button"
-                    class="cs-pill cs-pill--mine @(mineOnly ? "cs-pill--active-dark" : "")"
+                    class="kn-s3-pill @(mineOnly ? "is-active" : "")"
                     @onclick="ToggleMineOnly">
                 Assigned to me (@MineCount)
             </button>
             @foreach (var s in StatusFilters)
             {
                 <button type="button"
-                        class="cs-pill @(filterStatus == s.Key ? "cs-pill--active-dark" : "")"
+                        class="kn-s3-pill @(filterStatus == s.Key ? "is-active" : "")"
                         @onclick="() => filterStatus = s.Key">
                     @s.Label
                 </button>
@@ -100,59 +73,61 @@
         </div>
     </div>
 
-    <div class="cs-list cs-list--tickets">
-        @foreach (var ticket in FilteredTickets)
-        {
-            var ss = GetStatusStyle(ticket.Status);
-            var ps = GetPriorityStyle(ticket.Priority);
-            var replyCount = ticket.DisplayReplyCount;
-            <button type="button"
-                    class="cs-row cs-row--clickable @(activeTicket?.Id == ticket.Id ? "cs-row--active" : "")"
-                    @onclick="() => OpenTicketDrawerAsync(ticket)">
-                <div class="cs-row__body">
-                    <div class="cs-row__badges">
-                        <span class="cs-row__meta" style="font-family:monospace">@ticket.TicketNumber</span>
-                        <span class="cs-badge cs-badge--round" style="background:@ps.Bg;color:@ps.Text">@GetPriorityLabel(ticket.Priority)</span>
-                        <span class="cs-badge cs-badge--round" style="background:@ss.Bg;color:@ss.Text">
-                            <span class="cs-badge__dot" style="background:@ss.Dot"></span>
-                            @GetStatusLabel(ticket.Status)
-                        </span>
-                        @if (!string.IsNullOrWhiteSpace(ticket.Team) && ticket.Team != SupportTicketTeams.Unassigned)
-                        {
-                            <span class="cs-badge cs-badge--round cs-badge--team">@ticket.Team</span>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(ticket.AssignedToName) && ticket.AssignedToName != SupportTicketAgents.Unassigned)
-                        {
-                            <span class="cs-badge cs-badge--round cs-badge--agent">@ticket.AssignedToName</span>
-                        }
-                    </div>
-                    <p class="cs-row__title">@ticket.Subject</p>
-                    <p class="cs-row__meta">
-                        @ticket.Name
-                        @if (!string.IsNullOrWhiteSpace(ticket.Email))
-                        {
-                            <span> · </span>
-                            <span @onclick:stopPropagation="true">@ticket.Email</span>
-                        }
-                        <span> · @ticket.Category · @FormatDate(ticket.CreatedAt)</span>
-                        @if (replyCount > 0)
-                        {
-                            <span> · @replyCount repl@(replyCount == 1 ? "y" : "ies")</span>
-                        }
-                    </p>
-                </div>
-                <svg class="cs-row__chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
-            </button>
-        }
-
-        @if (!isLoading && !FilteredTickets.Any())
-        {
-            <div class="cs-empty">
-                <svg class="cs-empty__icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                <p>@(string.IsNullOrEmpty(loadError) ? "No tickets match your filters." : "Unable to load tickets.")</p>
-            </div>
-        }
-    </div>
+    @if (!isLoading && FilteredTickets.Any())
+    {
+        <div class="kn-s3-table-wrap">
+            <table class="kn-s3-table">
+                <thead>
+                    <tr>
+                        <th>Ticket</th>
+                        <th>Subject</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assignee</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in FilteredTickets)
+                    {
+                        var ss = GetStatusStyle(ticket.Status);
+                        var ps = GetPriorityStyle(ticket.Priority);
+                        <tr class="@(activeTicket?.Id == ticket.Id ? "is-active" : "")"
+                            @onclick="() => OpenTicketDrawerAsync(ticket)">
+                            <td>@ticket.TicketNumber</td>
+                            <td class="kn-s3-table__subject">@ticket.Subject</td>
+                            <td>
+                                <div>@ticket.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(ticket.Email))
+                                {
+                                    <small style="color:var(--kn-text-muted);">@ticket.Email</small>
+                                }
+                            </td>
+                            <td>
+                                <span class="cs-badge cs-badge--round" style="background:@ss.Bg;color:@ss.Text">
+                                    @GetStatusLabel(ticket.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="cs-badge cs-badge--round" style="background:@ps.Bg;color:@ps.Text">
+                                    @GetPriorityLabel(ticket.Priority)
+                                </span>
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(ticket.AssignedToName) || ticket.AssignedToName == SupportTicketAgents.Unassigned ? "—" : ticket.AssignedToName)</td>
+                            <td>@FormatDate(ticket.CreatedAt)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (!isLoading)
+    {
+        <div class="kn-s3-empty">
+            <p>@(string.IsNullOrEmpty(loadError) ? "No tickets match your filters." : "Unable to load tickets.")</p>
+        </div>
+    }
 
     @if (!string.IsNullOrEmpty(toast))
     {
@@ -167,6 +142,7 @@
 
     @if (activeTicket != null)
     {
+        <button type="button" class="kn-s3-drawer-backdrop" aria-label="Close ticket drawer" @onclick="CloseTicketDrawer"></button>
         <SupportTicketDrawer Ticket="activeTicket"
                              Shifted="showKbPanel"
                              IsLoading="drawerLoading"

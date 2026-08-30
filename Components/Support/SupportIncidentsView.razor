@@ -1,108 +1,133 @@
 @using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Support Workspace</p>
-        <h2>Incidents</h2>
-        <p>Escalations for @SupportApi.DisplayName</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Support Workspace</p>
+            <h2>Incidents</h2>
+            <p>Escalations for @SupportApi.DisplayName</p>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(error))
     {
-        <p class="sh-empty-list">@error</p>
+        <p class="kn-s3-empty">@error</p>
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loading incidents…</p>
+        <p class="kn-s3-empty">Loading incidents…</p>
     }
     else if (incidents.Count == 0)
     {
-        <p class="sh-empty-list">No incidents yet. Escalate a ticket from the Tickets drawer.</p>
+        <p class="kn-s3-empty">No incidents yet. Escalate a ticket from the Tickets drawer.</p>
     }
     else
     {
-        <div class="sh-table-wrap">
-            <table class="sh-table">
-                <thead>
-                    <tr>
-                        <th>Number</th>
-                        <th>Title</th>
-                        <th>Severity</th>
-                        <th>Status</th>
-                        <th>Commander</th>
-                        <th>Updated</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var i in incidents)
-                    {
-                        <tr class="@(selected?.Id == i.Id ? "is-selected" : "")" @onclick="() => SelectAsync(i)">
-                            <td>@i.IncidentNumber</td>
-                            <td>@i.Title</td>
-                            <td>@i.Severity</td>
-                            <td>@i.Status</td>
-                            <td>@(i.CommanderName ?? "—")</td>
-                            <td>@(i.UpdatedAt?.ToLocalTime().ToString("g") ?? "—")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="kn-s3-summary-row">
+            <div class="kn-s3-summary kn-s3-summary--danger">
+                <div class="kn-s3-metric__label">Open</div>
+                <div class="kn-s3-metric__value">@incidents.Count(i => i.Status is "open" or "investigating")</div>
+            </div>
+            <div class="kn-s3-summary kn-s3-summary--warn">
+                <div class="kn-s3-metric__label">Mitigated</div>
+                <div class="kn-s3-metric__value">@incidents.Count(i => i.Status == "mitigated")</div>
+            </div>
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Resolved</div>
+                <div class="kn-s3-metric__value">@incidents.Count(i => i.Status is "resolved" or "closed")</div>
+            </div>
         </div>
 
-        @if (selected is not null)
-        {
-            <section class="sh-page-intro" style="margin-top:1.5rem;">
-                <h3>@selected.IncidentNumber</h3>
-                <p>@selected.Title</p>
-                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.75rem 0;">
-                    <select class="cs-ticket-field__select" value="@editStatus" @onchange="OnStatusChanged">
-                        @foreach (var s in Statuses)
+        <div class="kn-s3-grid-2 kn-s3-grid-60-40">
+            <div class="kn-s3-table-wrap">
+                <table class="kn-s3-table">
+                    <thead>
+                        <tr>
+                            <th>Number</th>
+                            <th>Title</th>
+                            <th>Severity</th>
+                            <th>Status</th>
+                            <th>Commander</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in incidents)
                         {
-                            <option value="@s">@s</option>
+                            <tr class="@(selected?.Id == i.Id ? "is-active" : "")" @onclick="() => SelectAsync(i)">
+                                <td>@i.IncidentNumber</td>
+                                <td class="kn-s3-table__subject">@i.Title</td>
+                                <td>@i.Severity</td>
+                                <td>@i.Status</td>
+                                <td>@(i.CommanderName ?? "—")</td>
+                                <td>@(i.UpdatedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                            </tr>
                         }
-                    </select>
-                    <button type="button" class="cs-btn cs-btn--outline cs-btn--sm" disabled="@saving" @onclick="SaveStatusAsync">
-                        Update status
-                    </button>
-                </div>
-                <label class="cs-ticket-field__label">Postmortem notes</label>
-                <textarea class="cs-ticket-field__select"
-                          rows="4"
-                          @bind="postmortem"
-                          @bind:event="oninput"
-                          disabled="@saving"></textarea>
-                <button type="button"
-                        class="cs-btn cs-btn--primary cs-btn--sm"
-                        style="margin-top:0.5rem;"
-                        disabled="@saving"
-                        @onclick="SavePostmortemAsync">
-                    Save postmortem
-                </button>
+                    </tbody>
+                </table>
+            </div>
 
-                <h4 style="margin-top:1.25rem;">Timeline</h4>
-                @if (selected.Timeline.Count == 0)
-                {
-                    <p class="sh-empty-list">No events.</p>
-                }
-                else
-                {
-                    <ul style="list-style:none;padding:0;margin:0;">
-                        @foreach (var evt in selected.Timeline.OrderByDescending(e => e.CreatedAt))
-                        {
-                            <li style="padding:0.4rem 0;border-bottom:1px solid var(--border, #233648);">
-                                <strong>@evt.EventType</strong>
-                                @if (!string.IsNullOrWhiteSpace(evt.Detail))
-                                {
-                                    <span> — @evt.Detail</span>
-                                }
-                                <div><small>@(evt.ActorName ?? "System") · @(evt.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</small></div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </section>
-        }
+            @if (selected is not null)
+            {
+                <section class="kn-s3-panel">
+                    <h3>@selected.IncidentNumber</h3>
+                    <p style="margin:0 0 0.75rem;color:var(--kn-text-secondary);">@selected.Title</p>
+                    <div class="kn-s3-actions" style="margin-bottom:0.75rem;">
+                        <select class="cs-ticket-field__select" value="@editStatus" @onchange="OnStatusChanged">
+                            @foreach (var s in Statuses)
+                            {
+                                <option value="@s">@s</option>
+                            }
+                        </select>
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="SaveStatusAsync">
+                            Update status
+                        </button>
+                    </div>
+                    <label class="cs-ticket-field__label">Postmortem notes</label>
+                    <textarea class="cs-ticket-field__select"
+                              rows="4"
+                              @bind="postmortem"
+                              @bind:event="oninput"
+                              disabled="@saving"></textarea>
+                    <button type="button"
+                            class="kn-btn kn-btn--primary kn-btn--sm"
+                            style="margin-top:0.5rem;"
+                            disabled="@saving"
+                            @onclick="SavePostmortemAsync">
+                        Save postmortem
+                    </button>
+
+                    <h4 style="margin-top:1.25rem;">Timeline</h4>
+                    @if (selected.Timeline.Count == 0)
+                    {
+                        <p class="kn-s3-empty" style="padding:1rem 0;">No events.</p>
+                    }
+                    else
+                    {
+                        <ul style="list-style:none;padding:0;margin:0;">
+                            @foreach (var evt in selected.Timeline.OrderByDescending(e => e.CreatedAt))
+                            {
+                                <li class="kn-s3-list-row" style="flex-direction:column;align-items:flex-start;">
+                                    <strong>@evt.EventType</strong>
+                                    @if (!string.IsNullOrWhiteSpace(evt.Detail))
+                                    {
+                                        <span>@evt.Detail</span>
+                                    }
+                                    <small style="color:var(--kn-text-muted);">@(evt.ActorName ?? "System") · @(evt.CreatedAt?.ToLocalTime().ToString("g") ?? "—")</small>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            }
+            else
+            {
+                <div class="kn-s3-panel kn-s3-empty">
+                    <p>Select an incident to view details.</p>
+                </div>
+            }
+        </div>
     }
 </div>
 

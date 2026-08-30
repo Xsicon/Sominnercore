@@ -4,36 +4,29 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="cs-tab-shell cs-kb-admin">
-    <div class="cs-tab-header-row">
-        <div class="cs-tab-header" style="margin-bottom:0">
-            <p class="cs-tab-eyebrow">Customer Support</p>
-            <h2 class="cs-tab-title">Knowledge Base</h2>
-            <p class="cs-tab-subtitle">Manage help articles shown on the public Help Center page</p>
+<div class="kn-s3-page cs-tab-shell cs-kb-admin">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Customer Support</p>
+            <h2>Knowledge Base</h2>
+            <p>Manage help articles shown on the public Help Center page</p>
         </div>
-        <div class="cs-tab-actions">
-            <button type="button" class="cs-btn cs-btn--outline" @onclick="OpenHelpCenter">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+        <div class="kn-s3-actions">
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="OpenHelpCenter">
                 View Help Center
             </button>
-            <button type="button" class="cs-btn cs-btn--primary" @onclick="OpenNewPanel">
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="OpenNewPanel">
                 New Article
             </button>
         </div>
     </div>
 
-    <div class="cs-stats cs-stats--4">
+    <div class="kn-s3-metric-row">
         @foreach (var stat in StatCards)
         {
-            <div class="cs-stat-card">
-                <div class="cs-stat-card__icon" style="background:@(stat.Color)18">
-                    @((MarkupString)stat.IconSvg)
-                </div>
-                <div>
-                    <p class="cs-stat-card__value">@stat.Value</p>
-                    <p class="cs-stat-card__label">@stat.Label</p>
-                </div>
+            <div class="kn-s3-metric">
+                <div class="kn-s3-metric__label">@stat.Label</div>
+                <div class="kn-s3-metric__value">@stat.Value</div>
             </div>
         }
     </div>
@@ -137,6 +130,18 @@
                     </button>
                 }
             </div>
+        </div>
+
+        <div class="kn-s3-kb-grid" style="margin-bottom:1rem;">
+            @foreach (var article in PagedArticles.Take(6))
+            {
+                var meta = HelpCategoryMeta.Get(article.Category);
+                <button type="button" class="kn-s3-kb-card" @onclick="() => OpenViewPanelAsync(article)">
+                    <span class="cs-badge" style="background:@meta.Bg;color:@meta.Text">@article.Category</span>
+                    <strong>@article.Title</strong>
+                    <span style="font-size:0.75rem;color:var(--kn-text-muted);">@article.Status · @article.Views views</span>
+                </button>
+            }
         </div>
 
         <div class="cs-list">

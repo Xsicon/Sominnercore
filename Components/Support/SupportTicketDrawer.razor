@@ -6,8 +6,8 @@
 @inject SupabaseAuthService AuthService
 @inject IJSRuntime JS
 
-<aside class="cs-drawer cs-ticket-drawer @(Shifted ? "cs-drawer--shifted" : "")">
-    <header class="cs-drawer__header cs-ticket-drawer__header">
+<aside class="kn-s3-drawer cs-drawer cs-ticket-drawer @(Shifted ? "cs-drawer--shifted" : "")">
+    <header class="kn-s3-drawer__head cs-drawer__header cs-ticket-drawer__header">
         <div class="cs-ticket-drawer__heading">
             <p class="cs-drawer__eyebrow">@Ticket.TicketNumber · @Ticket.Category</p>
             <h3 class="cs-drawer__title">@Ticket.Subject</h3>
@@ -23,7 +23,7 @@
         </div>
     </header>
 
-    <div class="cs-drawer__body cs-ticket-drawer__body">
+    <div class="kn-s3-drawer__body cs-drawer__body cs-ticket-drawer__body">
         @if (IsLoading)
         {
             <p class="cs-loading">Loading ticket…</p>
