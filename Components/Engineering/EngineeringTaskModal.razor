@@ -1,0 +1,352 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+@if (Task is not null)
+{
+    <div class="kn-s4-modal-backdrop" @onclick="CloseAsync">
+        <div class="kn-s4-modal" role="dialog" aria-modal="true" aria-labelledby="eng-task-modal-title" @onclick:stopPropagation="true">
+            <header class="kn-s4-modal__head">
+                <div class="kn-s4-modal__head-main">
+                    <span class="material-symbols-outlined kn-s4-modal__head-icon" aria-hidden="true">credit_card</span>
+                    <textarea id="eng-task-modal-title"
+                              class="kn-s4-modal__title-input"
+                              rows="1"
+                              placeholder="Task title"
+                              @bind="editTitle"
+                              disabled="@saving"></textarea>
+                </div>
+                <button type="button" class="kn-s4-modal__close" aria-label="Close" @onclick="CloseAsync">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </header>
+
+            <div class="kn-s4-modal__layout">
+                <div class="kn-s4-modal__main">
+                    @if (!string.IsNullOrEmpty(saveError))
+                    {
+                        <p class="kn-s3-alert">@saveError</p>
+                    }
+
+                    <section class="kn-s4-modal__section">
+                        <div class="kn-s4-modal__section-head">
+                            <span class="material-symbols-outlined" aria-hidden="true">subject</span>
+                            <h3>Description</h3>
+                        </div>
+                        <textarea class="kn-s4-modal__description"
+                                  rows="6"
+                                  placeholder="Add a more detailed description…"
+                                  @bind="editDescription"
+                                  disabled="@saving"></textarea>
+                    </section>
+
+                    <section class="kn-s4-modal__section">
+                        <div class="kn-s4-modal__section-head">
+                            <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
+                            <h3>Pull request</h3>
+                        </div>
+                        <input class="kn-s4-modal__field"
+                               type="url"
+                               placeholder="https://github.com/org/repo/pull/123"
+                               @bind="editPrUrl"
+                               disabled="@saving" />
+                    </section>
+
+                    <p class="kn-s4-modal__meta-line">
+                        In list <strong>@GetStatusLabel(editStatus)</strong>
+                        · @Task.TaskNumber
+                    </p>
+                </div>
+
+                <aside class="kn-s4-modal__sidebar">
+                    <h4 class="kn-s4-modal__sidebar-title">Add to card</h4>
+
+                    <label class="kn-s4-modal__side-field">
+                        <span>Status</span>
+                        <select class="kn-s4-modal__field" @bind="editStatus" disabled="@saving">
+                            @foreach (var s in Statuses)
+                            {
+                                <option value="@s">@GetStatusLabel(s)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <div class="kn-s4-modal__side-field">
+                        <span>Members</span>
+                        <div class="kn-s4-modal__members">
+                            @if (!string.IsNullOrWhiteSpace(editAssigneeName))
+                            {
+                                <button type="button"
+                                        class="kn-s4-modal__member kn-s4-modal__member--active"
+                                        title="@editAssigneeName — click to remove"
+                                        disabled="@saving"
+                                        @onclick="ClearAssigneeAsync">
+                                    @GetInitials(editAssigneeName)
+                                </button>
+                            }
+                            @foreach (var member in AssignableStaff)
+                            {
+                                var label = GetStaffLabel(member);
+                                var isActive = string.Equals(editAssigneeName, label, StringComparison.OrdinalIgnoreCase);
+                                if (isActive) continue;
+                                <button type="button"
+                                        class="kn-s4-modal__member"
+                                        title="Assign @label"
+                                        disabled="@saving"
+                                        @onclick="() => AssignMemberAsync(label)">
+                                    @GetInitials(label)
+                                </button>
+                            }
+                        </div>
+                        @if (AssignableStaff.Any())
+                        {
+                            <select class="kn-s4-modal__field kn-s4-modal__member-select"
+                                    value="@MemberSelectValue"
+                                    disabled="@saving"
+                                    @onchange="OnMemberSelected">
+                                <option value="">Assign member…</option>
+                                @foreach (var member in AssignableStaff)
+                                {
+                                    var label = GetStaffLabel(member);
+                                    <option value="@label">@label</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <p class="kn-s4-modal__members-empty">No team members loaded for this product.</p>
+                        }
+                    </div>
+
+                    <label class="kn-s4-modal__side-field">
+                        <span>Type</span>
+                        <select class="kn-s4-modal__field" @bind="editType" disabled="@saving">
+                            @foreach (var t in Types)
+                            {
+                                <option value="@t">@GetTypeLabel(t)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="kn-s4-modal__side-field">
+                        <span>Priority</span>
+                        <select class="kn-s4-modal__field" @bind="editPriority" disabled="@saving">
+                            @foreach (var p in Priorities)
+                            {
+                                <option value="@p">@GetPriorityLabel(p)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="kn-s4-modal__side-field">
+                        <span>Milestone</span>
+                        <select class="kn-s4-modal__field" @bind="editMilestoneKey" disabled="@saving">
+                            <option value="">None</option>
+                            @foreach (var m in Milestones)
+                            {
+                                <option value="@m.Id">@m.Title</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="kn-s4-modal__side-field">
+                        <span>Estimate (points)</span>
+                        <input class="kn-s4-modal__field"
+                               type="number"
+                               step="0.5"
+                               min="0"
+                               placeholder="e.g. 3"
+                               @bind="editPoints"
+                               disabled="@saving" />
+                    </label>
+
+                    <button type="button"
+                            class="kn-btn kn-btn--primary kn-btn--sm kn-s4-modal__save"
+                            disabled="@saving"
+                            @onclick="SaveAsync">
+                        @(saving ? "Saving…" : "Save changes")
+                    </button>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly string[] Statuses = ["backlog", "ready", "in_progress", "in_review", "done"];
+    private static readonly string[] Types = ["feature", "bug", "chore", "spike", "incident"];
+    private static readonly string[] Priorities = ["critical", "high", "medium", "low"];
+
+    [Parameter] public EngTaskDto? Task { get; set; }
+    [Parameter] public IReadOnlyList<StaffMemberDto> Staff { get; set; } = [];
+    [Parameter] public IReadOnlyList<MilestoneDto> Milestones { get; set; } = [];
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool saving;
+    private string? saveError;
+    private string editTitle = "";
+    private string? editDescription;
+    private string editStatus = "backlog";
+    private string editType = "feature";
+    private string editPriority = "medium";
+    private string? editAssigneeName;
+    private string editMilestoneKey = "";
+    private string? editPrUrl;
+    private decimal? editPoints;
+
+    private IEnumerable<StaffMemberDto> AssignableStaff =>
+        Staff.Where(m => m.Active).OrderBy(m => GetStaffLabel(m));
+
+    private string MemberSelectValue =>
+        string.IsNullOrWhiteSpace(editAssigneeName) ? "" : editAssigneeName;
+
+    protected override void OnParametersSet()
+    {
+        if (Task is null) return;
+        editTitle = Task.Title;
+        editDescription = Task.Description;
+        editStatus = Task.Status;
+        editType = Task.TaskType;
+        editPriority = Task.Priority;
+        editAssigneeName = Task.AssigneeName;
+        editMilestoneKey = Task.MilestoneId?.ToString() ?? "";
+        editPrUrl = Task.GithubPrUrl;
+        editPoints = Task.EstimatePoints;
+        saveError = null;
+    }
+
+    private async Task AssignMemberAsync(string name)
+    {
+        editAssigneeName = name;
+        await SaveAssigneeAsync();
+    }
+
+    private async Task OnMemberSelected(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        editAssigneeName = value;
+        await SaveAssigneeAsync();
+    }
+
+    private async Task ClearAssigneeAsync()
+    {
+        editAssigneeName = null;
+        await SaveAssigneeAsync();
+    }
+
+    private async Task SaveAssigneeAsync()
+    {
+        if (Task is null) return;
+        saving = true;
+        saveError = null;
+        try
+        {
+            var result = await SupportApi.UpdateEngTaskAsync(Task.Id, new UpdateEngTaskRequest
+            {
+                AssigneeName = editAssigneeName ?? ""
+            });
+            if (!result.Success)
+            {
+                saveError = result.Message;
+                return;
+            }
+
+            if (result.Data is not null)
+            {
+                editAssigneeName = result.Data.AssigneeName;
+                Task.AssigneeName = result.Data.AssigneeName;
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            saveError = ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task CloseAsync() => await OnClose.InvokeAsync();
+
+    private async Task SaveAsync()
+    {
+        if (Task is null || string.IsNullOrWhiteSpace(editTitle)) return;
+        saving = true;
+        saveError = null;
+        try
+        {
+            Guid? milestoneId = null;
+            var clearMilestone = string.IsNullOrWhiteSpace(editMilestoneKey);
+            if (!clearMilestone && Guid.TryParse(editMilestoneKey, out var parsed))
+                milestoneId = parsed;
+
+            var req = new UpdateEngTaskRequest
+            {
+                Title = editTitle.Trim(),
+                Description = editDescription,
+                TaskType = editType,
+                Status = editStatus,
+                Priority = editPriority,
+                AssigneeName = editAssigneeName ?? "",
+                EstimatePoints = editPoints,
+                MilestoneId = milestoneId,
+                ClearMilestoneId = clearMilestone,
+                GithubPrUrl = string.IsNullOrWhiteSpace(editPrUrl) ? null : editPrUrl.Trim(),
+                ClearGithubPrUrl = string.IsNullOrWhiteSpace(editPrUrl)
+            };
+
+            var result = await SupportApi.UpdateEngTaskAsync(Task.Id, req);
+            if (!result.Success)
+            {
+                saveError = result.Message;
+                return;
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            saveError = ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private static string GetStaffLabel(StaffMemberDto member) =>
+        string.IsNullOrWhiteSpace(member.DisplayName) ? member.Email : member.DisplayName!;
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..1].ToUpperInvariant();
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+    }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "in_progress" => "In Progress",
+        "in_review" => "In Review",
+        "ready" => "Ready",
+        "done" => "Done",
+        _ => "Backlog"
+    };
+
+    private static string GetTypeLabel(string type) =>
+        char.ToUpperInvariant(type[0]) + type[1..];
+
+    private static string GetPriorityLabel(string priority) => priority switch
+    {
+        "critical" => "Critical",
+        "high" => "High",
+        "low" => "Low",
+        _ => "Medium"
+    };
+}

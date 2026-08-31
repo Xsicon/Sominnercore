@@ -37,7 +37,20 @@ JwtSecret for the bridge must match MuuqWear `Authentication:JwtSecret` (Support
 
 Cutover notes: `../Sominnercore-SupportApi/docs/support-muuqwear-cutover.md`  
 Schema SQL: `../Sominnercore-SupportApi/supabase/support_schema.sql` (schema name remains `sominnercore`)  
-Also apply: `products_registry.sql`, `staff_access.sql`, `teams.sql`, `support_w2_intake.sql`, `support_w2_lifecycle.sql`, `support_w3_incidents.sql`, `support_w4_engineering.sql`, `support_w5_people_ops.sql`, `support_w6_platform_glue.sql`, `support_w7_insights.sql`.
+Also apply: `products_registry.sql`, `product_repos.sql`, `staff_access.sql`, `teams.sql`, `support_w2_intake.sql`, `support_w2_lifecycle.sql`, `support_w3_incidents.sql`, `support_w4_engineering.sql`, `support_w5_people_ops.sql`, `support_w6_platform_glue.sql`, `support_w7_insights.sql`.
+
+## Linked repos (web + API)
+
+Products like **MuuqWear** have two codebases: a **web app** repo and a **product API** repo. KobNeti tracks both under the product registry:
+
+| Repo kind | Example (MuuqWear) | Role |
+|-----------|-------------------|------|
+| `web_app` | `muuqwear-web` | Storefront / Blazor or React app |
+| `api` | `muuqwear-api` | Product API (live chat, checkout, etc.) |
+
+Engineering → **GitHub** shows PRs/commits per linked repo. Platform admins manage URLs via `PUT api/products/{slug}/repos/{repoKind}`.
+
+The legacy single `github_repo_url` on `products` still works as a fallback for the web app repo.
 Widget embed: `../Sominnercore-SupportApi/docs/widget-embed.md`
 
 ## Multi-project Support Hub

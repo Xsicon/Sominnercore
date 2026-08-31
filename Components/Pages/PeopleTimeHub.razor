@@ -22,7 +22,7 @@ else
 {
 <KnHubShell BodyClass="kn-hub__body--scroll">
     <Tabs>
-        <button type="button" class="kn-hub-subnav__item @(activeTab == "time" ? "is-active" : "")" @onclick="@(() => SetTab("time"))">Time</button>
+        <button type="button" class="kn-hub-subnav__item @(activeTab == "time" ? "is-active" : "")" @onclick="@(() => SetTab("time"))">Time Tracking</button>
         <button type="button" class="kn-hub-subnav__item @(activeTab == "approvals" ? "is-active" : "")" @onclick="@(() => SetTab("approvals"))">Approvals</button>
     </Tabs>
     <ChildContent>
@@ -57,18 +57,37 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
         ApplyTab();
+        Navigation.LocationChanged += OnLocationChanged;
         SupportApi.TenantChanged += OnTenantChanged;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
     }
 
     private void OnTenantChanged() { workspaceEpoch++; _ = InvokeAsync(StateHasChanged); }
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() =>
+        {
+            ApplyTab();
+            StateHasChanged();
+        });
+
     private void ApplyTab()
     {
         var q = Navigation.ToAbsoluteUri(Navigation.Uri).Query.TrimStart('?');
+        if (string.IsNullOrEmpty(q))
+        {
+            activeTab = "time";
+            return;
+        }
         foreach (var part in q.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var kv = part.Split('=', 2);
-            if (kv.Length == 2 && kv[0] == "tab") activeTab = Uri.UnescapeDataString(kv[1]);
+            if (kv.Length == 2 && kv[0] == "tab")
+            {
+                var tab = Uri.UnescapeDataString(kv[1]);
+                if (tab is "time" or "approvals")
+                    activeTab = tab;
+                return;
+            }
         }
     }
     private Task SetTab(string tab)
@@ -77,5 +96,9 @@ else
         Navigation.NavigateTo(tab == "time" ? "/admin/time" : $"/admin/time?tab={tab}", replace: true);
         return Task.CompletedTask;
     }
-    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        SupportApi.TenantChanged -= OnTenantChanged;
+    }
 }

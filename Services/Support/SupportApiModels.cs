@@ -295,7 +295,16 @@ public class ProductRegistryDto
     public string PublicHelpCenterUrl { get; set; } = "";
     public string? UpstreamApiBaseUrl { get; set; }
     public string? GithubRepoUrl { get; set; }
+    public List<ProductRepoDto> LinkedRepos { get; set; } = [];
     public bool Enabled { get; set; }
+}
+
+public class ProductRepoDto
+{
+    public Guid Id { get; set; }
+    public string RepoKind { get; set; } = "web_app";
+    public string Title { get; set; } = "";
+    public string GithubRepoUrl { get; set; } = "";
 }
 
 public class ProductUpstreamStatusDto
@@ -432,11 +441,16 @@ public class CreateEngTaskRequest
 public class UpdateEngTaskRequest
 {
     public string? Title { get; set; }
+    public string? Description { get; set; }
+    public string? TaskType { get; set; }
     public string? Status { get; set; }
     public string? Priority { get; set; }
+    public decimal? EstimatePoints { get; set; }
+    public string? AssigneeName { get; set; }
     public Guid? TicketId { get; set; }
     public bool ClearTicketId { get; set; }
     public Guid? MilestoneId { get; set; }
+    public bool ClearMilestoneId { get; set; }
     public string? GithubPrUrl { get; set; }
     public bool ClearGithubPrUrl { get; set; }
 }
@@ -478,11 +492,14 @@ public class CalendarEventDto
 
 public class GithubCacheDto
 {
+    public string? RepoKey { get; set; }
+    public string? RepoTitle { get; set; }
     public string? RepoUrl { get; set; }
     public DateTime? PullsFetchedAt { get; set; }
     public DateTime? CommitsFetchedAt { get; set; }
     public List<GithubPullDto> Pulls { get; set; } = [];
     public List<GithubCommitDto> Commits { get; set; } = [];
+    public List<ProductRepoDto> LinkedRepos { get; set; } = [];
     public string? Message { get; set; }
 }
 

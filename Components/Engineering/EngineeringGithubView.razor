@@ -1,88 +1,163 @@
 ﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Engineering</p>
-        <h2>GitHub</h2>
-        <p>Read-only PRs &amp; commits for @SupportApi.DisplayName</p>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Engineering</p>
+            <h2>GitHub Activity</h2>
+            <p>Linked repos for @SupportApi.DisplayName — web app and product API</p>
+        </div>
+        <div class="kn-s3-actions">
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="RefreshAsync">
+                Refresh @(string.IsNullOrWhiteSpace(activeRepoKey) ? "all" : "repo")
+            </button>
+        </div>
     </div>
 
-    @if (SupportApi.IsPlatformAdmin)
+    @if (linkedRepos.Count == 0 && !SupportApi.IsPlatformAdmin)
     {
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-            <input class="kn-field" style="min-width:18rem;" placeholder="https://github.com/owner/repo" @bind="repoUrl" @bind:event="oninput" />
-            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="SaveRepoAsync">Save repo URL</button>
-            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+        <p class="kn-s3-hint">Ask a platform admin to link the web app and API GitHub repositories.</p>
+    }
+    else if (linkedRepos.Count == 0)
+    {
+        <div class="kn-s4-admin-panel">
+            <h4>Link repositories</h4>
+            <p class="kn-s3-hint">Products like MuuqWear have separate repos for the storefront (web app) and the product API.</p>
+            @RenderRepoEditor("web_app", "Web app repo", webRepoUrl)
+            @RenderRepoEditor("api", "Product API repo", apiRepoUrl)
         </div>
     }
     else
     {
-        <p class="sh-empty-list">Ask a platform admin to set the product GitHub repo URL, then refresh.</p>
-        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="RefreshAsync">Refresh cache</button>
+        <div class="kn-s4-github-tabs kn-s3-pills">
+            @foreach (var repo in linkedRepos)
+            {
+                <button type="button"
+                        class="kn-s3-pill @(activeRepoKey == repo.RepoKind ? "is-active" : "")"
+                        @onclick="() => SelectRepo(repo.RepoKind)">
+                    @repo.Title
+                </button>
+            }
+        </div>
+
+        @if (SupportApi.IsPlatformAdmin)
+        {
+            <div class="kn-s4-create-bar">
+                <span class="kn-chip kn-chip--neutral">@ActiveRepo?.RepoKind</span>
+                <input class="kn-s3-field__select kn-s4-create-bar__title"
+                       placeholder="https://github.com/owner/repo"
+                       @bind="editRepoUrl"
+                       @bind:event="oninput"
+                       disabled="@saving" />
+                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="SaveRepoAsync">
+                    Save repo URL
+                </button>
+            </div>
+        }
     }
 
     @if (!string.IsNullOrEmpty(error))
     {
-        <p class="sh-empty-list">@error</p>
+        <p class="kn-s3-alert">@error</p>
     }
     else if (loading)
     {
-        <p class="sh-empty-list">Loadingâ€¦</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading GitHub cache…</p>
+        </div>
     }
     else if (cache is null)
     {
-        <p class="sh-empty-list">No cache yet.</p>
+        <p class="kn-s3-empty">No cache yet. Link repos and refresh.</p>
     }
     else
     {
-        <p>
-            Repo: @(cache.RepoUrl ?? "â€”")
-            @if (cache.PullsFetchedAt.HasValue)
-            {
-                <span> Â· pulls @cache.PullsFetchedAt.Value.ToLocalTime().ToString("g")</span>
-            }
-        </p>
+        <div class="kn-s3-summary-row">
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Pull requests</div>
+                <div class="kn-s3-metric__value">@cache.Pulls.Count</div>
+            </div>
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Commits</div>
+                <div class="kn-s3-metric__value">@cache.Commits.Count</div>
+            </div>
+            <div class="kn-s3-summary kn-s3-summary--warn">
+                <div class="kn-s3-metric__label">Repository</div>
+                <div class="kn-s3-metric__value" style="font-size:0.85rem;">@(cache.RepoTitle ?? "—")</div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(cache.RepoUrl))
+        {
+            <p class="kn-s3-hint">Repository: <a href="@cache.RepoUrl" target="_blank" rel="noopener">@cache.RepoUrl</a></p>
+        }
         @if (!string.IsNullOrWhiteSpace(cache.Message))
         {
-            <p class="sh-empty-list">@cache.Message</p>
+            <p class="kn-s3-hint">@cache.Message</p>
         }
 
-        <h3>Pull requests</h3>
-        @if (cache.Pulls.Count == 0)
-        {
-            <p class="sh-empty-list">No PRs cached.</p>
-        }
-        else
-        {
-            <ul style="list-style:none;padding:0;">
-                @foreach (var pr in cache.Pulls)
-                {
-                    <li style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <a href="@pr.HtmlUrl" target="_blank" rel="noopener">#@pr.Number @pr.Title</a>
-                        <span class="kn-chip kn-chip--neutral">@pr.State</span>
-                    </li>
-                }
-            </ul>
-        }
+        <div class="kn-s4-github-tabs kn-s3-pills">
+            <button type="button"
+                    class="kn-s3-pill @(activeTab == "pulls" ? "is-active" : "")"
+                    @onclick='() => activeTab = "pulls"'>
+                Pull requests (@cache.Pulls.Count)
+            </button>
+            <button type="button"
+                    class="kn-s3-pill @(activeTab == "commits" ? "is-active" : "")"
+                    @onclick='() => activeTab = "commits"'>
+                Commits (@cache.Commits.Count)
+            </button>
+        </div>
 
-        <h3 style="margin-top:1.25rem;">Commits</h3>
-        @if (cache.Commits.Count == 0)
-        {
-            <p class="sh-empty-list">No commits cached.</p>
-        }
-        else
-        {
-            <ul style="list-style:none;padding:0;">
-                @foreach (var c in cache.Commits)
+        <div class="kn-s3-panel">
+            @if (activeTab == "pulls")
+            {
+                @if (cache.Pulls.Count == 0)
                 {
-                    <li style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <a href="@c.HtmlUrl" target="_blank" rel="noopener">@c.Sha[..Math.Min(7, c.Sha.Length)]</a>
-                        <span> @c.Message</span>
-                    </li>
+                    <p class="kn-s3-empty kn-s3-empty--compact">No pull requests cached.</p>
                 }
-            </ul>
-        }
+                else
+                {
+                    @foreach (var pr in cache.Pulls)
+                    {
+                        var stateStyle = GetPrStateStyle(pr.State);
+                        <div class="kn-s4-github-item">
+                            <div class="kn-s4-github-item__main">
+                                <a href="@pr.HtmlUrl" target="_blank" rel="noopener">#@pr.Number @pr.Title</a>
+                                <div class="kn-s4-github-item__meta">
+                                    @(pr.Author ?? "Unknown") · @(pr.UpdatedAt?.ToLocalTime().ToString("g") ?? "—")
+                                </div>
+                            </div>
+                            <span class="kn-chip" style="background:@stateStyle.Bg;color:@stateStyle.Text">@pr.State</span>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                @if (cache.Commits.Count == 0)
+                {
+                    <p class="kn-s3-empty kn-s3-empty--compact">No commits cached.</p>
+                }
+                else
+                {
+                    @foreach (var c in cache.Commits)
+                    {
+                        <div class="kn-s4-github-item">
+                            <div class="kn-s4-github-item__main">
+                                <a href="@c.HtmlUrl" target="_blank" rel="noopener">@c.Sha[..Math.Min(7, c.Sha.Length)]</a>
+                                <div>@c.Message</div>
+                                <div class="kn-s4-github-item__meta">
+                                    @(c.Author ?? "Unknown") · @(c.Date?.ToLocalTime().ToString("g") ?? "—")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        </div>
     }
 </div>
 
@@ -90,10 +165,54 @@
     private bool loading = true;
     private bool saving;
     private string? error;
+    private string activeTab = "pulls";
+    private string activeRepoKey = "web_app";
     private GithubCacheDto? cache;
-    private string repoUrl = "";
+    private List<ProductRepoDto> linkedRepos = [];
+    private string editRepoUrl = "";
+    private string webRepoUrl = "";
+    private string apiRepoUrl = "";
+
+    private ProductRepoDto? ActiveRepo =>
+        linkedRepos.FirstOrDefault(r => r.RepoKind == activeRepoKey)
+        ?? linkedRepos.FirstOrDefault();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private RenderFragment RenderRepoEditor(string kind, string label, string url) => __builder =>
+    {
+        <div class="kn-s4-create-bar" style="margin-bottom:0.5rem;">
+            <span class="kn-chip kn-chip--neutral" style="min-width:6rem;">@label</span>
+            <input class="kn-s3-field__select kn-s4-create-bar__title"
+                   placeholder="https://github.com/owner/repo"
+                   value="@url"
+                   @oninput="e => SetDraftUrl(kind, e.Value?.ToString())"
+                   disabled="@saving" />
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="() => SaveDraftRepo(kind)">
+                Save
+            </button>
+        </div>
+    };
+
+    private void SetDraftUrl(string kind, string? value)
+    {
+        if (kind == "api") apiRepoUrl = value ?? "";
+        else webRepoUrl = value ?? "";
+    }
+
+    private async Task SaveDraftRepo(string kind)
+    {
+        var url = kind == "api" ? apiRepoUrl : webRepoUrl;
+        saving = true;
+        try
+        {
+            var result = await SupportApi.UpsertProductRepoAsync(SupportApi.TenantId, kind, url);
+            if (!result.Success) error = result.Message;
+            else await LoadAsync();
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { saving = false; }
+    }
 
     private async Task LoadAsync()
     {
@@ -101,13 +220,39 @@
         error = null;
         try
         {
-            var result = await SupportApi.GetGithubCacheAsync();
+            var reposResult = await SupportApi.GetProductReposAsync(SupportApi.TenantId);
+            linkedRepos = reposResult.Success ? reposResult.Data ?? [] : [];
+
+            if (linkedRepos.Count > 0 && linkedRepos.All(r => r.RepoKind != activeRepoKey))
+                activeRepoKey = linkedRepos[0].RepoKind;
+
+            editRepoUrl = ActiveRepo?.GithubRepoUrl ?? "";
+
+            var result = await SupportApi.GetGithubCacheAsync(
+                linkedRepos.Count > 0 ? activeRepoKey : null);
             if (!result.Success) { error = result.Message; cache = null; }
             else
             {
                 cache = result.Data;
-                repoUrl = cache?.RepoUrl ?? "";
+                if (result.Data?.LinkedRepos?.Count > 0)
+                    linkedRepos = result.Data.LinkedRepos;
             }
+        }
+        catch (Exception ex) { error = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task SelectRepo(string repoKey)
+    {
+        activeRepoKey = repoKey;
+        editRepoUrl = ActiveRepo?.GithubRepoUrl ?? "";
+        loading = true;
+        error = null;
+        try
+        {
+            var result = await SupportApi.GetGithubCacheAsync(repoKey);
+            cache = result.Success ? result.Data : null;
+            if (!result.Success) error = result.Message;
         }
         catch (Exception ex) { error = ex.Message; }
         finally { loading = false; }
@@ -115,10 +260,15 @@
 
     private async Task SaveRepoAsync()
     {
+        if (ActiveRepo is null) return;
         saving = true;
         try
         {
-            var result = await SupportApi.UpdateProductGithubRepoAsync(SupportApi.TenantId, repoUrl);
+            var result = await SupportApi.UpsertProductRepoAsync(
+                SupportApi.TenantId,
+                ActiveRepo.RepoKind,
+                editRepoUrl,
+                ActiveRepo.Title);
             if (!result.Success) error = result.Message;
             else await LoadAsync();
         }
@@ -131,15 +281,25 @@
         saving = true;
         try
         {
-            var result = await SupportApi.RefreshGithubCacheAsync();
+            var result = await SupportApi.RefreshGithubCacheAsync(
+                linkedRepos.Count <= 1 ? activeRepoKey : null);
             if (!result.Success) error = result.Message;
             else
             {
                 cache = result.Data;
                 error = null;
+                if (linkedRepos.Count > 1 && !string.IsNullOrWhiteSpace(activeRepoKey))
+                    await SelectRepo(activeRepoKey);
             }
         }
         catch (Exception ex) { error = ex.Message; }
         finally { saving = false; }
     }
+
+    private static (string Bg, string Text) GetPrStateStyle(string state) =>
+        state.Equals("open", StringComparison.OrdinalIgnoreCase)
+            ? ("#DBEAFE", "#1E3A8A")
+            : state.Equals("merged", StringComparison.OrdinalIgnoreCase)
+                ? ("#EDE9FE", "#5B21B6")
+                : ("#E5E7EB", "#374151");
 }

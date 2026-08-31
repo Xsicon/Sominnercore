@@ -1,71 +1,120 @@
 ﻿@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Engineering</p>
-        <h2>Milestones</h2>
-        <p>Timeline for @SupportApi.DisplayName</p>
-    </div>
-
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <input class="kn-field" style="min-width:12rem;" placeholder="Milestone title" @bind="newTitle" @bind:event="oninput" />
-        <input class="kn-field" type="date" @bind="newTarget" />
-        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
-            Add milestone
-        </button>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Engineering</p>
+            <h2>Project Roadmap</h2>
+            <p>Milestones and calendar targets for @SupportApi.DisplayName</p>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(error))
     {
-        <p class="sh-empty-list">@error</p>
+        <p class="kn-s3-alert">@error</p>
     }
-    else if (loading)
+
+    @if (loading)
     {
-        <p class="sh-empty-list">Loadingâ€¦</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading milestones…</p>
+        </div>
     }
     else
     {
-        <h3>Roadmap</h3>
+        <div class="kn-s4-create-bar">
+            <input class="kn-s3-field__select kn-s4-create-bar__title"
+                   placeholder="Milestone title…"
+                   @bind="newTitle"
+                   @bind:event="oninput"
+                   disabled="@saving" />
+            <input class="kn-s3-field__select" type="date" @bind="newTarget" disabled="@saving" />
+            <button type="button"
+                    class="kn-btn kn-btn--primary kn-btn--sm"
+                    disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))"
+                    @onclick="CreateAsync">
+                Add milestone
+            </button>
+        </div>
+
+        <div class="kn-s3-summary-row">
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Planned</div>
+                <div class="kn-s3-metric__value">@milestones.Count(m => m.Status == "planned")</div>
+            </div>
+            <div class="kn-s3-summary kn-s3-summary--warn">
+                <div class="kn-s3-metric__label">In progress</div>
+                <div class="kn-s3-metric__value">@milestones.Count(m => m.Status is "in_progress" or "active")</div>
+            </div>
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Completed</div>
+                <div class="kn-s3-metric__value">@milestones.Count(m => m.Status is "done" or "completed")</div>
+            </div>
+        </div>
+
+        <h3 class="kn-s3-section-title">Roadmap</h3>
         @if (milestones.Count == 0)
         {
-            <p class="sh-empty-list">No milestones yet.</p>
+            <p class="kn-s3-empty">No milestones yet. Add one with a target date to sync to the calendar.</p>
         }
         else
         {
-            <ul style="list-style:none;padding:0;margin:0 0 1.5rem;">
+            <div class="kn-s4-milestone-list">
                 @foreach (var m in milestones.OrderBy(x => x.TargetDate).ThenBy(x => x.SortOrder))
                 {
-                    <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <strong>@m.Title</strong>
-                        <span class="kn-chip kn-chip--neutral">@m.Status</span>
-                        <span class="kn-chip kn-chip--neutral">@(m.TargetDate?.ToString("yyyy-MM-dd") ?? "no date")</span>
-                        <span class="kn-chip kn-chip--neutral">@m.TaskCount tasks</span>
-                        @if (m.CalendarEventId.HasValue)
+                    var statusStyle = GetStatusStyle(m.Status);
+                    <article class="kn-s4-milestone-card">
+                        <div class="kn-s4-milestone-card__head">
+                            <span class="kn-s4-milestone-card__title">@m.Title</span>
+                            <div class="kn-s4-milestone-card__chips">
+                                <span class="kn-chip" style="background:@statusStyle.Bg;color:@statusStyle.Text">@GetStatusLabel(m.Status)</span>
+                                <span class="kn-chip kn-chip--neutral">@(m.TargetDate?.ToString("MMM d, yyyy") ?? "No date")</span>
+                                <span class="kn-chip kn-chip--neutral">@m.TaskCount tasks</span>
+                                @if (m.CalendarEventId.HasValue)
+                                {
+                                    <span class="kn-chip kn-chip--neutral">On calendar</span>
+                                }
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(m.Description))
                         {
-                            <span class="kn-chip kn-chip--neutral">on calendar</span>
+                            <p class="kn-s3-hint">@m.Description</p>
                         }
-                    </li>
+                    </article>
                 }
-            </ul>
+            </div>
         }
 
-        <h3>Calendar events (from milestones)</h3>
+        <h3 class="kn-s3-section-title">Calendar events</h3>
         @if (events.Count == 0)
         {
-            <p class="sh-empty-list">No calendar events. Add a milestone with a target date.</p>
+            <p class="kn-s3-empty kn-s3-empty--compact">No calendar events from milestones yet.</p>
         }
         else
         {
-            <ul style="list-style:none;padding:0;margin:0;">
-                @foreach (var e in events)
-                {
-                    <li style="padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <strong>@e.Title</strong>
-                        <span> â€” @e.StartsAt.ToLocalTime().ToString("d")</span>
-                    </li>
-                }
-            </ul>
+            <div class="kn-s3-table-wrap">
+                <table class="kn-s3-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in events.OrderBy(x => x.StartsAt))
+                        {
+                            <tr>
+                                <td class="kn-s3-table__subject">@e.Title</td>
+                                <td>@e.StartsAt.ToLocalTime().ToString("g")</td>
+                                <td>@e.EventType</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     }
 </div>
@@ -121,4 +170,20 @@
         catch (Exception ex) { error = ex.Message; }
         finally { saving = false; }
     }
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "in_progress" or "active" => "In Progress",
+        "at_risk" => "At Risk",
+        "done" or "completed" => "Done",
+        _ => "Planned"
+    };
+
+    private static (string Bg, string Text) GetStatusStyle(string status) => status switch
+    {
+        "in_progress" or "active" => ("#DBEAFE", "#1E3A8A"),
+        "at_risk" => ("#FEE2E2", "#991B1B"),
+        "done" or "completed" => ("#D1FAE5", "#065F46"),
+        _ => ("#F3F4F6", "#374151")
+    };
 }

@@ -64,6 +64,7 @@ else
         isAuthenticated = true;
         isCheckingAuth = false;
         ApplyTabFromQuery();
+        Navigation.LocationChanged += OnLocationChanged;
         SupportApi.TenantChanged += OnTenantChanged;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { /* shell handles */ }
     }
@@ -74,16 +75,32 @@ else
         _ = InvokeAsync(StateHasChanged);
     }
 
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() =>
+        {
+            ApplyTabFromQuery();
+            StateHasChanged();
+        });
+
     private void ApplyTabFromQuery()
     {
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var query = uri.Query.TrimStart('?');
-        if (string.IsNullOrEmpty(query)) return;
+        if (string.IsNullOrEmpty(query))
+        {
+            activeTab = "board";
+            return;
+        }
         foreach (var part in query.Split('&'))
         {
             var kv = part.Split('=', 2);
             if (kv.Length == 2 && kv[0] == "tab")
-                activeTab = Uri.UnescapeDataString(kv[1]);
+            {
+                var tab = Uri.UnescapeDataString(kv[1]);
+                if (tab is "board" or "milestones" or "github")
+                    activeTab = tab;
+                return;
+            }
         }
     }
 
@@ -94,5 +111,9 @@ else
         return Task.CompletedTask;
     }
 
-    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        SupportApi.TenantChanged -= OnTenantChanged;
+    }
 }

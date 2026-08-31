@@ -33,6 +33,7 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddSingleton<ProductChangeNotifier>();
 builder.Services.AddScoped<RateLimiter>();
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddScoped<UserTimeZoneService>();
 builder.Services.AddScoped<SoftwareProductService>();
 builder.Services.AddScoped<PageContentService>();
 builder.Services.AddScoped<KobNeti.Services.PublicUiState>();

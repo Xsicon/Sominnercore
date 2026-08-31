@@ -1,82 +1,413 @@
-﻿@using KobNeti.Services.Support
+﻿@using KobNeti.Services
+@using KobNeti.Services.Support
 @inject SupportApiClient SupportApi
+@inject SupabaseAuthService Auth
+@inject UserTimeZoneService TimeZone
+@implements IDisposable
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">People</p>
-        <h2>Time</h2>
-        <p>Clock and manual entries for @SupportApi.DisplayName</p>
+<div class="kn-s3-page kn-s4-time-page">
+    <div class="kn-s4-time-head">
+        <div>
+            <p class="kn-s3-eyebrow">People Ops</p>
+            <h2>Time Tracking</h2>
+            <p>Clock in and out · track your shifts for @SupportApi.DisplayName</p>
+        </div>
+        <div class="kn-s4-time-head__meta">
+            <div class="kn-s4-pay-period-pill">
+                <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+                <span>Pay period: <strong>@PayPeriodLabel</strong></span>
+            </div>
+            <div class="kn-s4-pay-period-pill kn-s4-pay-period-pill--tz">
+                <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                <span>This device: <strong>@TimeZone.NowTime @TimeZone.Abbreviation</strong> · @TimeZone.TimeZoneId</span>
+            </div>
+        </div>
     </div>
 
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="ClockIn">Clock in</button>
-        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="ClockOut">Clock out</button>
-        <input class="kn-field" style="width:5rem;" type="number" min="1" @bind="manualMinutes" />
-        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="AddManual">Add manual mins</button>
-    </div>
-
-    @if (!string.IsNullOrEmpty(msg))
+    @if (!string.IsNullOrEmpty(toast))
     {
-        <p class="sh-empty-list">@msg</p>
+        <div class="kn-s4-toast @(toastIsError ? "kn-s4-toast--error" : "")" role="status">
+            <span class="material-symbols-outlined" aria-hidden="true">@(toastIsError ? "error" : "check_circle")</span>
+            <span>@toast</span>
+        </div>
     }
 
     @if (loading)
     {
-        <p class="sh-empty-list">Loadingâ€¦</p>
-    }
-    else if (entries.Count == 0)
-    {
-        <p class="sh-empty-list">No time entries yet.</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading timesheet…</p>
+        </div>
     }
     else
     {
-        <table class="sh-table">
-            <thead><tr><th>When</th><th>Type</th><th>Mins</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-            @foreach (var e in entries)
+        <div class="kn-s4-time-grid">
+            <section class="kn-s4-shift-card @(openEntry is not null ? "kn-s4-shift-card--active" : "")">
+                <div class="kn-s4-shift-card__top">
+                    <div class="kn-s4-shift-card__status">
+                        <span class="kn-s4-shift-card__dot @(openEntry is not null ? "is-live" : "")"></span>
+                        <span>Live shift</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(openStartedLabel))
+                    {
+                        <span class="kn-s4-shift-card__started">
+                            Started @openStartedLabel
+                            @if (!string.IsNullOrEmpty(openShiftTz))
+                            {
+                                <span class="kn-s4-shift-card__tz">(@openShiftTz)</span>
+                            }
+                        </span>
+                    }
+                </div>
+
+                <div class="kn-s4-shift-card__timer" aria-live="polite">
+                    @(openEntry is null ? "00:00:00" : FormatTimer(elapsedSeconds))
+                </div>
+
+                <p class="kn-s4-shift-card__hint">
+                    @(openEntry is null
+                        ? "Clock in uses this device's timezone — not tied to the account."
+                        : openShiftFromElsewhere
+                            ? $"Shift times shown in {openShiftTz} (where this punch was started)."
+                            : "Your shift is being tracked. Clock out when you finish.")
+                </p>
+
+                <div class="kn-s4-shift-card__actions">
+                    @if (openEntry is null)
+                    {
+                        <button type="button"
+                                class="kn-s4-btn-clock kn-s4-btn-clock--in"
+                                disabled="@busy"
+                                @onclick="ClockIn">
+                            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                            Clock in
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button"
+                                class="kn-s4-btn-clock kn-s4-btn-clock--out"
+                                disabled="@busy"
+                                @onclick="ClockOut">
+                            <span class="material-symbols-outlined" aria-hidden="true">stop</span>
+                            Clock out
+                        </button>
+                    }
+                    <span class="kn-s4-shift-card__location">
+                        <span class="kn-s4-shift-card__loc-dot"></span>
+                        @agentName · @TimeZone.Abbreviation
+                    </span>
+                </div>
+            </section>
+
+            <section class="kn-s4-summary-card">
+                <div class="kn-s4-summary-card__head">
+                    <h3>
+                        <span class="material-symbols-outlined" aria-hidden="true">trending_up</span>
+                        Today's summary
+                    </h3>
+                    <span class="kn-s4-status-badge @(openEntry is not null ? "kn-s4-status-badge--in" : "")">
+                        <span class="kn-s4-status-badge__dot"></span>
+                        @(openEntry is not null ? "Clocked in" : "Clocked out")
+                    </span>
+                </div>
+                <p class="kn-s4-summary-card__tz">Each row uses the timezone from when that person clocked in</p>
+
+                <div class="kn-s4-summary-metrics">
+                    <div class="kn-s4-summary-metric">
+                        <span>Total hours</span>
+                        <strong>@FormatHours(todayMinutes)</strong>
+                    </div>
+                    <div class="kn-s4-summary-metric">
+                        <span>Shifts today</span>
+                        <strong>@todayShiftCount</strong>
+                    </div>
+                    <div class="kn-s4-summary-metric">
+                        <span>This week</span>
+                        <strong>@FormatHours(weekMinutes)</strong>
+                    </div>
+                </div>
+
+                <div class="kn-s4-daily-target">
+                    <div class="kn-s4-daily-target__labels">
+                        <span>Daily target (8h)</span>
+                        <span>@DailyTargetPercent%</span>
+                    </div>
+                    <div class="kn-s4-daily-target__bar">
+                        <div class="kn-s4-daily-target__fill" style="width:@($"{DailyTargetPercent}%")"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <details class="kn-s4-missed-punch">
+            <summary>
+                <span class="material-symbols-outlined" aria-hidden="true">edit_calendar</span>
+                Add missed punch
+            </summary>
+            <div class="kn-s4-missed-punch__body">
+                <p class="kn-s3-hint">For forgotten clock-ins. Submitted entries require manager approval.</p>
+                <div class="kn-s4-missed-punch__row">
+                    <label>
+                        <span>Duration (hours)</span>
+                        <input type="number" min="0.5" max="24" step="0.5" @bind="manualHours" disabled="@busy" />
+                    </label>
+                    <label>
+                        <span>Notes</span>
+                        <input type="text" placeholder="e.g. Forgot to clock in after standup" @bind="manualNotes" disabled="@busy" />
+                    </label>
+                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="AddManual">
+                        Submit missed punch
+                    </button>
+                </div>
+            </div>
+        </details>
+
+        <section class="kn-s4-timesheet">
+            <div class="kn-s4-timesheet__head">
+                <h3>
+                    <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                    Timesheet
+                </h3>
+                <span>@displayRows.Count entries · @PayPeriodLabel</span>
+            </div>
+
+            @if (displayRows.Count == 0)
             {
-                <tr>
-                    <td>@(e.ClockIn?.ToLocalTime().ToString("g") ?? e.CreatedAt.ToLocalTime().ToString("g"))</td>
-                    <td>@e.EntryType</td>
-                    <td>@(e.Minutes?.ToString() ?? "â€”")</td>
-                    <td>@e.Status</td>
-                    <td>
-                        @if (e.Status == "approved")
-                        {
-                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy"
-                                    @onclick="() => RequestEdit(e)">Request edit</button>
-                        }
-                    </td>
-                </tr>
+                <p class="kn-s3-empty">No time entries yet. Clock in to start your first shift.</p>
             }
-            </tbody>
-        </table>
+            else
+            {
+                <div class="kn-s3-table-wrap">
+                    <table class="kn-s3-table kn-s4-timesheet-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Clock in</th>
+                                <th>Clock out</th>
+                                <th>Duration</th>
+                                <th>Clock-in location</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in displayRows)
+                            {
+                                var style = GetStatusStyle(row.Entry.Status);
+                                <tr>
+                                    <td>@row.DateLabel</td>
+                                    <td>@row.ClockInLabel</td>
+                                    <td>@row.ClockOutLabel</td>
+                                    <td class="kn-s4-timesheet-table__duration">@FormatEntryDuration(row.Entry)</td>
+                                    <td><span class="kn-s4-tz-chip" title="@row.ZoneId">@row.ZoneLabel</span></td>
+                                    <td><span class="kn-s4-entry-type kn-s4-entry-type--@row.Entry.EntryType">@GetEntryTypeLabel(row.Entry.EntryType)</span></td>
+                                    <td><span class="kn-chip" style="background:@style.Bg;color:@style.Text">@GetStatusLabel(row.Entry.Status)</span></td>
+                                    <td class="kn-s4-timesheet-table__action">
+                                        @if (row.Entry.Status == "approved" && row.Entry.EntryType == "clock")
+                                        {
+                                            <button type="button" class="kn-s4-link-btn" disabled="@busy" @onclick="() => OpenEdit(row.Entry)">
+                                                Request correction
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (!string.IsNullOrWhiteSpace(row.Notes))
+                                {
+                                    <tr class="kn-s4-timesheet-table__notes-row">
+                                        <td colspan="8">@row.Notes</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
     }
 </div>
 
+@if (editEntry is not null)
+{
+    <div class="kn-s4-modal-backdrop" @onclick="CloseEdit">
+        <div class="kn-s4-modal kn-s4-modal--sm" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <header class="kn-s4-modal__head">
+                <div class="kn-s4-modal__head-main">
+                    <span class="material-symbols-outlined kn-s4-modal__head-icon" aria-hidden="true">edit_calendar</span>
+                    <h3 class="kn-s4-modal__title-text">Request time correction</h3>
+                </div>
+                <button type="button" class="kn-s4-modal__close" aria-label="Close" @onclick="CloseEdit">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </header>
+            <div class="kn-s4-modal__main kn-s4-modal__main--pad">
+                <p class="kn-s3-hint">@editEntrySummary</p>
+                <label class="kn-s4-modal__side-field">
+                    <span>Corrected duration (hours)</span>
+                    <input class="kn-s4-modal__field" type="number" min="0.5" max="24" step="0.5" @bind="editHours" disabled="@busy" />
+                </label>
+                <label class="kn-s4-modal__side-field">
+                    <span>Reason</span>
+                    <textarea class="kn-s4-modal__field" rows="3" placeholder="Explain why this shift needs correction…" @bind="editReason" disabled="@busy"></textarea>
+                </label>
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="SubmitEdit">
+                    Submit for approval
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    private const int DailyTargetMinutes = 480;
+
     private bool loading = true;
     private bool busy;
-    private string? msg;
-    private int manualMinutes = 30;
+    private string? toast;
+    private bool toastIsError;
+    private string agentName = "You";
+    private decimal manualHours = 1m;
+    private string manualNotes = "";
     private List<TimeEntryDto> entries = [];
+    private List<TimeEntryDisplayRow> displayRows = [];
+    private TimeEntryDto? editEntry;
+    private string editEntrySummary = "";
+    private decimal editHours = 1m;
+    private string editReason = "";
+    private string openStartedLabel = "";
+    private string openShiftTz = "";
+    private bool openShiftFromElsewhere;
+    private int todayMinutes;
+    private int weekMinutes;
+    private int todayShiftCount;
+    private int elapsedSeconds;
+    private System.Threading.Timer? toastTimer;
+    private System.Threading.Timer? clockTimer;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    private TimeEntryDto? openEntry =>
+        entries.FirstOrDefault(e => e.EntryType == "clock" && e.Status == "open");
+
+    private int DailyTargetPercent =>
+        Math.Min(100, (int)Math.Round(todayMinutes * 100.0 / DailyTargetMinutes));
+
+    private string PayPeriodLabel
+    {
+        get
+        {
+            var now = DateTime.Today;
+            if (now.Day <= 15)
+                return $"{now:MMM} 1 – {now:MMM} 15, {now:yyyy}";
+            var last = DateTime.DaysInMonth(now.Year, now.Month);
+            return $"{now:MMM} 16 – {now:MMM} {last}, {now:yyyy}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TimeZone.EnsureAsync();
+        agentName = await Auth.GetAgentDisplayNameAsync();
+        await Load();
+        StartClockTimer();
+    }
+
+    private void StartClockTimer()
+    {
+        clockTimer?.Dispose();
+        clockTimer = new System.Threading.Timer(_ =>
+        {
+            UpdateElapsed();
+            _ = InvokeAsync(StateHasChanged);
+        }, null, 0, 1000);
+    }
+
+    private void UpdateElapsed()
+    {
+        if (openEntry?.ClockIn is null)
+        {
+            elapsedSeconds = 0;
+            return;
+        }
+
+        elapsedSeconds = Math.Max(0, (int)(DateTime.UtcNow - UserTimeZoneService.AsUtc(openEntry.ClockIn.Value)).TotalSeconds);
+    }
 
     private async Task Load()
     {
         loading = true;
+        await TimeZone.RefreshNowAsync();
+
         var result = await SupportApi.GetTimeEntriesAsync();
         entries = result.Success ? result.Data ?? [] : [];
-        if (!result.Success) msg = result.Message;
+        if (!result.Success) ShowToast(result.Message ?? "Failed to load timesheet.", true);
+
+        await BuildDisplayAsync();
+        UpdateElapsed();
         loading = false;
+    }
+
+    private async Task BuildDisplayAsync()
+    {
+        displayRows = [];
+        openStartedLabel = "";
+        openShiftTz = "";
+        openShiftFromElsewhere = false;
+        todayMinutes = 0;
+        weekMinutes = 0;
+        todayShiftCount = 0;
+
+        var weekCutoffKey = await TimeZone.LocalDateKeyAsync(DateTime.UtcNow.AddDays(-6));
+
+        foreach (var e in entries.Where(x => x.Status is not "superseded").OrderByDescending(x => x.ClockIn ?? x.CreatedAt))
+        {
+            var tz = GetEntryTz(e);
+            var instant = GetEntryInstant(e);
+            var dateKey = await TimeZone.LocalDateKeyAsync(instant, tz);
+            var isToday = await TimeZone.IsTodayAsync(instant, tz);
+
+            if (e.Status is not "rejected")
+            {
+                if (isToday) todayMinutes += EntryMinutes(e);
+                if (string.CompareOrdinal(dateKey, weekCutoffKey) >= 0) weekMinutes += EntryMinutes(e);
+            }
+
+            if (e.EntryType == "clock" && isToday && e.Status is not "superseded")
+                todayShiftCount++;
+
+            var row = new TimeEntryDisplayRow
+            {
+                Entry = e,
+                ZoneId = tz,
+                ZoneLabel = await TimeZone.EntryZoneLabelAsync(e.Notes),
+                Notes = UserTimeZoneService.DisplayNotes(e.Notes),
+                DateLabel = await TimeZone.FormatDateAsync(instant, tz),
+                ClockInLabel = e.ClockIn is null ? "—" : await TimeZone.FormatTimeWithZoneAsync(e.ClockIn.Value, tz),
+                ClockOutLabel = e.ClockOut is null
+                    ? (e.Status == "open" ? "In progress" : "—")
+                    : await TimeZone.FormatTimeWithZoneAsync(e.ClockOut.Value, tz)
+            };
+            displayRows.Add(row);
+        }
+
+        if (openEntry?.ClockIn is not null)
+        {
+            openShiftTz = GetEntryTz(openEntry);
+            openShiftFromElsewhere = TimeZone.EntryUsesDifferentZone(openEntry.Notes);
+            openStartedLabel = await TimeZone.FormatTimeWithZoneAsync(openEntry.ClockIn.Value, openShiftTz);
+        }
     }
 
     private async Task ClockIn()
     {
         busy = true;
-        var r = await SupportApi.ClockInAsync();
-        msg = r.Success ? "Clocked in" : r.Message;
+        await TimeZone.RefreshForClockInAsync();
+        var r = await SupportApi.ClockInAsync(notes: TimeZone.BuildClockInNotes());
+        if (r.Success)
+        {
+            var label = await TimeZone.FormatTimeWithZoneAsync(DateTime.UtcNow);
+            ShowToast($"Clocked in — {label}", false);
+        }
+        else ShowToast(r.Message ?? "Clock in failed", true);
         await Load();
         busy = false;
     }
@@ -85,7 +416,10 @@
     {
         busy = true;
         var r = await SupportApi.ClockOutAsync();
-        msg = r.Success ? $"Clocked out ({r.Data?.Minutes} min)" : r.Message;
+        var msg = r.Success
+            ? $"Clocked out — {FormatHours(r.Data?.Minutes ?? 0)} logged"
+            : r.Message ?? "Clock out failed";
+        ShowToast(msg, !r.Success);
         await Load();
         busy = false;
     }
@@ -93,19 +427,120 @@
     private async Task AddManual()
     {
         busy = true;
-        var r = await SupportApi.AddManualTimeAsync(manualMinutes);
-        msg = r.Success ? "Manual time added" : r.Message;
+        await TimeZone.RefreshForClockInAsync();
+        var minutes = (int)Math.Round(manualHours * 60m);
+        var r = await SupportApi.AddManualTimeAsync(
+            minutes,
+            notes: TimeZone.BuildClockInNotes(string.IsNullOrWhiteSpace(manualNotes) ? null : manualNotes.Trim()));
+        ShowToast(r.Success ? "Missed punch submitted" : r.Message ?? "Failed", !r.Success);
+        if (r.Success)
+        {
+            manualNotes = "";
+            manualHours = 1m;
+        }
         await Load();
         busy = false;
     }
 
-    private async Task RequestEdit(TimeEntryDto e)
+    private async Task OpenEdit(TimeEntryDto e)
     {
+        editEntry = e;
+        editHours = Math.Max(0.5m, Math.Round((e.Minutes ?? 60) / 60m * 2m) / 2m);
+        editReason = "";
+        var tz = UserTimeZoneService.ParseEntryTimeZone(e.Notes) ?? TimeZone.TimeZoneId;
+        var instant = UserTimeZoneService.AsUtc(e.ClockIn ?? e.CreatedAt);
+        editEntrySummary = $"{await TimeZone.FormatDateAsync(instant, tz)} · current {FormatEntryDuration(e)} · {TimeZone.EntryZoneLabel(e.Notes)}";
+    }
+
+    private void CloseEdit() => editEntry = null;
+
+    private async Task SubmitEdit()
+    {
+        if (editEntry is null) return;
         busy = true;
-        var next = Math.Max(1, (e.Minutes ?? 30) + 15);
-        var r = await SupportApi.RequestTimeEditAsync(e.Id, next, "Correction");
-        msg = r.Success ? "Edit sent for approval" : r.Message;
+        var minutes = (int)Math.Round(editHours * 60m);
+        var r = await SupportApi.RequestTimeEditAsync(editEntry.Id, minutes, string.IsNullOrWhiteSpace(editReason) ? "Correction" : editReason.Trim());
+        ShowToast(r.Success ? "Correction sent to manager for approval" : r.Message ?? "Failed", !r.Success);
+        editEntry = null;
         await Load();
         busy = false;
+    }
+
+    private void ShowToast(string message, bool isError)
+    {
+        toast = message;
+        toastIsError = isError;
+        toastTimer?.Dispose();
+        toastTimer = new System.Threading.Timer(_ =>
+        {
+            toast = null;
+            _ = InvokeAsync(StateHasChanged);
+        }, null, 3200, Timeout.Infinite);
+    }
+
+    private static DateTime GetEntryInstant(TimeEntryDto e) =>
+        UserTimeZoneService.AsUtc(e.ClockIn ?? e.CreatedAt);
+
+    private string GetEntryTz(TimeEntryDto e) =>
+        UserTimeZoneService.ParseEntryTimeZone(e.Notes) ?? TimeZone.TimeZoneId;
+
+    private int EntryMinutes(TimeEntryDto e)
+    {
+        if (e.Status == "open" && e.ClockIn is not null)
+            return Math.Max(0, (int)(DateTime.UtcNow - UserTimeZoneService.AsUtc(e.ClockIn.Value)).TotalMinutes);
+        return e.Minutes ?? 0;
+    }
+
+    private static string FormatTimer(int totalSeconds)
+    {
+        var hrs = totalSeconds / 3600;
+        var mins = (totalSeconds % 3600) / 60;
+        var secs = totalSeconds % 60;
+        return $"{hrs:D2}:{mins:D2}:{secs:D2}";
+    }
+
+    private static string FormatHours(int minutes)
+    {
+        if (minutes <= 0) return "0h";
+        var h = minutes / 60;
+        var m = minutes % 60;
+        return m == 0 ? $"{h}h" : $"{h}h {m}m";
+    }
+
+    private static string FormatEntryDuration(TimeEntryDto e)
+    {
+        if (e.Status == "open" && e.ClockIn is not null)
+        {
+            var mins = Math.Max(0, (int)(DateTime.UtcNow - UserTimeZoneService.AsUtc(e.ClockIn.Value)).TotalMinutes);
+            return FormatHours(mins);
+        }
+        return e.Minutes is null or <= 0 ? "—" : FormatHours(e.Minutes.Value);
+    }
+
+    private static string GetEntryTypeLabel(string type) =>
+        type == "clock" ? "Shift" : "Manual";
+
+    private static string GetStatusLabel(string status) => status switch
+    {
+        "open" => "In progress",
+        "approved" => "Approved",
+        "pending" => "Pending approval",
+        "rejected" => "Rejected",
+        _ => status
+    };
+
+    private static (string Bg, string Text) GetStatusStyle(string status) => status switch
+    {
+        "approved" => ("#EEF2FF", "#4338CA"),
+        "open" => ("#DBEAFE", "#1D4ED8"),
+        "pending" => ("#FEF3C7", "#92400E"),
+        "rejected" => ("#FEE2E2", "#991B1B"),
+        _ => ("#F1F5F9", "#475569")
+    };
+
+    public void Dispose()
+    {
+        toastTimer?.Dispose();
+        clockTimer?.Dispose();
     }
 }

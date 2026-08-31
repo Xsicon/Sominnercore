@@ -1,78 +1,186 @@
 ﻿@using KobNeti.Services.Support
+@using Microsoft.AspNetCore.Components.Web
 @inject SupportApiClient SupportApi
+@inject SupabaseAuthService Auth
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">Engineering</p>
-        <h2>Board</h2>
-        <p>Tasks for @SupportApi.DisplayName</p>
-    </div>
-
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-        <input class="kn-field" style="min-width:14rem;" placeholder="New task title" @bind="newTitle" @bind:event="oninput" />
-        <select class="kn-field" @bind="newType">
-            @foreach (var t in Types)
-            {
-                <option value="@t">@t</option>
-            }
-        </select>
-        <select class="kn-field" @bind="newPriority">
-            @foreach (var p in Priorities)
-            {
-                <option value="@p">@p</option>
-            }
-        </select>
-        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))" @onclick="CreateAsync">
-            Add task
-        </button>
+<div class="kn-s3-page">
+    <div class="kn-s3-head">
+        <div>
+            <p class="kn-s3-eyebrow">Engineering</p>
+            <h2>Task Board</h2>
+            <p>Kanban for @SupportApi.DisplayName — drag work through backlog to done</p>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(error))
     {
-        <p class="sh-empty-list">@error</p>
+        <p class="kn-s3-alert">@error</p>
     }
-    else if (loading)
+
+    @if (loading)
     {
-        <p class="sh-empty-list">Loading boardâ€¦</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading board…</p>
+        </div>
     }
     else
     {
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;">
+        <div class="kn-s3-summary-row">
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Backlog</div>
+                <div class="kn-s3-metric__value">@tasks.Count(t => t.Status == "backlog")</div>
+            </div>
+            <div class="kn-s3-summary kn-s3-summary--warn">
+                <div class="kn-s3-metric__label">In progress</div>
+                <div class="kn-s3-metric__value">@tasks.Count(t => t.Status is "ready" or "in_progress" or "in_review")</div>
+            </div>
+            <div class="kn-s3-summary">
+                <div class="kn-s3-metric__label">Done</div>
+                <div class="kn-s3-metric__value">@tasks.Count(t => t.Status == "done")</div>
+            </div>
+        </div>
+
+        <div class="kn-s4-create-bar">
+            <input class="kn-s3-field__select kn-s4-create-bar__title"
+                   placeholder="New task title…"
+                   @bind="newTitle"
+                   @bind:event="oninput"
+                   disabled="@saving" />
+            <select class="kn-s3-field__select" @bind="newType" disabled="@saving">
+                @foreach (var t in Types)
+                {
+                    <option value="@t">@GetTypeLabel(t)</option>
+                }
+            </select>
+            <select class="kn-s3-field__select" @bind="newPriority" disabled="@saving">
+                @foreach (var p in Priorities)
+                {
+                    <option value="@p">@GetPriorityLabel(p)</option>
+                }
+            </select>
+            <button type="button"
+                    class="kn-btn kn-btn--primary kn-btn--sm"
+                    disabled="@(saving || string.IsNullOrWhiteSpace(newTitle))"
+                    @onclick="CreateAsync">
+                Add task
+            </button>
+        </div>
+
+        <div class="kn-s3-toolbar">
+            <div class="kn-s3-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input placeholder="Search tasks…" @bind="search" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <div class="kn-s4-kanban">
+            @if (openMenuTaskId.HasValue)
+            {
+                <button type="button"
+                        class="kn-s4-kanban-backdrop"
+                        aria-label="Close card menu"
+                        @onclick="() => openMenuTaskId = null"></button>
+            }
             @foreach (var col in Columns)
             {
-                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:0.75rem;min-height:12rem;">
-                    <h4 style="margin:0 0 0.75rem;text-transform:capitalize;">@col.Replace('_', ' ')</h4>
-                    @foreach (var task in tasks.Where(t => t.Status == col))
-                    {
-                        <div style="border:1px solid rgba(255,255,255,0.1);padding:0.5rem;margin-bottom:0.5rem;">
-                            <div style="font-size:0.75rem;opacity:0.7;">@task.TaskNumber Â· @task.Priority</div>
-                            <strong>@task.Title</strong>
-                            @if (!string.IsNullOrWhiteSpace(task.GithubPrUrl))
-                            {
-                                <div><a href="@task.GithubPrUrl" target="_blank" rel="noopener">PR</a></div>
-                            }
-                            <div style="margin-top:0.4rem;display:flex;gap:0.25rem;flex-wrap:wrap;">
-                                @foreach (var next in NextStatuses(task.Status))
+                var colTasks = FilteredTasks.Where(t => t.Status == col).ToList();
+                <section class="kn-s4-kanban__col">
+                    <header class="kn-s4-kanban__col-head">
+                        <span class="kn-s4-kanban__col-title">@GetColumnLabel(col)</span>
+                        <span class="kn-s4-kanban__count">@colTasks.Count</span>
+                    </header>
+                    <div class="kn-s4-kanban__cards">
+                        @if (colTasks.Count == 0)
+                        {
+                            <p class="kn-s4-kanban__empty">No cards yet</p>
+                        }
+                        @foreach (var task in colTasks)
+                        {
+                            var menuOpen = openMenuTaskId == task.Id;
+                            <article class="kn-s4-task-card kn-s4-task-card--@task.Priority @(menuOpen ? "is-menu-open" : "")"
+                                     role="button"
+                                     tabindex="0"
+                                     @onclick="() => OpenTask(task)"
+                                     @onkeydown="e => OnCardKeydown(e, task)">
+                                @if (ShouldShowTypeLabel(task.TaskType))
                                 {
-                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="() => MoveAsync(task, next)">
-                                        â†’ @next.Replace('_', ' ')
-                                    </button>
+                                    <div class="kn-s4-task-card__labels">
+                                        <span class="kn-s4-label kn-s4-label--@task.TaskType">@GetTypeLabel(task.TaskType)</span>
+                                    </div>
                                 }
-                            </div>
-                            <div style="margin-top:0.35rem;">
-                                <input class="kn-field"
-                                       style="width:100%;font-size:0.75rem;"
-                                       placeholder="GitHub PR URL"
-                                       value="@(task.GithubPrUrl ?? "")"
-                                       @onchange="e => SetPrAsync(task, e)" />
-                            </div>
-                        </div>
-                    }
-                </div>
+                                <h3 class="kn-s4-task-card__title">@task.Title</h3>
+                                <footer class="kn-s4-task-card__foot">
+                                    <div class="kn-s4-task-card__foot-left">
+                                        @if (!string.IsNullOrWhiteSpace(task.AssigneeName))
+                                        {
+                                            <span class="kn-s4-avatar" title="@task.AssigneeName">@GetInitials(task.AssigneeName)</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(task.GithubPrUrl))
+                                        {
+                                            <a href="@task.GithubPrUrl"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="kn-s4-task-card__icon-link"
+                                               title="Open pull request"
+                                               @onclick:stopPropagation="true">
+                                                <span class="material-symbols-outlined" aria-hidden="true">call_merge</span>
+                                            </a>
+                                        }
+                                        <span class="kn-s4-task-card__id">@task.TaskNumber</span>
+                                    </div>
+                                    <div class="kn-s4-task-card__menu-wrap">
+                                        <button type="button"
+                                                class="kn-s4-task-card__menu-btn"
+                                                aria-label="Quick actions"
+                                                aria-expanded="@menuOpen"
+                                                disabled="@saving"
+                                                @onclick:stopPropagation="true"
+                                                @onclick="() => ToggleMenu(task.Id)">
+                                            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+                                        </button>
+                                        @if (menuOpen)
+                                        {
+                                            <div class="kn-s4-task-card__menu" @onclick:stopPropagation="true">
+                                                @foreach (var next in NextStatuses(task.Status))
+                                                {
+                                                    <button type="button"
+                                                            class="kn-s4-task-card__menu-item"
+                                                            disabled="@saving"
+                                                            @onclick="() => MoveAndCloseAsync(task, next)">
+                                                        Move to @GetColumnLabel(next)
+                                                    </button>
+                                                }
+                                                <div class="kn-s4-task-card__menu-divider"></div>
+                                                <label class="kn-s4-task-card__menu-pr">
+                                                    <span>GitHub PR</span>
+                                                    <input type="url"
+                                                           placeholder="https://github.com/…/pull/1"
+                                                           value="@(task.GithubPrUrl ?? "")"
+                                                           disabled="@saving"
+                                                           @onchange="e => SetPrAsync(task, e)" />
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </footer>
+                            </article>
+                        }
+                    </div>
+                </section>
             }
         </div>
     }
 </div>
+
+@if (selectedTask is not null)
+{
+    <EngineeringTaskModal Task="selectedTask"
+                          Staff="staff"
+                          Milestones="milestones"
+                          OnClose="CloseTaskModal"
+                          OnSaved="SaveTaskModal" />
+}
 
 @code {
     private static readonly string[] Columns = ["backlog", "ready", "in_progress", "in_review", "done"];
@@ -82,10 +190,78 @@
     private bool loading = true;
     private bool saving;
     private string? error;
+    private string search = "";
     private List<EngTaskDto> tasks = [];
+    private List<StaffMemberDto> staff = [];
+    private List<MilestoneDto> milestones = [];
+    private string? currentUserName;
+    private EngTaskDto? selectedTask;
     private string newTitle = "";
     private string newType = "feature";
     private string newPriority = "medium";
+    private Guid? openMenuTaskId;
+
+    private void ToggleMenu(Guid taskId) =>
+        openMenuTaskId = openMenuTaskId == taskId ? null : taskId;
+
+    private void OpenTask(EngTaskDto task)
+    {
+        openMenuTaskId = null;
+        selectedTask = task;
+    }
+
+    private void OnCardKeydown(KeyboardEventArgs e, EngTaskDto task)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            OpenTask(task);
+        }
+    }
+
+    private Task CloseTaskModal()
+    {
+        selectedTask = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveTaskModal()
+    {
+        var taskId = selectedTask?.Id;
+        await LoadAsync();
+        if (taskId.HasValue)
+            selectedTask = tasks.FirstOrDefault(t => t.Id == taskId.Value);
+    }
+
+    private async Task MoveAndCloseAsync(EngTaskDto task, string status)
+    {
+        openMenuTaskId = null;
+        await MoveAsync(task, status);
+    }
+
+    private static bool ShouldShowTypeLabel(string type) =>
+        type is "bug" or "incident" or "spike";
+
+    private static string GetInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..1].ToUpperInvariant();
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+    }
+
+    private IEnumerable<EngTaskDto> FilteredTasks
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(search))
+                return tasks;
+            var q = search.Trim();
+            return tasks.Where(t =>
+                t.TaskNumber.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || t.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || (t.AssigneeName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -95,7 +271,12 @@
         error = null;
         try
         {
-            var result = await SupportApi.GetEngTasksAsync();
+            var tasksTask = SupportApi.GetEngTasksAsync();
+            var staffTask = SupportApi.GetAssignableStaffAsync();
+            var milestonesTask = SupportApi.GetMilestonesAsync();
+            await Task.WhenAll(tasksTask, staffTask, milestonesTask);
+
+            var result = await tasksTask;
             if (!result.Success)
             {
                 error = result.Message;
@@ -105,6 +286,14 @@
             {
                 tasks = result.Data ?? [];
             }
+
+            var staffResult = await staffTask;
+            staff = staffResult.Success ? staffResult.Data ?? [] : [];
+            currentUserName = await Auth.GetAgentDisplayNameAsync();
+            EnsureCurrentUserInStaff();
+
+            var msResult = await milestonesTask;
+            milestones = msResult.Success ? msResult.Data ?? [] : [];
         }
         catch (Exception ex)
         {
@@ -174,10 +363,54 @@
     private static IEnumerable<string> NextStatuses(string status) => status switch
     {
         "backlog" => ["ready", "in_progress"],
-        "ready" => ["in_progress"],
+        "ready" => ["in_progress", "backlog"],
         "in_progress" => ["in_review", "done"],
         "in_review" => ["done", "in_progress"],
         "done" => ["in_progress"],
         _ => []
     };
+
+    private static string GetColumnLabel(string col) => col switch
+    {
+        "in_progress" => "In Progress",
+        "in_review" => "In Review",
+        "ready" => "Ready",
+        "done" => "Done",
+        _ => "Backlog"
+    };
+
+    private static string GetTypeLabel(string type) =>
+        char.ToUpperInvariant(type[0]) + type[1..];
+
+    private static string GetPriorityLabel(string priority) => priority switch
+    {
+        "critical" => "Critical",
+        "high" => "High",
+        "low" => "Low",
+        _ => "Medium"
+    };
+
+    private void EnsureCurrentUserInStaff()
+    {
+        if (string.IsNullOrWhiteSpace(currentUserName))
+            return;
+
+        var label = currentUserName.Trim();
+        if (staff.Any(s =>
+                string.Equals(StaffLabel(s), label, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(s.DisplayName, label, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        staff.Add(new StaffMemberDto
+        {
+            Id = Guid.Empty,
+            Email = label,
+            DisplayName = label,
+            Role = "support",
+            Active = true
+        });
+    }
+
+    private static string StaffLabel(StaffMemberDto member) =>
+        string.IsNullOrWhiteSpace(member.DisplayName) ? member.Email : member.DisplayName!;
 }

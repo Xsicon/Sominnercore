@@ -1,45 +1,170 @@
-﻿@using KobNeti.Services.Support
+﻿@using KobNeti.Services
+@using KobNeti.Services.Support
+@using System.Text.Json
 @inject SupportApiClient SupportApi
+@inject UserTimeZoneService TimeZone
 
-<div class="sh-page">
-    <div class="sh-page-intro">
-        <p class="sh-eyebrow">People</p>
-        <h2>Approvals</h2>
-        <p>Time edits and payroll for @SupportApi.DisplayName</p>
+<div class="kn-s3-page kn-s4-approvals-page">
+    <div class="kn-s4-time-head">
+        <div>
+            <p class="kn-s3-eyebrow">People Ops</p>
+            <h2>Approvals</h2>
+            <p>Review time corrections and payroll requests for @SupportApi.DisplayName</p>
+        </div>
+        <select class="kn-s4-filter-select" @bind="filter" @bind:after="Load">
+            <option value="all">All requests</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+        </select>
     </div>
 
     @if (!string.IsNullOrEmpty(msg))
     {
-        <p class="sh-empty-list">@msg</p>
+        <p class="kn-s3-alert">@msg</p>
     }
 
     @if (loading)
     {
-        <p class="sh-empty-list">Loadingâ€¦</p>
-    }
-    else if (items.Count == 0)
-    {
-        <p class="sh-empty-list">No pending approvals.</p>
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading approvals…</p>
+        </div>
     }
     else
     {
-        <ul style="list-style:none;padding:0;">
-            @foreach (var a in items)
-            {
-                <li style="padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                    <strong>@a.RequestType</strong>
-                    <span class="kn-chip kn-chip--neutral">@a.Status</span>
-                    <div><small>@(a.RequesterName ?? "â€”") Â· @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
-                    @if (a.Status == "pending")
+        <div class="kn-s4-approval-stats">
+            <div class="kn-s4-approval-stat kn-s4-approval-stat--pending">
+                <div class="kn-s4-approval-stat__top">
+                    <span>Pending</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                </div>
+                <strong>@items.Count(i => i.Status == "pending")</strong>
+                <p>@items.Count(i => i.Status == "pending" && i.RequestType == "time_edit") time · @items.Count(i => i.Status == "pending" && i.RequestType == "payroll") payroll</p>
+            </div>
+            <div class="kn-s4-approval-stat">
+                <div class="kn-s4-approval-stat__top">
+                    <span>Approved</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                </div>
+                <strong>@items.Count(i => i.Status == "approved")</strong>
+                <p>This pay period</p>
+            </div>
+            <div class="kn-s4-approval-stat">
+                <div class="kn-s4-approval-stat__top">
+                    <span>Rejected</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
+                </div>
+                <strong>@items.Count(i => i.Status == "rejected")</strong>
+                <p>This pay period</p>
+            </div>
+        </div>
+
+        @if (ShowPendingSection)
+        {
+            <section class="kn-s4-approvals-section">
+                <h3>
+                    <span class="kn-s4-approvals-section__dot"></span>
+                    Pending approvals (@pendingList.Count)
+                </h3>
+
+                @if (pendingList.Count == 0)
+                {
+                    <div class="kn-s4-approvals-empty">
+                        <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                        <strong>All caught up</strong>
+                        <p>No pending requests awaiting your review.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var a in pendingList)
                     {
-                        <div style="margin-top:0.4rem;display:flex;gap:0.35rem;">
-                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, true)">Approve</button>
-                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, false)">Reject</button>
-                        </div>
+                        var style = GetStatusStyle(a.Status);
+                        var summary = GetSummary(a);
+                        <article class="kn-s4-approval-card">
+                            <div class="kn-s4-approval-card__main">
+                                <div class="kn-s4-approval-card__icon">
+                                    <span class="material-symbols-outlined" aria-hidden="true">@GetTypeIcon(a.RequestType)</span>
+                                </div>
+                                <div>
+                                    <div class="kn-s4-approval-card__meta">
+                                        <span class="kn-s4-approval-card__type">@GetTypeLabel(a.RequestType)</span>
+                                        <span class="kn-chip" style="background:@style.Bg;color:@style.Text">@a.Status</span>
+                                    </div>
+                                    <strong class="kn-s4-approval-card__title">@summary</strong>
+                                    <p class="kn-s3-hint">
+                                        @(a.RequesterName ?? "Unknown") · @whenLabels.GetValueOrDefault(a.Id, "—") · @TimeAgo(a.CreatedAt)
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="kn-s4-approval-card__actions">
+                                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="() => Decide(a.Id, true)">
+                                    Approve
+                                </button>
+                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm kn-s4-btn-reject" disabled="@busy" @onclick="() => StartReject(a.Id)">
+                                    Reject
+                                </button>
+                            </div>
+                            @if (rejectingId == a.Id)
+                            {
+                                <form class="kn-s4-reject-form" @onsubmit="ConfirmReject" @onsubmit:preventDefault="true">
+                                    <label>
+                                        <span>Rejection reason (required)</span>
+                                        <input type="text" @bind="rejectReason" placeholder="Explain why this request is denied…" required />
+                                    </label>
+                                    <div class="kn-s3-actions">
+                                        <button type="button" class="kn-btn kn-btn--ghost kn-btn--sm" @onclick="CancelReject">Cancel</button>
+                                        <button type="submit" class="kn-btn kn-btn--outline kn-btn--sm kn-s4-btn-reject" disabled="@busy">Confirm reject</button>
+                                    </div>
+                                </form>
+                            }
+                        </article>
                     }
-                </li>
-            }
-        </ul>
+                }
+            </section>
+        }
+
+        @if (ShowHistorySection && historyList.Count > 0)
+        {
+            <section class="kn-s4-timesheet">
+                <div class="kn-s4-timesheet__head">
+                    <h3>
+                        <span class="material-symbols-outlined" aria-hidden="true">history</span>
+                        Decision history
+                    </h3>
+                    <span>@historyList.Count records</span>
+                </div>
+                <div class="kn-s3-table-wrap">
+                    <table class="kn-s3-table kn-s4-timesheet-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Requester</th>
+                                <th>Summary</th>
+                                <th>Decision</th>
+                                <th>Approver</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in historyList)
+                            {
+                                var style = GetStatusStyle(a.Status);
+                                <tr>
+                                    <td>@whenLabels.GetValueOrDefault(a.Id, "—")</td>
+                                    <td>@GetTypeLabel(a.RequestType)</td>
+                                    <td>@(a.RequesterName ?? "—")</td>
+                                    <td>@GetSummary(a)</td>
+                                    <td><span class="kn-chip" style="background:@style.Bg;color:@style.Text">@a.Status</span></td>
+                                    <td>@(a.ApproverName ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
     }
 </div>
 
@@ -47,16 +172,45 @@
     private bool loading = true;
     private bool busy;
     private string? msg;
+    private string filter = "all";
+    private Guid? rejectingId;
+    private string rejectReason = "";
     private List<ApprovalRequestDto> items = [];
+
+    private List<ApprovalRequestDto> pendingList = [];
+    private List<ApprovalRequestDto> historyList = [];
+    private Dictionary<Guid, string> whenLabels = new();
+
+    private bool ShowPendingSection => filter is "all" or "pending";
+    private bool ShowHistorySection => filter is "all" or "approved" or "rejected";
 
     protected override async Task OnInitializedAsync() => await Load();
 
     private async Task Load()
     {
         loading = true;
-        var result = await SupportApi.GetApprovalsAsync();
+        msg = null;
+        await TimeZone.EnsureAsync();
+        var status = filter switch
+        {
+            "pending" => "pending",
+            "approved" => "approved",
+            "rejected" => "rejected",
+            _ => null
+        };
+        var result = await SupportApi.GetApprovalsAsync(status);
         items = result.Success ? result.Data ?? [] : [];
         if (!result.Success) msg = result.Message;
+        pendingList = items.Where(i => i.Status == "pending").OrderByDescending(i => i.CreatedAt).ToList();
+        historyList = items.Where(i => i.Status is "approved" or "rejected").OrderByDescending(i => i.DecidedAt ?? i.CreatedAt).ToList();
+
+        whenLabels = new Dictionary<Guid, string>();
+        foreach (var a in items)
+        {
+            var when = UserTimeZoneService.AsUtc(a.DecidedAt ?? a.CreatedAt);
+            whenLabels[a.Id] = $"{await TimeZone.FormatDateTimeAsync(when)} {TimeZone.Abbreviation}";
+        }
+
         loading = false;
     }
 
@@ -65,7 +219,87 @@
         busy = true;
         var r = await SupportApi.DecideApprovalAsync(id, approve);
         msg = r.Success ? (approve ? "Approved" : "Rejected") : r.Message;
+        rejectingId = null;
+        rejectReason = "";
         await Load();
         busy = false;
     }
+
+    private void StartReject(Guid id)
+    {
+        rejectingId = id;
+        rejectReason = "";
+    }
+
+    private void CancelReject()
+    {
+        rejectingId = null;
+        rejectReason = "";
+    }
+
+    private async Task ConfirmReject()
+    {
+        if (rejectingId is null || string.IsNullOrWhiteSpace(rejectReason)) return;
+        await Decide(rejectingId.Value, false);
+    }
+
+    private static string GetTypeLabel(string type) => type switch
+    {
+        "time_edit" => "Time correction",
+        "payroll" => "Payroll run",
+        _ => type.Replace('_', ' ')
+    };
+
+    private static string GetTypeIcon(string type) => type switch
+    {
+        "payroll" => "payments",
+        "time_edit" => "schedule",
+        _ => "approval"
+    };
+
+    private static string GetSummary(ApprovalRequestDto a)
+    {
+        if (a.RequestType == "payroll")
+            return "Payroll period approval";
+
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(a.PayloadJson) ? "{}" : a.PayloadJson);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("minutes", out var minsEl) && minsEl.TryGetInt32(out var mins))
+                return $"Duration correction → {FormatHours(mins)}";
+            if (root.TryGetProperty("reason", out var reasonEl))
+            {
+                var reason = reasonEl.GetString();
+                if (!string.IsNullOrWhiteSpace(reason))
+                    return reason;
+            }
+        }
+        catch { /* ignore malformed payload */ }
+
+        return "Time entry correction request";
+    }
+
+    private static string FormatHours(int minutes)
+    {
+        var h = minutes / 60;
+        var m = minutes % 60;
+        return m == 0 ? $"{h}h" : $"{h}h {m}m";
+    }
+
+    private static string TimeAgo(DateTime createdAt)
+    {
+        var span = DateTime.UtcNow - UserTimeZoneService.AsUtc(createdAt);
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalHours < 1) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalDays < 1) return $"{(int)span.TotalHours}h ago";
+        return $"{(int)span.TotalDays}d ago";
+    }
+
+    private static (string Bg, string Text) GetStatusStyle(string status) => status switch
+    {
+        "approved" => ("#EEF2FF", "#4338CA"),
+        "rejected" => ("#FEE2E2", "#991B1B"),
+        _ => ("#FEF3C7", "#92400E")
+    };
 }

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using KobNeti.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace KobNeti.Services.Support;
@@ -24,7 +25,12 @@ public class SupportApiClient
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Converters =
+        {
+            new UtcDateTimeConverter(),
+            new UtcNullableDateTimeConverter()
+        }
     };
 
     public SupportApiClient(HttpClient http, IConfiguration configuration, SupabaseAuthService auth)
@@ -156,6 +162,19 @@ public class SupportApiClient
         {
             var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Staff");
             return await ReadEnvelopeAsync<List<StaffMemberDto>>(res, "Failed to load staff.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<StaffMemberDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<List<StaffMemberDto>>> GetAssignableStaffAsync()
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Staff/assignable");
+            return await ReadEnvelopeAsync<List<StaffMemberDto>>(res, "Failed to load assignable staff.");
         }
         catch (Exception ex)
         {
@@ -931,11 +950,14 @@ public class SupportApiClient
         }
     }
 
-    public async Task<ApiResponse<GithubCacheDto>> GetGithubCacheAsync()
+    public async Task<ApiResponse<GithubCacheDto>> GetGithubCacheAsync(string? repoKey = null)
     {
         try
         {
-            var res = await SendAuthorizedAsync(HttpMethod.Get, "api/Github");
+            var url = string.IsNullOrWhiteSpace(repoKey)
+                ? "api/Github"
+                : $"api/Github?repoKey={Uri.EscapeDataString(repoKey)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Get, url);
             return await ReadEnvelopeAsync<GithubCacheDto>(res, "Failed to load GitHub cache.");
         }
         catch (Exception ex)
@@ -944,11 +966,47 @@ public class SupportApiClient
         }
     }
 
-    public async Task<ApiResponse<GithubCacheDto>> RefreshGithubCacheAsync()
+    public async Task<ApiResponse<List<ProductRepoDto>>> GetProductReposAsync(string slug)
     {
         try
         {
-            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/Github/refresh");
+            var res = await SendAuthorizedAsync(HttpMethod.Get, $"api/products/{Uri.EscapeDataString(slug)}/repos");
+            return await ReadEnvelopeAsync<List<ProductRepoDto>>(res, "Failed to load linked repos.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<ProductRepoDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<ProductRepoDto>> UpsertProductRepoAsync(
+        string slug,
+        string repoKind,
+        string githubRepoUrl,
+        string? title = null)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(
+                HttpMethod.Put,
+                $"api/products/{Uri.EscapeDataString(slug)}/repos/{Uri.EscapeDataString(repoKind)}",
+                new { title = title ?? "", githubRepoUrl });
+            return await ReadEnvelopeAsync<ProductRepoDto>(res, "Failed to save linked repo.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ProductRepoDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<GithubCacheDto>> RefreshGithubCacheAsync(string? repoKey = null)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(repoKey)
+                ? "api/Github/refresh"
+                : $"api/Github/refresh?repoKey={Uri.EscapeDataString(repoKey)}";
+            var res = await SendAuthorizedAsync(HttpMethod.Post, url);
             return await ReadEnvelopeAsync<GithubCacheDto>(res, "Failed to refresh GitHub cache.");
         }
         catch (Exception ex)
@@ -989,11 +1047,11 @@ public class SupportApiClient
         }
     }
 
-    public async Task<ApiResponse<TimeEntryDto>> ClockInAsync(Guid? ticketId = null, Guid? engTaskId = null)
+    public async Task<ApiResponse<TimeEntryDto>> ClockInAsync(Guid? ticketId = null, Guid? engTaskId = null, string? notes = null)
     {
         try
         {
-            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/clock-in", new { ticketId, engTaskId });
+            var res = await SendAuthorizedAsync(HttpMethod.Post, "api/TimeEntries/clock-in", new { ticketId, engTaskId, notes });
             return await ReadEnvelopeAsync<TimeEntryDto>(res, "Failed to clock in.");
         }
         catch (Exception ex)

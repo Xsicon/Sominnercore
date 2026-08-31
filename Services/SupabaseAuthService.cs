@@ -244,6 +244,12 @@ public class SupabaseAuthService
         return "Admin";
     }
 
+    public async Task<string?> GetAgentEmailAsync()
+    {
+        await EnsureInitializedAsync();
+        return (GetCurrentUser() ?? GetCurrentSession()?.User)?.Email?.Trim();
+    }
+
     /// <summary>
     /// Restores persisted session (if any) and returns the user only when they are an admin.
     /// </summary>
