@@ -208,6 +208,37 @@
   cursor: wait;
 }
 
+.kn-login__quick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.65rem;
+  padding: 0.65rem 1rem;
+  border: 1px dashed #C7D2FE;
+  border-radius: 12px;
+  background: #F8FAFF;
+  color: #4F46E5;
+  font: 600 0.8125rem/1.4 var(--kn-font);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kn-login__quick:hover:not(:disabled) {
+  background: #EEF2FF;
+  border-color: #A5B4FC;
+}
+
+.kn-login__quick:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kn-login__quick .material-symbols-outlined {
+  font-size: 1rem;
+}
+
 .kn-login__submit--sm {
   margin-top: 0;
   width: auto;

@@ -679,6 +679,24 @@ public class PlatformHelpArticleDto
     public int SortOrder { get; set; }
 }
 
+public class SavePlatformHelpRequest
+{
+    public string Slug { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string Category { get; set; } = "general";
+    public string Status { get; set; } = "published";
+    public int SortOrder { get; set; }
+}
+
+public static class PlatformHelpCategories
+{
+    public static readonly string[] All =
+    [
+        "getting-started", "support", "engineering", "people", "platform", "general"
+    ];
+}
+
 public class ImChannelDto
 {
     public Guid Id { get; set; }

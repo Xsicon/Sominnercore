@@ -2,10 +2,13 @@
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
 @using KobNeti.Services.Support
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
 @inject SupabaseAuthService AuthService
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
 @inject RateLimiter RateLimiter
+@inject IConfiguration Configuration
+@inject IWebAssemblyHostEnvironment HostEnvironment
 
 <PageTitle>Sign in - KobNeti</PageTitle>
 
@@ -83,6 +86,18 @@
                             <span>Sign in</span>
                         }
                     </button>
+
+                    @if (showQuickLogin)
+                    {
+                        <button type="button"
+                                class="kn-login__quick"
+                                id="btn-quick-sign-in"
+                                disabled="@isLoading"
+                                @onclick="HandleQuickLogin">
+                            <span class="material-symbols-outlined" aria-hidden="true">bolt</span>
+                            Quick sign in (@quickLoginLabel)
+                        </button>
+                    }
                 </EditForm>
             }
 
@@ -161,6 +176,11 @@
     private string forgotEmail = "";
     private string? forgotError;
 
+    private bool showQuickLogin;
+    private string quickLoginEmail = "";
+    private string quickLoginPassword = "";
+    private string quickLoginLabel = "";
+
     private class LoginModel
     {
         public string Email { get; set; } = "";
@@ -174,6 +194,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (HostEnvironment.IsDevelopment())
+        {
+            quickLoginEmail = Configuration["Supabase:QuickLogin:Email"]?.Trim() ?? "";
+            quickLoginPassword = Configuration["Supabase:QuickLogin:Password"] ?? "";
+            showQuickLogin = !string.IsNullOrWhiteSpace(quickLoginEmail)
+                             && !string.IsNullOrWhiteSpace(quickLoginPassword);
+            quickLoginLabel = MaskEmail(quickLoginEmail);
+        }
+
         var (user, _) = await AuthService.GetAuthenticatedAdminAsync();
         if (user != null)
         {
@@ -245,6 +274,13 @@
         }
     }
 
+    private async Task HandleQuickLogin()
+    {
+        loginModel.Email = quickLoginEmail;
+        loginModel.Password = quickLoginPassword;
+        await HandleLogin();
+    }
+
     private async Task HandleLogin()
     {
         isLoading = true;
@@ -298,5 +334,12 @@
             return (parts[0][0].ToString() + parts[1][0]).ToUpperInvariant();
         var local = source.Split('@')[0];
         return local.Length >= 2 ? local[..2].ToUpperInvariant() : local.ToUpperInvariant();
+    }
+
+    private static string MaskEmail(string email)
+    {
+        var at = email.IndexOf('@');
+        if (at <= 1) return email;
+        return $"{email[0]}…{email[(at - 1)..]}";
     }
 }

@@ -199,7 +199,7 @@
                     <div class="ops-dropdown">
                         <div class="ops-dropdown__head"><strong>Direct Messages</strong></div>
                         <p class="ops-dropdown__empty">Internal chat is available in Support → Internal Chat.</p>
-                        <a class="ops-dropdown__link" href="/admin/support?tab=internal">Open Internal Chat</a>
+                        <a class="ops-dropdown__link" href="/admin/internal">Open Internal Chat</a>
                     </div>
                 }
                 <div class="ops-user-menu">
@@ -216,6 +216,9 @@
                                 <p class="ops-sidebar__user-email">@currentUserEmail</p>
                                 <span class="ops-access-pill">@(string.IsNullOrWhiteSpace(agentRole) ? "Staff" : agentRole)</span>
                             </div>
+                            <a class="ops-dropdown__item" href="/admin/profile" @onclick="CloseMenus">
+                                <span class="material-symbols-outlined">person</span> Profile
+                            </a>
                             <button type="button" class="ops-dropdown__item" @onclick="OpenHelp">
                                 <span class="material-symbols-outlined">help</span> Platform help
                             </button>
@@ -252,7 +255,7 @@
                             <p style="margin:0.4rem 0 0;font-size:0.9rem;opacity:0.9;">@a.Body</p>
                         </details>
                     }
-                    <p style="margin-top:0.75rem;"><a href="/admin/insights">Open Insights → Help</a></p>
+                    <p style="margin-top:0.75rem;"><a href="/admin/help">Open Help Center</a></p>
                 }
             </div>
         }
@@ -302,7 +305,7 @@
             new("Live Chat", "/admin/support?tab=live", "/admin/support"),
             new("Escalations", "/admin/support?tab=incidents", "/admin/support"),
             new("Knowledge Base", "/admin/support?tab=kb", "/admin/support"),
-            new("Internal Chat", "/admin/support?tab=internal", "/admin/support"),
+            new("Internal Chat", "/admin/internal", "/admin/internal"),
         ], Badge: null),
         new("engineering", "Engineering", "code",
         [
@@ -323,8 +326,8 @@
         ], PlatformAdminOnly: true),
         new("products", "Products", "inventory_2",
         [
-            new("Product Registry", "/admin", "/admin"),
-            new("Linked Repositories", "/admin/engineering?tab=github", "/admin/engineering"),
+            new("Product Registry", "/admin/registry", "/admin/registry"),
+            new("Linked Repositories", "/admin/registry", "/admin/registry"),
         ]),
         new("communication", "Communication", "forum",
         [
@@ -334,14 +337,13 @@
         new("resources-files", "Resources & Files", "folder",
         [
             new("File Management", "/admin/platform?tab=files", "/admin/platform"),
-            new("Assets", "/admin/insights?tab=assets", "/admin/insights"),
-            new("Help Center", "/admin/insights?tab=help", "/admin/insights"),
+            new("Assets", "/admin/assets", "/admin/assets"),
+            new("Help Center", "/admin/help", "/admin/help"),
         ]),
         new("system-analytics", "System & Analytics", "analytics",
         [
             new("Audit Logs", "/admin/platform?tab=audit", "/admin/platform"),
             new("Analytics & Reports", "/admin/insights", "/admin/insights"),
-            new("Integrations", "/admin/platform?tab=integrations", "/admin/platform"),
         ]),
     ];
 
@@ -357,9 +359,14 @@
             if (path.StartsWith("/admin/people", StringComparison.OrdinalIgnoreCase)) return "People Ops";
             if (path.StartsWith("/admin/calendar", StringComparison.OrdinalIgnoreCase)) return "Calendar";
             if (path.StartsWith("/admin/platform", StringComparison.OrdinalIgnoreCase)) return "Platform";
+            if (path.StartsWith("/admin/registry", StringComparison.OrdinalIgnoreCase)) return "Product Registry";
+            if (path.StartsWith("/admin/help", StringComparison.OrdinalIgnoreCase)) return "Help Center";
+            if (path.StartsWith("/admin/assets", StringComparison.OrdinalIgnoreCase)) return "Assets";
+            if (path.StartsWith("/admin/internal", StringComparison.OrdinalIgnoreCase)) return "Internal Chat";
             if (path.StartsWith("/admin/insights", StringComparison.OrdinalIgnoreCase)) return "Insights";
             if (path.StartsWith("/admin/staff", StringComparison.OrdinalIgnoreCase)) return "Users";
             if (path.StartsWith("/admin/teams", StringComparison.OrdinalIgnoreCase)) return "Teams";
+            if (path.StartsWith("/admin/profile", StringComparison.OrdinalIgnoreCase)) return "Profile";
             return "KobNeti";
         }
     }
@@ -493,6 +500,12 @@
     {
         showUserMenu = !showUserMenu;
         showNotifs = showMsgs = showProductMenu = false;
+    }
+
+    private void CloseMenus()
+    {
+        showNotifs = showMsgs = showUserMenu = showProductMenu = false;
+        mobileOpen = false;
     }
 
     private async Task ToggleTheme()

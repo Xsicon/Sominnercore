@@ -1,12 +1,13 @@
-@page "/admin/calendar"
+@page "/admin/assets"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
 @using KobNeti.Services.Support
 @inject SupabaseAuthService AuthService
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
+@implements IDisposable
 
-<PageTitle>Calendar - KobNeti</PageTitle>
+<PageTitle>Assets - KobNeti</PageTitle>
 
 @if (isCheckingAuth)
 {
@@ -20,7 +21,7 @@ else
 {
 <KnHubShell BodyClass="kn-hub__body--scroll">
     <ChildContent>
-        <PlatformCalendarView @key="workspaceKey" />
+        <PlatformAssetsView @key="workspaceKey" />
     </ChildContent>
 </KnHubShell>
 }
@@ -28,7 +29,8 @@ else
 @code {
     private bool isCheckingAuth = true;
     private bool isAuthenticated;
-    private string workspaceKey = "";
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,7 +43,10 @@ else
         }
         isAuthenticated = true;
         isCheckingAuth = false;
-        workspaceKey = SupportApi.TenantId;
+        SupportApi.TenantChanged += OnTenantChanged;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
     }
+
+    private void OnTenantChanged() { workspaceEpoch++; _ = InvokeAsync(StateHasChanged); }
+    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
 }

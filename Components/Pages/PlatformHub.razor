@@ -5,130 +5,74 @@
 @inject SupabaseAuthService AuthService
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <PageTitle>Platform - KobNeti</PageTitle>
 
-@if (ready)
+@if (isCheckingAuth)
+{
+    <div class="kn-hub-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
+}
+else
 {
 <KnHubShell BodyClass="kn-hub__body--scroll">
     <Tabs>
-        <button type="button" class="kn-hub-subnav__item @(tab=="audit"?"is-active":"")" @onclick="@(() => SetTab("audit"))">Audit</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="notifications"?"is-active":"")" @onclick="@(() => SetTab("notifications"))">Notifications</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="files"?"is-active":"")" @onclick="@(() => SetTab("files"))">Files</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="integrations"?"is-active":"")" @onclick="@(() => SetTab("integrations"))">Integrations</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "audit" ? "is-active" : "")" @onclick="@(() => SetTab("audit"))">Audit</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "notifications" ? "is-active" : "")" @onclick="@(() => SetTab("notifications"))">Notifications</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "files" ? "is-active" : "")" @onclick="@(() => SetTab("files"))">Files</button>
     </Tabs>
     <ChildContent>
-        <div class="kn-s3-page">
-                @if (tab == "audit")
-                {
-                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                        <input class="kn-field" placeholder="Search" @bind="auditSearch" />
-                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="LoadAudit">Search</button>
-                    </div>
-                    @foreach (var a in audit)
-                    {
-                        <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);font-size:0.9rem;">
-                            <strong>@a.Action</strong> Â· @a.EntityType/@a.EntityId
-                            <div><small>@(a.ActorName ?? "â€”") Â· @a.CreatedAt.ToLocalTime().ToString("g")</small></div>
-                        </div>
-                    }
-                }
-                else if (tab == "notifications")
-                {
-                    <div style="margin-bottom:1rem;">
-                        <label><input type="checkbox" @bind="prefs.AssignEnabled" /> Assign</label>
-                        <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.ApprovalEnabled" /> Approval</label>
-                        <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.EscalationEnabled" /> Escalation</label>
-                        <label style="margin-left:0.75rem;"><input type="checkbox" @bind="prefs.ReminderEnabled" /> Reminder</label>
-                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" style="margin-left:0.75rem;" @onclick="SavePrefs">Save prefs</button>
-                    </div>
-                    @foreach (var n in notes)
-                    {
-                        <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                            <strong>@n.Title</strong>
-                            @if (!n.IsRead && n.ReadAt is null)
-                            {
-                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => MarkRead(n.Id)">Mark read</button>
-                            }
-                            <div><small>@n.CreatedAt.ToLocalTime().ToString("g")</small></div>
-                        </div>
-                    }
-                }
-                else if (tab == "files")
-                {
-                    <p class="sh-empty-list">Product-scoped files (separate from ticket/chat uploads).</p>
-                    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-                        <input class="kn-field" placeholder="folder e.g. /docs/" @bind="folder" />
-                        <input class="kn-field" placeholder="file name" @bind="fileName" />
-                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="AddFile">Register</button>
-                    </div>
-                    @foreach (var f in files)
-                    {
-                        <div style="padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                            @f.FolderPath@f.FileName <span class="kn-chip kn-chip--neutral">@f.StoragePath</span>
-                        </div>
-                    }
-                }
-                else
-                {
-                    @if (!SupportApi.IsPlatformAdmin)
-                    {
-                        <p class="sh-empty-list">Platform admin required.</p>
-                    }
-                    else
-                    {
-                        @foreach (var i in integrations)
-                        {
-                            <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                                <strong>@i.DisplayName</strong>
-                                <span class="kn-chip kn-chip--neutral">@i.Status</span>
-                                @if (i.HasSecrets) { <span class="kn-chip kn-chip--neutral">secrets</span> }
-                                @if (i.Status != "connected")
-                                {
-                                    <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="() => Connect(i.Provider)">Connect</button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => Disconnect(i.Provider)">Disconnect</button>
-                                }
-                            </div>
-                        }
-                    }
-                }
-                @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
-        </div>
+        @if (tab == "notifications")
+        {
+            <PlatformNotificationsView @key="workspaceKey" />
+        }
+        else if (tab == "files")
+        {
+            <PlatformFilesView @key="workspaceKey" />
+        }
+        else
+        {
+            <PlatformAuditView @key="workspaceKey" />
+        }
     </ChildContent>
 </KnHubShell>
 }
 
 @code {
-    private bool ready;
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
     private string tab = "audit";
-    private string? msg;
-    private string auditSearch = "";
-    private string folder = "/docs/";
-    private string fileName = "";
-    private List<AuditEventDto> audit = [];
-    private List<NotificationDto> notes = [];
-    private NotificationPrefsDto prefs = new();
-    private List<OpsFileDto> files = [];
-    private List<IntegrationDto> integrations = [];
-    private string TabTitle => tab switch { "notifications" => "Notifications", "files" => "Files", "integrations" => "Integrations", _ => "Audit" };
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
 
     protected override async Task OnInitializedAsync()
     {
         var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
-        if (user == null || session == null) { Navigation.NavigateTo("/admin/login"); return; }
+        if (user == null || session == null)
+        {
+            isCheckingAuth = false;
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        isAuthenticated = true;
+        isCheckingAuth = false;
         ApplyTabFromQuery();
-        ready = true;
+        Navigation.LocationChanged += OnLocationChanged;
+        SupportApi.TenantChanged += OnTenantChanged;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
-        await ReloadTab();
     }
+
+    private void OnTenantChanged() { workspaceEpoch++; _ = InvokeAsync(StateHasChanged); }
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() => { ApplyTabFromQuery(); StateHasChanged(); });
 
     private void ApplyTabFromQuery()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        var query = uri.Query.TrimStart('?');
+        var query = Navigation.ToAbsoluteUri(Navigation.Uri).Query.TrimStart('?');
         if (string.IsNullOrEmpty(query)) return;
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -136,93 +80,23 @@
             if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
             {
                 var t = Uri.UnescapeDataString(pair[1]);
-                if (t is "audit" or "notifications" or "files" or "integrations")
+                if (t is "audit" or "notifications" or "files")
                     tab = t;
+                else if (t == "integrations")
+                    tab = "audit";
             }
         }
     }
 
-    private async Task SetTab(string next)
+    private void SetTab(string next)
     {
         tab = next;
         Navigation.NavigateTo($"/admin/platform?tab={next}", replace: true);
-        await ReloadTab();
     }
 
-    private async Task ReloadTab()
+    public void Dispose()
     {
-        msg = null;
-        if (tab == "audit") await LoadAudit();
-        else if (tab == "notifications") { await LoadNotes(); await LoadPrefs(); }
-        else if (tab == "files") await LoadFiles();
-        else await LoadIntegrations();
-    }
-
-    private async Task LoadAudit()
-    {
-        var r = await SupportApi.SearchAuditAsync(string.IsNullOrWhiteSpace(auditSearch) ? null : auditSearch);
-        audit = r.Success ? r.Data ?? [] : [];
-        if (!r.Success) msg = r.Message;
-    }
-
-    private async Task LoadNotes()
-    {
-        var r = await SupportApi.GetNotificationsAsync();
-        notes = r.Success ? r.Data ?? [] : [];
-    }
-
-    private async Task LoadPrefs()
-    {
-        var r = await SupportApi.GetNotificationPrefsAsync();
-        if (r.Success && r.Data != null) prefs = r.Data;
-    }
-
-    private async Task SavePrefs()
-    {
-        var r = await SupportApi.SaveNotificationPrefsAsync(prefs);
-        msg = r.Success ? "Prefs saved" : r.Message;
-    }
-
-    private async Task MarkRead(Guid id)
-    {
-        await SupportApi.MarkNotificationReadAsync(id);
-        await LoadNotes();
-    }
-
-    private async Task LoadFiles()
-    {
-        var r = await SupportApi.GetOpsFilesAsync();
-        files = r.Success ? r.Data ?? [] : [];
-    }
-
-    private async Task AddFile()
-    {
-        if (string.IsNullOrWhiteSpace(fileName)) return;
-        var r = await SupportApi.CreateOpsFileAsync(fileName.Trim(), folder);
-        msg = r.Success ? "Registered" : r.Message;
-        if (r.Success) fileName = "";
-        await LoadFiles();
-    }
-
-    private async Task LoadIntegrations()
-    {
-        if (!SupportApi.IsPlatformAdmin) return;
-        var r = await SupportApi.GetIntegrationsAsync();
-        integrations = r.Success ? r.Data ?? [] : [];
-        if (!r.Success) msg = r.Message;
-    }
-
-    private async Task Connect(string provider)
-    {
-        var r = await SupportApi.ConnectIntegrationAsync(provider, "dev-secret-token");
-        msg = r.Success ? "Connected" : r.Message;
-        await LoadIntegrations();
-    }
-
-    private async Task Disconnect(string provider)
-    {
-        var r = await SupportApi.DisconnectIntegrationAsync(provider);
-        msg = r.Success ? "Disconnected" : r.Message;
-        await LoadIntegrations();
+        Navigation.LocationChanged -= OnLocationChanged;
+        SupportApi.TenantChanged -= OnTenantChanged;
     }
 }

@@ -4,8 +4,8 @@
 @inject SupportApiClient SupportApi
 @inject IJSRuntime JS
 
-<div class="kn-s3-page">
-    <div class="kn-s3-head">
+<div class="kn-s3-page kn-s4-payroll-page">
+    <div class="kn-s4-time-head">
         <div>
             <p class="kn-s3-eyebrow">People Ops</p>
             <h2>Payroll Runs</h2>
@@ -182,8 +182,10 @@
         {
             var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(csv));
             await JS.InvokeVoidAsync(
-                "eval",
-                $"(function(){{const b=atob('{b64}');const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([u],{{type:'text/csv'}}));a.download='payroll-{p.Id:N}.csv';a.click();}})();");
+                "downloadBase64File",
+                b64,
+                $"payroll-{p.Id:N}.csv",
+                "text/csv");
             msg = "CSV downloaded";
             await Load();
         }

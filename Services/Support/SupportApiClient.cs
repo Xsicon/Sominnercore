@@ -259,6 +259,36 @@ public class SupportApiClient
         }
     }
 
+    public async Task<ApiResponse<TeamDto>> AddTeamMemberAsync(Guid teamId, Guid staffId, string memberRole = "member")
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Post, $"api/Teams/{teamId}/members", new
+            {
+                staffId,
+                memberRole
+            });
+            return await ReadEnvelopeAsync<TeamDto>(res, "Failed to add team member.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<TeamDto> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<object>> RemoveTeamMemberAsync(Guid teamId, Guid staffId)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Delete, $"api/Teams/{teamId}/members/{staffId}");
+            return await ReadEnvelopeAsync<object>(res, "Failed to remove team member.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<RotateEmbedKeyDto>> RotateEmbedKeyAsync(string slug)
     {
         try
@@ -330,15 +360,38 @@ public class SupportApiClient
 
     private static async Task<ApiResponse<T>> ReadEnvelopeAsync<T>(HttpResponseMessage res, string fallback)
     {
-        var body = await res.Content.ReadFromJsonAsync<ApiResponse<T>>(JsonOptions)
-                   ?? new ApiResponse<T>();
+        var raw = await res.Content.ReadAsStringAsync();
+        ApiResponse<T>? body = null;
+
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            try
+            {
+                body = JsonSerializer.Deserialize<ApiResponse<T>>(raw, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                var snippet = raw.Length > 120 ? raw[..120] + "…" : raw;
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    Message = $"{fallback} (HTTP {(int)res.StatusCode}: API returned non-JSON — check KobNetiApi:BaseUrl is the ops API, not the Blazor app). Response: {snippet}"
+                };
+            }
+        }
+
+        body ??= new ApiResponse<T>();
         if (!res.IsSuccessStatusCode)
         {
             body.Success = false;
             if (string.IsNullOrWhiteSpace(body.Message))
-                body.Message = fallback;
+            {
+                body.Message = string.IsNullOrWhiteSpace(raw)
+                    ? $"{fallback} (HTTP {(int)res.StatusCode} — empty response; restart/deploy KobNetiApi if you added new endpoints)"
+                    : $"{fallback} (HTTP {(int)res.StatusCode})";
+            }
         }
-        else
+        else if (body.Data is null && string.IsNullOrWhiteSpace(body.Message))
         {
             body.Success = true;
         }
@@ -1349,6 +1402,32 @@ public class SupportApiClient
         }
     }
 
+    public async Task<ApiResponse<OpsFileDto>> UploadOpsFileAsync(string fileName, byte[] bytes, string contentType, string folderPath = "/")
+    {
+        try
+        {
+            await EnsureAgentTokenAsync();
+            using var content = new MultipartFormDataContent();
+            var fileContent = new ByteArrayContent(bytes);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(
+                string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+            content.Add(fileContent, "file", fileName);
+            content.Add(new StringContent(folderPath), "folder");
+
+            using var req = new HttpRequestMessage(HttpMethod.Post, "api/OpsFiles/upload");
+            req.Headers.TryAddWithoutValidation("X-Tenant-Key", _tenantKey);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _agentToken);
+            req.Content = content;
+
+            var res = await _http.SendAsync(req);
+            return await ReadEnvelopeAsync<OpsFileDto>(res, "Failed to upload file.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<OpsFileDto> { Success = false, Message = ex.Message };
+        }
+    }
+
     public async Task<ApiResponse<List<IntegrationDto>>> GetIntegrationsAsync()
     {
         try
@@ -1466,6 +1545,19 @@ public class SupportApiClient
         catch (Exception ex)
         {
             return new ApiResponse<List<PlatformHelpArticleDto>> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public async Task<ApiResponse<PlatformHelpArticleDto>> UpsertPlatformHelpAsync(SavePlatformHelpRequest request)
+    {
+        try
+        {
+            var res = await SendAuthorizedAsync(HttpMethod.Put, "api/PlatformHelp", request);
+            return await ReadEnvelopeAsync<PlatformHelpArticleDto>(res, "Failed to save article.");
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PlatformHelpArticleDto> { Success = false, Message = ex.Message };
         }
     }
 

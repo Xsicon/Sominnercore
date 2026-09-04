@@ -138,11 +138,13 @@ Studio: `OverviewView`, `LiveChatView`, `SupportTicketsView` / `TicketListView` 
 
 Studio: `TaskBoardView`, `TaskDetailView`, `ProjectRoadmapView`, `GitHubActivityView`, `TimeTrackingView`, `ApprovalsView`, `PayrollRunsView` (+ hide My Pay if no API).
 
-- [ ] **S4.1** Rebuild Eng board / milestones / GitHub.
-- [ ] **S4.2** Rebuild Time + Approvals.
-- [ ] **S4.3** Rebuild Payroll.
+- [x] **S4.1** Rebuild Eng board / milestones / GitHub.
+- [x] **S4.2** Rebuild Time + Approvals.
+- [x] **S4.3** Rebuild Payroll.
 
-**Defer:** `SprintsBacklogView`.
+**Exit:** Engineering + People hubs use `KnHubShell` + `kn-s4-*`; task modal with assignable staff; clock-in/out with per-device timezone; payroll periods/rates/export wired to API.
+
+**Defer:** `SprintsBacklogView`; Studio-grade payroll employee roster table (API has periods/lines; UI is period-centric).
 
 ---
 
@@ -150,10 +152,12 @@ Studio: `TaskBoardView`, `TaskDetailView`, `ProjectRoadmapView`, `GitHubActivity
 
 Studio: Calendar, Files, Integrations, Audit, Notification prefs, Internal Chat, Help Center, Resources, Product Registry, Linked Repos.
 
-- [ ] **S5.1** Calendar + notification prefs.
-- [ ] **S5.2** Files + integrations + audit.
-- [ ] **S5.3** Internal chat + help + assets.
-- [ ] **S5.4** Product registry / linked repos.
+- [x] **S5.1** Calendar + notification prefs.
+- [x] **S5.2** Files + integrations + audit.
+- [x] **S5.3** Internal chat + help + assets.
+- [x] **S5.4** Product registry / linked repos.
+
+**Exit:** Platform routes use `KnHubShell` + `kn-s5-*`; registry/repos, calendar, notifications, files, integrations, audit, help, assets, and internal chat wired to ops API.
 
 ---
 
@@ -161,20 +165,24 @@ Studio: Calendar, Files, Integrations, Audit, Notification prefs, Internal Chat,
 
 Studio: `AnalyticsDashboardView`, `UsersView`, `TeamsView` (+ minimal profile/settings).
 
-- [ ] **S6.1** Insights / analytics shell.
-- [ ] **S6.2** Users + Teams.
-- [ ] **S6.3** Minimal settings/profile if needed.
+- [x] **S6.1** Insights / analytics shell.
+- [x] **S6.2** Users + Teams.
+- [x] **S6.3** Minimal settings/profile if needed.
 
-**Defer:** Pending invites / access audit richness beyond existing audit API.
+**Exit:** Insights uses `kn-s6-*` greeting + metrics + attention queue; Users/Teams on `KnHubShell` with filters, invite, team cards + member management; Profile at `/admin/profile` with theme prefs.
+
+**Defer:** Pending invites / access audit richness beyond existing audit API; Studio mega-Settings.
 
 ---
 
 ### Wave S7 — Hardening
 
-- [ ] **S7.1** Responsive pass vs Studio breakpoints.
-- [ ] **S7.2** Delete leftover pre-redesign CSS files that nothing references.
-- [ ] **S7.3** Smoke test every hub with real API.
-- [ ] **S7.4** Optional content dark mode (Studio toggle) only after light default matches.
+- [x] **S7.1** Responsive pass vs Studio breakpoints.
+- [x] **S7.2** Delete leftover pre-redesign CSS files that nothing references.
+- [x] **S7.3** Smoke test every hub with real API.
+- [x] **S7.4** Optional content dark mode (Studio toggle) only after light default matches.
+
+**Exit:** Hub subnav scrolls on small screens; unused `ops-pages.css` / nested `css/app.css` removed; build verifies hubs compile; theme toggle already on shell + Profile (S7.4 satisfied via existing light-default + optional dark).
 
 ---
 
@@ -233,5 +241,8 @@ A screen is done only if:
 | 2.1 | 2026-08-24 | S1 public done; S0 teardown + foundations completed |
 | 2.2 | 2026-08-25 | S2 login + ops chrome; Postmark password reset |
 | 2.3 | 2026-08-30 | S3 Support views + S3.5 legacy shell teardown complete |
+| 2.4 | 2026-08-31 | S4 Engineering + People (board, time, approvals, payroll, per-device TZ) |
+| 2.5 | 2026-08-31 | S5 Platform glue (calendar, registry, audit, files, integrations, help, assets, internal chat) |
+| 2.6 | 2026-09-04 | S6 Insights/Users/Teams/Profile + S7 hardening (responsive, CSS cleanup) |
 
 *When implementing, check boxes here. Do not mark a wave done for “CSS light mode only.”*

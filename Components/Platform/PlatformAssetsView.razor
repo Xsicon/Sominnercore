@@ -1,0 +1,428 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page kn-s5-assets-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Operations</p>
+            <h2>Asset Management</h2>
+            <p>Track hardware, software licenses, and renewal dates for @SupportApi.DisplayName</p>
+        </div>
+        <div class="kn-s5-page-head__actions">
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="RemindRenewals">
+                <span class="material-symbols-outlined" aria-hidden="true">notifications_active</span>
+                Send renewal reminders
+            </button>
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="ToggleAddPanel">
+                <span class="material-symbols-outlined" aria-hidden="true">@(showAddPanel ? "close" : "add")</span>
+                @(showAddPanel ? "Close" : "Register asset")
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    <div class="kn-s5-stats kn-s5-stats--assets">
+        <div class="kn-s5-stat kn-s5-stat--accent-blue">
+            <div class="kn-s5-stat__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">inventory_2</span>
+            </div>
+            <div>
+                <div class="kn-s5-stat__label">Active assets</div>
+                <div class="kn-s5-stat__value">@activeCount</div>
+            </div>
+        </div>
+        <div class="kn-s5-stat kn-s5-stat--accent-indigo">
+            <div class="kn-s5-stat__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">person_check</span>
+            </div>
+            <div>
+                <div class="kn-s5-stat__label">Assigned</div>
+                <div class="kn-s5-stat__value">@assignedCount</div>
+            </div>
+        </div>
+        <div class="kn-s5-stat kn-s5-stat--accent-amber">
+            <div class="kn-s5-stat__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">event_upcoming</span>
+            </div>
+            <div>
+                <div class="kn-s5-stat__label">Renewing in 30 days</div>
+                <div class="kn-s5-stat__value">@renewingSoon</div>
+            </div>
+        </div>
+        <div class="kn-s5-stat kn-s5-stat--accent-slate">
+            <div class="kn-s5-stat__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">archive</span>
+            </div>
+            <div>
+                <div class="kn-s5-stat__label">Retired</div>
+                <div class="kn-s5-stat__value">@retiredCount</div>
+            </div>
+        </div>
+    </div>
+
+    @if (showAddPanel)
+    {
+        <section class="kn-s5-assets-form" aria-label="Register new asset">
+            <h3 class="kn-s5-card__title">Register new asset</h3>
+            <p class="kn-s5-assets-form__hint">Add equipment or licenses to your inventory. Renewal reminders can be sent from the header action.</p>
+            <div class="kn-s5-assets-form__grid">
+                <label class="kn-s5-assets-field">
+                    <span>Asset name</span>
+                    <input type="text" placeholder="e.g. MacBook Pro 14&quot;" @bind="assetName" disabled="@busy" />
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Type</span>
+                    <select @bind="assetType" disabled="@busy">
+                        <option value="hardware">Hardware</option>
+                        <option value="license">License</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Renewal date</span>
+                    <input type="date" @bind="renewalDate" disabled="@busy" />
+                </label>
+                <label class="kn-s5-assets-field kn-s5-assets-field--wide">
+                    <span>Notes <small>(optional)</small></span>
+                    <input type="text" placeholder="Model, seat email, warranty details…" @bind="assetNotes" disabled="@busy" />
+                </label>
+            </div>
+            <div class="kn-s5-assets-form__actions">
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy || string.IsNullOrWhiteSpace(assetName)" @onclick="Create">
+                    <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                    Save asset
+                </button>
+                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="ResetAddForm">Clear</button>
+            </div>
+        </section>
+    }
+
+    <div class="kn-s5-toolbar kn-s5-assets-toolbar">
+        <div class="kn-s5-search">
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input type="search" placeholder="Search by name, serial, or assignee…" @bind="searchQuery" @bind:event="oninput" disabled="@loading" />
+        </div>
+        <select class="kn-s5-assets-filter" @bind="typeFilter" disabled="@loading">
+            <option value="all">All types</option>
+            <option value="hardware">Hardware</option>
+            <option value="license">Licenses</option>
+            <option value="other">Other</option>
+        </select>
+        <select class="kn-s5-assets-filter" @bind="statusFilter" disabled="@loading">
+            <option value="all">All statuses</option>
+            <option value="available">Available</option>
+            <option value="assigned">Assigned</option>
+            <option value="retired">Retired</option>
+        </select>
+        @if (!loading && assets.Count > 0)
+        {
+            <span class="kn-s5-assets-count">@FilteredCount of @assets.Count</span>
+        }
+    </div>
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading asset inventory…</p>
+        </div>
+    }
+    else if (assets.Count == 0)
+    {
+        <div class="kn-s5-empty kn-s5-empty--assets">
+            <span class="material-symbols-outlined" aria-hidden="true">devices</span>
+            <strong>No assets registered yet</strong>
+            <p>Start tracking laptops, monitors, software seats, and other equipment your team relies on.</p>
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="() => showAddPanel = true">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                Register first asset
+            </button>
+        </div>
+    }
+    else if (FilteredCount == 0)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+            <strong>No matches</strong>
+            <p>Try adjusting your search or filters.</p>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-table-wrap">
+            <table class="kn-s5-table kn-s5-assets-table">
+                <thead>
+                    <tr>
+                        <th>Asset</th>
+                        <th>Type</th>
+                        <th>Serial / key</th>
+                        <th>Status</th>
+                        <th>Assigned to</th>
+                        <th>Renewal</th>
+                        <th class="kn-s5-assets-table__actions-col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in filteredAssets)
+                    {
+                        <tr class="@(a.Status == "retired" ? "is-retired" : "")">
+                            <td>
+                                <div class="kn-s5-asset-cell">
+                                    <span class="kn-s5-asset-cell__icon @GetTypeIconClass(a.AssetType)" aria-hidden="true">
+                                        <span class="material-symbols-outlined">@GetTypeIcon(a.AssetType)</span>
+                                    </span>
+                                    <div>
+                                        <strong class="kn-s5-asset-cell__name">@a.Name</strong>
+                                        @if (!string.IsNullOrWhiteSpace(a.Notes))
+                                        {
+                                            <span class="kn-s5-asset-cell__notes">@a.Notes</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="kn-s5-asset-type">@FormatAssetType(a.AssetType)</span></td>
+                            <td class="kn-s5-asset-mono">@(string.IsNullOrWhiteSpace(a.SerialOrKey) ? "—" : a.SerialOrKey)</td>
+                            <td>
+                                <span class="kn-s5-asset-status @GetStatusClass(a)">
+                                    <span class="kn-s5-asset-status__dot" aria-hidden="true"></span>
+                                    @GetStatusLabel(a)
+                                </span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(a.AssignedUserName))
+                                {
+                                    <span class="kn-s5-asset-assignee">
+                                        <span class="material-symbols-outlined" aria-hidden="true">person</span>
+                                        @a.AssignedUserName
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="kn-s5-asset-unassigned">Unassigned</span>
+                                }
+                            </td>
+                            <td>
+                                @if (a.RenewalDate is not null)
+                                {
+                                    <span class="kn-s5-asset-renewal @(IsRenewalSoon(a) ? "is-soon" : "") @(IsRenewalOverdue(a) ? "is-overdue" : "")">
+                                        @a.RenewalDate.Value.ToString("MMM d, yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="kn-s5-asset-unassigned">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (a.Status != "retired")
+                                {
+                                    <div class="kn-s5-row-actions">
+                                        @if (string.IsNullOrEmpty(a.AssignedUserName))
+                                        {
+                                            <button type="button" class="kn-s5-row-action" title="Assign to me" disabled="@busy" @onclick="() => Assign(a.Id)">
+                                                <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+                                                <span class="kn-s5-row-action__label">Assign</span>
+                                            </button>
+                                        }
+                                        <button type="button" class="kn-s5-row-action kn-s5-row-action--muted" title="Retire asset" disabled="@busy" @onclick="() => Retire(a.Id)">
+                                            <span class="material-symbols-outlined" aria-hidden="true">archive</span>
+                                            <span class="kn-s5-row-action__label">Retire</span>
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="kn-s5-asset-unassigned">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private bool showAddPanel;
+    private string? msg;
+    private bool msgIsError;
+    private List<AssetDto> assets = [];
+    private string assetName = "";
+    private string assetType = "hardware";
+    private string assetNotes = "";
+    private DateOnly? renewalDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60));
+    private string searchQuery = "";
+    private string typeFilter = "all";
+    private string statusFilter = "all";
+
+    private int activeCount => assets.Count(a => a.Status != "retired");
+    private int assignedCount => assets.Count(a => !string.IsNullOrEmpty(a.AssignedUserName) && a.Status != "retired");
+    private int retiredCount => assets.Count(a => a.Status == "retired");
+    private int renewingSoon => assets.Count(a =>
+        a.RenewalDate is not null &&
+        a.Status != "retired" &&
+        a.RenewalDate.Value <= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)));
+
+    private IEnumerable<AssetDto> filteredAssets => assets
+        .Where(MatchesFilters)
+        .OrderBy(a => a.Status == "retired")
+        .ThenBy(a => IsRenewalSoon(a) ? 0 : 1)
+        .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase);
+
+    private int FilteredCount => filteredAssets.Count();
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private bool MatchesFilters(AssetDto a)
+    {
+        if (typeFilter != "all" && !string.Equals(a.AssetType, typeFilter, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (statusFilter != "all")
+        {
+            var normalized = NormalizeStatus(a);
+            if (!string.Equals(normalized, statusFilter, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+            return true;
+
+        var q = searchQuery.Trim();
+        return a.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || (a.SerialOrKey?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.AssignedUserName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (a.Notes?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private static string NormalizeStatus(AssetDto a)
+    {
+        if (a.Status == "retired") return "retired";
+        if (!string.IsNullOrEmpty(a.AssignedUserName) || a.Status == "assigned") return "assigned";
+        return "available";
+    }
+
+    private static string GetStatusLabel(AssetDto a) => NormalizeStatus(a) switch
+    {
+        "retired" => "Retired",
+        "assigned" => "Assigned",
+        _ => IsRenewalSoonStatic(a) ? "Expiring soon" : "Available"
+    };
+
+    private static string GetStatusClass(AssetDto a) => NormalizeStatus(a) switch
+    {
+        "retired" => "is-retired",
+        "assigned" => "is-assigned",
+        _ => IsRenewalSoonStatic(a) ? "is-expiring" : "is-available"
+    };
+
+    private static bool IsRenewalSoonStatic(AssetDto a) =>
+        a.RenewalDate is not null &&
+        a.Status != "retired" &&
+        a.RenewalDate.Value <= DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30));
+
+    private bool IsRenewalSoon(AssetDto a) => IsRenewalSoonStatic(a);
+
+    private static bool IsRenewalOverdue(AssetDto a) =>
+        a.RenewalDate is not null &&
+        a.Status != "retired" &&
+        a.RenewalDate.Value < DateOnly.FromDateTime(DateTime.UtcNow);
+
+    private static string FormatAssetType(string? type) => (type ?? "other").ToLowerInvariant() switch
+    {
+        "hardware" => "Hardware",
+        "license" => "License",
+        _ => "Other"
+    };
+
+    private static string GetTypeIcon(string? type) => (type ?? "other").ToLowerInvariant() switch
+    {
+        "hardware" => "laptop_mac",
+        "license" => "key",
+        _ => "category"
+    };
+
+    private static string GetTypeIconClass(string? type) => (type ?? "other").ToLowerInvariant() switch
+    {
+        "hardware" => "is-hardware",
+        "license" => "is-license",
+        _ => "is-other"
+    };
+
+    private async Task Load()
+    {
+        loading = true;
+        var r = await SupportApi.GetAssetsAsync();
+        assets = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) Show(r.Message ?? "Failed to load assets.", true);
+        loading = false;
+    }
+
+    private void ToggleAddPanel() => showAddPanel = !showAddPanel;
+
+    private void ResetAddForm()
+    {
+        assetName = "";
+        assetType = "hardware";
+        assetNotes = "";
+        renewalDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60));
+    }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(assetName)) return;
+        busy = true;
+        var r = await SupportApi.CreateAssetAsync(
+            assetName.Trim(),
+            assetType,
+            renewalDate,
+            string.IsNullOrWhiteSpace(assetNotes) ? null : assetNotes.Trim());
+        Show(r.Success ? "Asset registered successfully." : r.Message ?? "Failed to register asset.", !r.Success);
+        if (r.Success)
+        {
+            ResetAddForm();
+            showAddPanel = false;
+        }
+        await Load();
+        busy = false;
+    }
+
+    private async Task Assign(Guid id)
+    {
+        busy = true;
+        var r = await SupportApi.AssignAssetAsync(id, "Me");
+        Show(r.Success ? "Asset assigned to you." : r.Message ?? "Assignment failed.", !r.Success);
+        await Load();
+        busy = false;
+    }
+
+    private async Task Retire(Guid id)
+    {
+        busy = true;
+        var r = await SupportApi.RetireAssetAsync(id);
+        Show(r.Success ? "Asset retired." : r.Message ?? "Failed to retire asset.", !r.Success);
+        await Load();
+        busy = false;
+    }
+
+    private async Task RemindRenewals()
+    {
+        busy = true;
+        var r = await SupportApi.SendAssetRenewalRemindersAsync();
+        Show(r.Success ? $"Sent {r.Data} renewal reminder(s)." : r.Message ?? "Failed to send reminders.", !r.Success);
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}

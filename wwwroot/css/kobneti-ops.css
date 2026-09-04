@@ -698,6 +698,7 @@
   color: #334155;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 
 .ops-dropdown__item:hover {

@@ -1,4 +1,4 @@
-@page "/admin/calendar"
+@page "/admin/registry"
 @layout Components.Layout.AdminLayout
 @using KobNeti.Services
 @using KobNeti.Services.Support
@@ -6,7 +6,7 @@
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
 
-<PageTitle>Calendar - KobNeti</PageTitle>
+<PageTitle>Product Registry - KobNeti</PageTitle>
 
 @if (isCheckingAuth)
 {
@@ -20,7 +20,7 @@ else
 {
 <KnHubShell BodyClass="kn-hub__body--scroll">
     <ChildContent>
-        <PlatformCalendarView @key="workspaceKey" />
+        <PlatformRegistryView />
     </ChildContent>
 </KnHubShell>
 }
@@ -28,7 +28,6 @@ else
 @code {
     private bool isCheckingAuth = true;
     private bool isAuthenticated;
-    private string workspaceKey = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,7 +40,6 @@ else
         }
         isAuthenticated = true;
         isCheckingAuth = false;
-        workspaceKey = SupportApi.TenantId;
         try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
     }
 }

@@ -1,0 +1,154 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Platform</p>
+            <h2>File Management</h2>
+            <p>Upload and manage product-scoped ops files — separate from ticket and chat attachments</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    <div class="kn-s5-toolbar">
+        <input type="text" placeholder="Folder e.g. /docs/" @bind="folder" disabled="@busy" style="width:8rem;" />
+        <label class="kn-s5-upload-btn">
+            <InputFile OnChange="HandleUploadAsync" disabled="@busy" class="kn-s5-upload-btn__input" />
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+            @(busy ? "Uploading…" : "Choose file to upload")
+        </label>
+        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@loading" @onclick="Load">Refresh</button>
+    </div>
+    <p class="kn-s3-hint" style="margin:-0.5rem 0 1rem;">PDF, Office docs, images, etc. · max 25 MB · stored in Supabase when API storage is configured</p>
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading files…</p>
+        </div>
+    }
+    else if (files.Count == 0)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>
+            <strong>No files yet</strong>
+            <p>Upload a document using the button above.</p>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-table-wrap">
+            <table class="kn-s5-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Folder</th>
+                        <th>Size</th>
+                        <th>Added by</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in files.OrderByDescending(x => x.CreatedAt))
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(f.PublicUrl))
+                                {
+                                    <a href="@f.PublicUrl" target="_blank" rel="noopener noreferrer"><strong>@f.FileName</strong></a>
+                                }
+                                else
+                                {
+                                    <strong>@f.FileName</strong>
+                                }
+                            </td>
+                            <td>@f.FolderPath</td>
+                            <td>@FormatSize(f.SizeBytes)</td>
+                            <td>@(f.CreatedByName ?? "—")</td>
+                            <td>@f.CreatedAt.ToLocalTime().ToString("g")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private const long MaxBytes = 25 * 1024 * 1024;
+
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private bool msgIsError;
+    private string folder = "/docs/";
+    private List<OpsFileDto> files = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var r = await SupportApi.GetOpsFilesAsync();
+        files = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) Show(r.Message ?? "Failed", true);
+        loading = false;
+    }
+
+    private async Task HandleUploadAsync(InputFileChangeEventArgs e)
+    {
+        msg = null;
+        var file = e.File;
+        if (file.Size > MaxBytes)
+        {
+            Show("File must be 25 MB or less.", true);
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var r = await SupportApi.UploadOpsFileAsync(
+                file.Name,
+                ms.ToArray(),
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                folder);
+
+            Show(r.Success ? (r.Message ?? "File uploaded") : (r.Message ?? "Upload failed"), !r.Success);
+            if (r.Success) await Load();
+        }
+        catch (Exception ex)
+        {
+            Show("Upload failed: " + ex.Message, true);
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string FormatSize(long? bytes)
+    {
+        if (bytes is null or <= 0) return "—";
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}

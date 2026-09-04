@@ -8,120 +8,344 @@
 
 <PageTitle>Teams - KobNeti</PageTitle>
 
-<div class="ops-page">
-    <KnPageHeader Title="Teams" Subtitle="Group staff for routing and ownership." />
-
-    @if (!string.IsNullOrEmpty(error))
-    {
-        <p class="ops-error">@error</p>
-    }
-
-    @if (!SupportApi.IsPlatformAdmin)
-    {
-        <p class="ops-error">Platform admin role required.</p>
-    }
-    else
-    {
-        <section class="ops-card">
-            <h2>Create team</h2>
-            <div class="ops-form-row">
-                <input @bind="teamName" placeholder="Team name" />
-                <input @bind="teamProduct" placeholder="Product slug (optional)" />
-                <button type="button" class="ops-btn" @onclick="CreateAsync" disabled="@busy">Create</button>
+@if (isCheckingAuth)
+{
+    <div class="kn-hub-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
+}
+else
+{
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <ChildContent>
+        <div class="kn-s3-page kn-s6-page">
+            <div class="kn-s5-page-head">
+                <div>
+                    <p class="kn-s3-eyebrow">People &amp; Teams</p>
+                    <h2>Teams</h2>
+                    <p>Group staff for routing and ownership across products</p>
+                </div>
+                @if (SupportApi.IsPlatformAdmin)
+                {
+                    <div class="kn-s5-page-head__actions">
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="() => showCreate = !showCreate">
+                            <span class="material-symbols-outlined" aria-hidden="true">@(showCreate ? "close" : "add")</span>
+                            @(showCreate ? "Close" : "Create team")
+                        </button>
+                    </div>
+                }
             </div>
-        </section>
 
-        <section class="ops-card">
-            <h2>Teams</h2>
-            @if (loading)
+            @if (!string.IsNullOrEmpty(msg))
             {
-                <p>Loading…</p>
+                <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
             }
-            else if (teams.Count == 0)
+
+            @if (!SupportApi.IsPlatformAdmin)
             {
-                <p class="ops-muted">No teams yet.</p>
+                <div class="kn-s5-empty">
+                    <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                    <strong>Platform admin required</strong>
+                    <p>Only platform admins can manage teams.</p>
+                </div>
             }
             else
             {
-                <ul class="ops-list">
-                    @foreach (var t in teams)
+                <div class="kn-s6-summary">
+                    <div class="kn-s5-stat kn-s5-stat--accent-indigo">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">groups</span></div>
+                        <div><div class="kn-s5-stat__label">Teams</div><div class="kn-s5-stat__value">@teams.Count</div></div>
+                    </div>
+                    <div class="kn-s5-stat kn-s5-stat--accent-blue">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">person</span></div>
+                        <div><div class="kn-s5-stat__label">Members</div><div class="kn-s5-stat__value">@teams.Sum(t => t.Members.Count)</div></div>
+                    </div>
+                    <div class="kn-s5-stat kn-s5-stat--accent-slate">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">inventory_2</span></div>
+                        <div><div class="kn-s5-stat__label">With product</div><div class="kn-s5-stat__value">@teams.Count(t => !string.IsNullOrWhiteSpace(t.ProductSlug))</div></div>
+                    </div>
+                </div>
+
+                @if (showCreate)
+                {
+                    <section class="kn-s6-invite-panel" aria-label="Create team">
+                        <div class="kn-s6-invite-panel__head"><h3>Create team</h3></div>
+                        <div class="kn-s6-form-grid">
+                            <label class="kn-s6-field">
+                                <span>Name</span>
+                                <input type="text" @bind="teamName" disabled="@busy" placeholder="Support L1" />
+                            </label>
+                            <label class="kn-s6-field">
+                                <span>Product slug <small style="font-weight:500;color:var(--kn-text-muted);">(optional)</small></span>
+                                <input type="text" @bind="teamProduct" disabled="@busy" placeholder="muuqwear" />
+                            </label>
+                            <label class="kn-s6-field kn-s6-field--wide">
+                                <span>Description</span>
+                                <textarea @bind="teamDescription" disabled="@busy" placeholder="What this team owns…"></textarea>
+                            </label>
+                        </div>
+                        <div class="kn-s6-form-actions">
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy || string.IsNullOrWhiteSpace(teamName)" @onclick="CreateAsync">
+                                <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                                Create team
+                            </button>
+                        </div>
+                    </section>
+                }
+
+                @if (loading)
+                {
+                    <div class="kn-s3-loading-block" role="status"><span class="kn-s3-spinner" aria-hidden="true"></span><p>Loading teams…</p></div>
+                }
+                else if (teams.Count == 0)
+                {
+                    <div class="kn-s5-empty">
+                        <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+                        <strong>No teams yet</strong>
+                        <p>Create a team to group staff for routing and ownership.</p>
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" style="margin-top:0.75rem;" @onclick="() => showCreate = true">Create first team</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="kn-s6-team-grid">
+                        @foreach (var t in teams.OrderBy(x => x.Name))
+                        {
+                            <button type="button" class="kn-s6-team-card @(selectedId == t.Id ? "is-active" : "")" @onclick="() => SelectTeam(t.Id)">
+                                <div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:flex-start;">
+                                    <h3>@t.Name</h3>
+                                    @if (!string.IsNullOrWhiteSpace(t.ProductSlug))
+                                    {
+                                        <span class="kn-chip kn-chip--neutral">@t.ProductSlug</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(t.Description))
+                                {
+                                    <p class="kn-s6-team-card__desc">@t.Description</p>
+                                }
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                                    <div class="kn-s6-avatar-stack">
+                                        @foreach (var m in t.Members.Take(5))
+                                        {
+                                            <span class="kn-s6-user-avatar" title="@(m.DisplayName ?? m.Email)">@MemberInitials(m)</span>
+                                        }
+                                        @if (t.Members.Count > 5)
+                                        {
+                                            <span class="kn-s6-user-avatar">+@(t.Members.Count - 5)</span>
+                                        }
+                                    </div>
+                                    <span style="font-size:0.75rem;font-weight:600;color:var(--kn-text-muted);">@t.Members.Count member@(t.Members.Count == 1 ? "" : "s")</span>
+                                </div>
+                            </button>
+                        }
+                    </div>
+
+                    @if (selectedTeam is not null)
                     {
-                        <li>
-                            <strong>@t.Name</strong>
-                            <span class="ops-muted">@t.Slug</span>
-                            @if (!string.IsNullOrWhiteSpace(t.ProductSlug))
+                        <section class="kn-s6-detail-panel" style="margin-top:1.15rem;" aria-label="Team detail">
+                            <div class="kn-s6-detail-panel__head">
+                                <div>
+                                    <h3>@selectedTeam.Name</h3>
+                                    <p style="margin:0.25rem 0 0;font-size:0.8125rem;color:var(--kn-text-muted);">
+                                        @selectedTeam.Slug
+                                        @if (!string.IsNullOrWhiteSpace(selectedTeam.ProductSlug))
+                                        {
+                                            <text> · @selectedTeam.ProductSlug</text>
+                                        }
+                                    </p>
+                                </div>
+                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => selectedId = null">Close</button>
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(selectedTeam.Description))
                             {
-                                <span class="ops-pill">@t.ProductSlug</span>
+                                <p style="margin:0 0 0.85rem;font-size:0.875rem;color:#475569;">@selectedTeam.Description</p>
                             }
-                            <span class="ops-muted">@t.Members.Count member(s)</span>
-                        </li>
+
+                            <div class="kn-s6-form-grid">
+                                <label class="kn-s6-field">
+                                    <span>Add member</span>
+                                    <select @bind="addStaffId" disabled="@busy">
+                                        <option value="">Select staff…</option>
+                                        @foreach (var s in staff.Where(x => x.Active && selectedTeam.Members.All(m => m.StaffId != x.Id)).OrderBy(x => x.DisplayName ?? x.Email))
+                                        {
+                                            <option value="@s.Id">@(s.DisplayName ?? s.Email) (@s.Email)</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label class="kn-s6-field">
+                                    <span>Role</span>
+                                    <select @bind="addMemberRole" disabled="@busy">
+                                        <option value="member">Member</option>
+                                        <option value="lead">Lead</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="kn-s6-form-actions">
+                                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy || string.IsNullOrWhiteSpace(addStaffId)" @onclick="AddMemberAsync">
+                                    <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+                                    Add to team
+                                </button>
+                            </div>
+
+                            <div class="kn-s6-member-list">
+                                @if (selectedTeam.Members.Count == 0)
+                                {
+                                    <p style="margin:0;font-size:0.8125rem;color:var(--kn-text-muted);">No members yet.</p>
+                                }
+                                else
+                                {
+                                    @foreach (var m in selectedTeam.Members.OrderBy(x => x.DisplayName ?? x.Email))
+                                    {
+                                        <div class="kn-s6-member-row">
+                                            <div class="kn-s6-member-row__info">
+                                                <span class="kn-s6-user-avatar">@MemberInitials(m)</span>
+                                                <div class="kn-s6-user-cell__meta">
+                                                    <strong>@(m.DisplayName ?? m.Email)</strong>
+                                                    <span>@m.Email · @m.MemberRole</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => RemoveMemberAsync(m.StaffId)">Remove</button>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </section>
                     }
-                </ul>
+                }
             }
-        </section>
-    }
-</div>
+        </div>
+    </ChildContent>
+</KnHubShell>
+}
 
 @code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
     private List<TeamDto> teams = [];
+    private List<StaffMemberDto> staff = [];
     private bool loading = true;
     private bool busy;
-    private string? error;
+    private bool showCreate;
+    private string? msg;
+    private bool msgIsError;
     private string teamName = "";
     private string teamProduct = "";
+    private string teamDescription = "";
+    private Guid? selectedId;
+    private string addStaffId = "";
+    private string addMemberRole = "member";
+
+    private TeamDto? selectedTeam =>
+        selectedId is null ? null : teams.FirstOrDefault(t => t.Id == selectedId);
 
     protected override async Task OnInitializedAsync()
     {
         var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
         if (user == null || session == null)
         {
+            isCheckingAuth = false;
             Navigation.NavigateTo("/admin/login");
             return;
         }
-
+        isAuthenticated = true;
+        isCheckingAuth = false;
         try
         {
             await SupportApi.EnsureAgentTokenAsync();
-            if (!SupportApi.IsPlatformAdmin)
-            {
+            if (SupportApi.IsPlatformAdmin)
+                await ReloadAsync();
+            else
                 loading = false;
-                return;
-            }
-
-            await ReloadAsync();
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            Show(ex.Message, true);
             loading = false;
         }
+    }
+
+    private void SelectTeam(Guid id)
+    {
+        selectedId = id;
+        addStaffId = "";
+        addMemberRole = "member";
+    }
+
+    private static string MemberInitials(TeamMemberDto m)
+    {
+        var name = string.IsNullOrWhiteSpace(m.DisplayName) ? m.Email : m.DisplayName!;
+        var parts = name.Split([' ', '.', '@', '_', '-'], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
+        return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}";
     }
 
     private async Task ReloadAsync()
     {
         loading = true;
-        var result = await SupportApi.GetTeamsAsync();
-        teams = result.Success ? result.Data ?? [] : [];
-        if (!result.Success) error = result.Message;
+        var teamsResult = await SupportApi.GetTeamsAsync();
+        teams = teamsResult.Success ? teamsResult.Data ?? [] : [];
+        if (!teamsResult.Success) Show(teamsResult.Message ?? "Failed", true);
+
+        var staffResult = await SupportApi.GetStaffAsync();
+        staff = staffResult.Success ? staffResult.Data ?? [] : [];
+
+        if (selectedId is not null && teams.All(t => t.Id != selectedId))
+            selectedId = null;
         loading = false;
     }
 
     private async Task CreateAsync()
     {
         busy = true;
-        error = null;
         var result = await SupportApi.CreateTeamAsync(
-            teamName,
-            string.IsNullOrWhiteSpace(teamProduct) ? null : teamProduct.Trim());
-        busy = false;
-        if (!result.Success)
+            teamName.Trim(),
+            string.IsNullOrWhiteSpace(teamProduct) ? null : teamProduct.Trim(),
+            string.IsNullOrWhiteSpace(teamDescription) ? null : teamDescription.Trim());
+        if (!result.Success) Show(result.Message ?? "Failed", true);
+        else
         {
-            error = result.Message;
-            return;
+            Show("Team created.", false);
+            teamName = "";
+            teamProduct = "";
+            teamDescription = "";
+            showCreate = false;
+            if (result.Data is not null) selectedId = result.Data.Id;
+            await ReloadAsync();
         }
+        busy = false;
+    }
 
-        teamName = "";
-        teamProduct = "";
+    private async Task AddMemberAsync()
+    {
+        if (selectedId is null || !Guid.TryParse(addStaffId, out var staffId)) return;
+        busy = true;
+        var result = await SupportApi.AddTeamMemberAsync(selectedId.Value, staffId, addMemberRole);
+        Show(result.Success ? "Member added." : result.Message ?? "Failed", !result.Success);
+        if (result.Success)
+        {
+            addStaffId = "";
+            await ReloadAsync();
+        }
+        busy = false;
+    }
+
+    private async Task RemoveMemberAsync(Guid staffId)
+    {
+        if (selectedId is null) return;
+        busy = true;
+        var result = await SupportApi.RemoveTeamMemberAsync(selectedId.Value, staffId);
+        Show(result.Success ? "Member removed." : result.Message ?? "Failed", !result.Success);
         await ReloadAsync();
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
     }
 }

@@ -1,0 +1,555 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page kn-s5-help-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Operations</p>
+            <h2>Help Center</h2>
+            <p>Internal guides for KobNeti staff — separate from the customer Knowledge Base in Support Hub</p>
+        </div>
+        <div class="kn-s5-page-head__actions">
+            @if (!loading && articles.Count > 0)
+            {
+                <span class="kn-s5-help-meta-pill">
+                    <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+                    @publishedCount published
+                </span>
+            }
+            @if (canEdit)
+            {
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving" @onclick="StartNewArticle">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                    New article
+                </button>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    @if (canEdit && !string.IsNullOrEmpty(editorHint))
+    {
+        <p class="kn-s5-help-admin-hint">
+            <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+            @editorHint
+        </p>
+    }
+
+    @if (showEditor && canEdit)
+    {
+        <section class="kn-s5-help-editor" aria-label="Article editor">
+            <div class="kn-s5-help-editor__head">
+                <h3>@(isNewArticle ? "Create article" : "Edit article")</h3>
+                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@saving" @onclick="CloseEditor">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    Cancel
+                </button>
+            </div>
+            <div class="kn-s5-help-editor__grid">
+                <label class="kn-s5-assets-field">
+                    <span>Title</span>
+                    <input type="text" placeholder="e.g. Managing Tickets" @bind="editTitle" disabled="@saving" @bind:after="AutoSlugIfNew" />
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Slug <small>(URL id, lowercase)</small></span>
+                    <input type="text" placeholder="managing-tickets" @bind="editSlug" disabled="@saving || !isNewArticle" />
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Category</span>
+                    <select @bind="editCategory" disabled="@saving">
+                        @foreach (var c in PlatformHelpCategories.All)
+                        {
+                            <option value="@c">@FormatCategory(c)</option>
+                        }
+                    </select>
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Status</span>
+                    <select @bind="editStatus" disabled="@saving">
+                        <option value="published">Published</option>
+                        <option value="draft">Draft</option>
+                        <option value="archived">Archived</option>
+                    </select>
+                </label>
+                <label class="kn-s5-assets-field">
+                    <span>Sort order</span>
+                    <input type="number" min="0" @bind="editSortOrder" disabled="@saving" />
+                </label>
+                <label class="kn-s5-assets-field kn-s5-assets-field--wide">
+                    <span>Body</span>
+                    <textarea class="kn-s5-help-editor__body" rows="14" placeholder="Write guide content. Use numbered steps like:&#10;&#10;1. First step:&#10;Description here.&#10;&#10;2. Second step:&#10;More detail." @bind="editBody" disabled="@saving"></textarea>
+                </label>
+            </div>
+            <div class="kn-s5-assets-form__actions">
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@saving || !CanSaveEditor" @onclick="SaveArticle">
+                    <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                    @(saving ? "Saving…" : "Save article")
+                </button>
+            </div>
+        </section>
+    }
+
+    @if (!loading && articles.Count > 0)
+    {
+        <div class="kn-s5-stats kn-s5-stats--help">
+            <div class="kn-s5-stat kn-s5-stat--accent-indigo">
+                <div class="kn-s5-stat__icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">library_books</span>
+                </div>
+                <div>
+                    <div class="kn-s5-stat__label">Total articles</div>
+                    <div class="kn-s5-stat__value">@articles.Count</div>
+                </div>
+            </div>
+            <div class="kn-s5-stat kn-s5-stat--accent-blue">
+                <div class="kn-s5-stat__icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">category</span>
+                </div>
+                <div>
+                    <div class="kn-s5-stat__label">Topics</div>
+                    <div class="kn-s5-stat__value">@categoryList.Count</div>
+                </div>
+            </div>
+            <div class="kn-s5-stat kn-s5-stat--accent-slate">
+                <div class="kn-s5-stat__icon" aria-hidden="true">
+                    <span class="material-symbols-outlined">filter_alt</span>
+                </div>
+                <div>
+                    <div class="kn-s5-stat__label">Showing</div>
+                    <div class="kn-s5-stat__value">@FilteredCount</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="kn-s5-help-search-wrap">
+            <div class="kn-s5-help-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="search"
+                       placeholder="Search articles by title, topic, or keywords…"
+                       @bind="search"
+                       @bind:event="oninput"
+                       @bind:after="EnsureSelection"
+                       aria-label="Search help articles" />
+                @if (!string.IsNullOrWhiteSpace(search))
+                {
+                    <button type="button" class="kn-s5-help-search__clear" @onclick="ClearSearch" aria-label="Clear search">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="kn-s5-help-categories" role="tablist" aria-label="Filter by category">
+            <button type="button"
+                    class="kn-s5-help-cat @(categoryFilter == "all" ? "is-active" : "")"
+                    role="tab"
+                    aria-selected="@(categoryFilter == "all")"
+                    @onclick='() => SetCategory("all")'>
+                All topics
+            </button>
+            @foreach (var cat in categoryList)
+            {
+                <button type="button"
+                        class="kn-s5-help-cat @(categoryFilter == cat ? "is-active" : "")"
+                        role="tab"
+                        aria-selected="@(categoryFilter == cat)"
+                        @onclick="() => SetCategory(cat)">
+                    <span class="material-symbols-outlined" aria-hidden="true">@GetCategoryIcon(cat)</span>
+                    @FormatCategory(cat)
+                    <span class="kn-s5-help-cat__count">@articles.Count(a => a.Category == cat)</span>
+                </button>
+            }
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading help articles…</p>
+        </div>
+    }
+    else if (articles.Count == 0)
+    {
+        <div class="kn-s5-empty kn-s5-empty--help">
+            <span class="material-symbols-outlined" aria-hidden="true">help_center</span>
+            <strong>No help articles yet</strong>
+            <p>@(canEdit ? "Create your first internal guide, or run the platform help seed SQL in Supabase." : "Platform guides will appear here once your team publishes internal documentation.")</p>
+            @if (canEdit)
+            {
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="StartNewArticle">
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                    Create first article
+                </button>
+            }
+        </div>
+    }
+    else if (!filteredArticles.Any())
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+            <strong>No articles match your search</strong>
+            <p>Try a different keyword or browse all topics.</p>
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="ResetFilters">Clear filters</button>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-help-layout">
+            <aside class="kn-s5-help-list" aria-label="Article list">
+                <div class="kn-s5-help-list__head">
+                    <span>Articles</span>
+                    <span class="kn-s5-help-list__count">@FilteredCount</span>
+                </div>
+                <div class="kn-s5-help-list__items">
+                    @foreach (var a in filteredArticles)
+                    {
+                        var isSelected = selectedId == a.Id;
+                        <button type="button"
+                                class="kn-s5-help-list-item @(isSelected ? "is-active" : "")"
+                                @onclick="() => SelectArticle(a.Id)">
+                            <span class="kn-s5-help-list-item__icon @GetCategoryClass(a.Category)" aria-hidden="true">
+                                <span class="material-symbols-outlined">@GetCategoryIcon(a.Category)</span>
+                            </span>
+                            <span class="kn-s5-help-list-item__body">
+                                <span class="kn-s5-help-list-item__title">
+                                    @a.Title
+                                    @if (a.Status != "published")
+                                    {
+                                        <span class="kn-s5-help-draft-badge">@a.Status</span>
+                                    }
+                                </span>
+                                <span class="kn-s5-help-list-item__meta">
+                                    @FormatCategory(a.Category) · @EstimateReadTime(a.Body)
+                                </span>
+                            </span>
+                            <span class="material-symbols-outlined kn-s5-help-list-item__chevron" aria-hidden="true">chevron_right</span>
+                        </button>
+                    }
+                </div>
+            </aside>
+
+            <article class="kn-s5-help-reader" aria-label="Article content">
+                @if (selectedArticle is null)
+                {
+                    <div class="kn-s5-help-reader__placeholder">
+                        <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
+                        <strong>Select an article</strong>
+                        <p>Choose a guide from the list to read the full documentation.</p>
+                    </div>
+                }
+                else
+                {
+                    <header class="kn-s5-help-reader__head">
+                        <div class="kn-s5-help-reader__icon @GetCategoryClass(selectedArticle.Category)" aria-hidden="true">
+                            <span class="material-symbols-outlined">@GetCategoryIcon(selectedArticle.Category)</span>
+                        </div>
+                        <div class="kn-s5-help-reader__titles">
+                            <span class="kn-s5-help-reader__category">@FormatCategory(selectedArticle.Category)</span>
+                            <h3>@selectedArticle.Title</h3>
+                            <div class="kn-s5-help-reader__meta">
+                                <span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+                                    @EstimateReadTime(selectedArticle.Body)
+                                </span>
+                                @if (selectedArticle.Status != "published")
+                                {
+                                    <span class="kn-s5-help-draft-badge">@selectedArticle.Status</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(selectedArticle.Slug))
+                                {
+                                    <span class="kn-s5-help-reader__slug">@selectedArticle.Slug</span>
+                                }
+                            </div>
+                        </div>
+                        @if (canEdit)
+                        {
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm kn-s5-help-edit-btn" @onclick="() => StartEditArticle(selectedArticle)">
+                                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                                Edit
+                            </button>
+                        }
+                    </header>
+
+                    <div class="kn-s5-help-reader__summary">
+                        @GetExcerpt(selectedArticle.Body, 220)
+                    </div>
+
+                    <div class="kn-s5-help-reader__content">
+                        @foreach (var block in FormatBody(selectedArticle.Body))
+                        {
+                            @if (block.IsHeading)
+                            {
+                                <h4>@block.Text</h4>
+                            }
+                            else
+                            {
+                                <p>@block.Text</p>
+                            }
+                        }
+                    </div>
+
+                    <footer class="kn-s5-help-reader__footer">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        Customer-facing articles live in Support Hub → Knowledge Base. This Help Center is for internal staff only.
+                    </footer>
+                }
+            </article>
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool saving;
+    private bool showEditor;
+    private bool isNewArticle;
+    private bool msgIsError;
+    private string? msg;
+    private string search = "";
+    private string categoryFilter = "all";
+    private Guid? selectedId;
+    private List<PlatformHelpArticleDto> articles = [];
+
+    private string editSlug = "";
+    private string editTitle = "";
+    private string editBody = "";
+    private string editCategory = "general";
+    private string editStatus = "published";
+    private int editSortOrder;
+
+    private bool canEdit => SupportApi.IsPlatformAdmin;
+    private string editorHint => canEdit
+        ? "Platform admins can create and edit articles here. Customer KB articles are managed under Support Hub → Knowledge Base."
+        : "";
+
+    private int publishedCount => articles.Count(a => a.Status == "published");
+    private bool CanSaveEditor => !string.IsNullOrWhiteSpace(editTitle) && !string.IsNullOrWhiteSpace(editSlug);
+
+    private List<string> categoryList => articles
+        .Select(a => a.Category)
+        .Where(c => !string.IsNullOrWhiteSpace(c))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private int FilteredCount => filteredArticles.Count();
+
+    private IEnumerable<PlatformHelpArticleDto> filteredArticles => articles
+        .Where(MatchesFilters)
+        .OrderBy(a => a.SortOrder)
+        .ThenBy(a => a.Title, StringComparer.OrdinalIgnoreCase);
+
+    private PlatformHelpArticleDto? selectedArticle =>
+        selectedId is null ? null : articles.FirstOrDefault(a => a.Id == selectedId);
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        msg = null;
+        var r = await SupportApi.GetPlatformHelpAsync(publishedOnly: !canEdit);
+        articles = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) Show(r.Message ?? "Failed to load articles.", true);
+        EnsureSelection();
+        loading = false;
+    }
+
+    private void StartNewArticle()
+    {
+        isNewArticle = true;
+        showEditor = true;
+        editTitle = "";
+        editSlug = "";
+        editBody = "";
+        editCategory = "general";
+        editStatus = "published";
+        editSortOrder = articles.Count > 0 ? articles.Max(a => a.SortOrder) + 1 : 1;
+        msg = null;
+    }
+
+    private void StartEditArticle(PlatformHelpArticleDto article)
+    {
+        isNewArticle = false;
+        showEditor = true;
+        editSlug = article.Slug;
+        editTitle = article.Title;
+        editBody = article.Body;
+        editCategory = article.Category;
+        editStatus = article.Status;
+        editSortOrder = article.SortOrder;
+        msg = null;
+    }
+
+    private void CloseEditor()
+    {
+        showEditor = false;
+        isNewArticle = false;
+    }
+
+    private void AutoSlugIfNew()
+    {
+        if (!isNewArticle || !string.IsNullOrWhiteSpace(editSlug)) return;
+        editSlug = Slugify(editTitle);
+    }
+
+    private async Task SaveArticle()
+    {
+        if (!CanSaveEditor) return;
+        saving = true;
+        var r = await SupportApi.UpsertPlatformHelpAsync(new SavePlatformHelpRequest
+        {
+            Slug = editSlug.Trim().ToLowerInvariant(),
+            Title = editTitle.Trim(),
+            Body = editBody.Trim(),
+            Category = editCategory,
+            Status = editStatus,
+            SortOrder = editSortOrder
+        });
+        Show(r.Success ? "Article saved." : r.Message ?? "Save failed.", !r.Success);
+        if (r.Success)
+        {
+            showEditor = false;
+            await Load();
+            if (r.Data is not null)
+                selectedId = r.Data.Id;
+        }
+        saving = false;
+    }
+
+    private static string Slugify(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var slug = text.Trim().ToLowerInvariant();
+        var chars = slug.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray();
+        slug = new string(chars);
+        while (slug.Contains("--", StringComparison.Ordinal))
+            slug = slug.Replace("--", "-", StringComparison.Ordinal);
+        return slug.Trim('-');
+    }
+
+    private bool MatchesFilters(PlatformHelpArticleDto a)
+    {
+        if (categoryFilter != "all" && !string.Equals(a.Category, categoryFilter, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(search))
+            return true;
+
+        var q = search.Trim();
+        return a.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || a.Body.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || a.Category.Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void SetCategory(string cat)
+    {
+        categoryFilter = cat;
+        EnsureSelection();
+    }
+
+    private void ClearSearch() => search = "";
+
+    private void ResetFilters()
+    {
+        search = "";
+        categoryFilter = "all";
+        EnsureSelection();
+    }
+
+    private void SelectArticle(Guid id)
+    {
+        selectedId = id;
+        if (showEditor && !isNewArticle)
+            CloseEditor();
+    }
+
+    private void EnsureSelection()
+    {
+        var list = filteredArticles.ToList();
+        if (list.Count == 0)
+        {
+            selectedId = null;
+            return;
+        }
+
+        if (selectedId is null || list.All(a => a.Id != selectedId))
+            selectedId = list[0].Id;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+
+    private static string FormatCategory(string? category)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return "General";
+        return string.Join(' ', category.Split(['-', '_', ' '], StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => char.ToUpperInvariant(w[0]) + w[1..].ToLowerInvariant()));
+    }
+
+    private static string GetCategoryIcon(string? category) => (category ?? "general").ToLowerInvariant() switch
+    {
+        "getting-started" or "getting started" => "rocket_launch",
+        "tickets" or "tickets-support" or "support" => "confirmation_number",
+        "engineering" => "code",
+        "people" or "time" or "time-payroll" or "payroll" => "schedule",
+        "admin" or "platform" => "admin_panel_settings",
+        "onboarding" => "person_add",
+        _ => "menu_book"
+    };
+
+    private static string GetCategoryClass(string? category) => (category ?? "general").ToLowerInvariant() switch
+    {
+        "getting-started" or "getting started" or "onboarding" => "is-start",
+        "tickets" or "tickets-support" or "support" => "is-support",
+        "engineering" => "is-eng",
+        "people" or "time" or "time-payroll" or "payroll" => "is-time",
+        "admin" or "platform" => "is-admin",
+        _ => "is-general"
+    };
+
+    private static string EstimateReadTime(string body)
+    {
+        var words = string.IsNullOrWhiteSpace(body) ? 0 : body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        var minutes = Math.Max(1, (int)Math.Ceiling(words / 200.0));
+        return $"{minutes} min read";
+    }
+
+    private static string GetExcerpt(string body, int max)
+    {
+        var text = (body ?? "").Replace('\n', ' ').Trim();
+        if (text.Length <= max) return text;
+        return text[..max].TrimEnd() + "…";
+    }
+
+    private static IEnumerable<BodyBlock> FormatBody(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            yield return new BodyBlock("No content provided for this article.", false);
+            yield break;
+        }
+
+        foreach (var line in body.Split('\n', StringSplitOptions.None))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            var isHeading = trimmed.Length < 80
+                && (trimmed.EndsWith(':') || trimmed.StartsWith('#') || char.IsDigit(trimmed[0]) && trimmed.Contains('.'));
+            var text = trimmed.TrimStart('#').Trim();
+            if (text.EndsWith(':')) text = text[..^1];
+            yield return new BodyBlock(text, isHeading);
+        }
+    }
+
+    private readonly record struct BodyBlock(string Text, bool IsHeading);
+}

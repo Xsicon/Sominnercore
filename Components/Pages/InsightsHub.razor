@@ -9,193 +9,379 @@
 
 <PageTitle>Insights - KobNeti</PageTitle>
 
-@if (ready)
+@if (isCheckingAuth)
+{
+    <div class="kn-hub-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
+}
+else
 {
 <KnHubShell BodyClass="kn-hub__body--scroll">
     <Tabs>
-        <button type="button" class="kn-hub-subnav__item @(tab=="overview"?"is-active":"")" @onclick="@(() => SetTab("overview"))">Overview</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="cross"?"is-active":"")" @onclick="@(() => SetTab("cross"))">All products</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="reports"?"is-active":"")" @onclick="@(() => SetTab("reports"))">Reports</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="help"?"is-active":"")" @onclick="@(() => SetTab("help"))">Platform help</button>
-        <button type="button" class="kn-hub-subnav__item @(tab=="assets"?"is-active":"")" @onclick="@(() => SetTab("assets"))">Assets</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "overview" ? "is-active" : "")" @onclick="@(() => SetTab("overview"))">Overview</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "cross" ? "is-active" : "")" @onclick="@(() => SetTab("cross"))">All products</button>
+        <button type="button" class="kn-hub-subnav__item @(tab == "reports" ? "is-active" : "")" @onclick="@(() => SetTab("reports"))">Reports</button>
     </Tabs>
     <ChildContent>
-        <div class="kn-s3-page" @key="workspaceKey">
-                @if (!string.IsNullOrEmpty(msg)) { <p class="sh-empty-list">@msg</p> }
+        <div class="kn-s3-page kn-s6-page" @key="workspaceKey">
+            @if (!string.IsNullOrEmpty(msg))
+            {
+                <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+            }
 
-                @if (tab == "overview")
-                {
-                    @if (overview is null)
-                    {
-                        <p class="sh-empty-list">Loadingâ€¦</p>
-                    }
-                    else
-                    {
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;">
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.ActiveChats</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Active chats</div>
-                            </div>
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.OpenTickets</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Open tickets</div>
-                            </div>
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.OpenIncidents</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Open incidents</div>
-                            </div>
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.EngTasksInProgress</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Eng in progress</div>
-                            </div>
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.PendingApprovals</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Pending approvals</div>
-                            </div>
-                            <div style="padding:0.75rem;border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-                                <div style="font-size:1.4rem;font-weight:600;">@overview.UnreadNotifications</div>
-                                <div style="opacity:0.7;font-size:0.85rem;">Unread alerts</div>
-                            </div>
-                        </div>
-                    }
-                }
-                else if (tab == "cross")
-                {
-                    @if (cross is null)
-                    {
-                        <p class="sh-empty-list">Loadingâ€¦</p>
-                    }
-                    else
-                    {
-                        <p class="sh-empty-list" style="margin-bottom:1rem;">
-                            Totals â€” tickets @cross.TotalOpenTickets Â· chats @cross.TotalActiveChats Â·
-                            incidents @cross.TotalOpenIncidents Â· approvals @cross.TotalPendingApprovals
-                        </p>
-                        @foreach (var p in cross.Products)
-                        {
-                            <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                                <strong>@p.DisplayName</strong>
-                                <div><small>
-                                    tickets @p.OpenTickets Â· chats @p.ActiveChats Â· incidents @p.OpenIncidents Â·
-                                    eng @p.EngTasksInProgress Â· approvals @p.PendingApprovals
-                                </small></div>
-                            </div>
-                        }
-                    }
-                }
-                else if (tab == "reports")
-                {
-                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                        <select class="kn-field" @bind="reportType">
-                            <option value="tickets">Tickets</option>
-                            <option value="time">Time</option>
-                            <option value="payroll">Payroll</option>
-                            <option value="audit">Audit</option>
-                        </select>
-                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="RunReport">Run export</button>
+            @if (tab == "overview")
+            {
+                <div class="kn-s6-greeting">
+                    <div>
+                        <p class="kn-s3-eyebrow">Analytics</p>
+                        <h2>@Greeting, @FirstName</h2>
+                        <p>Live operations snapshot for @SupportApi.DisplayName</p>
                     </div>
-                    @foreach (var r in reports)
-                    {
-                        <div style="padding:0.45rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                            <strong>@r.Label</strong>
-                            <span class="kn-chip kn-chip--neutral">@r.ReportType</span>
-                            <span class="kn-chip kn-chip--neutral">@r.RowCount rows</span>
-                            <small>@r.CreatedAt.ToLocalTime().ToString("g")</small>
-                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => ShowCsv(r.Id)">View CSV</button>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(csvPreview))
-                    {
-                        <pre style="margin-top:1rem;max-height:240px;overflow:auto;font-size:0.75rem;white-space:pre-wrap;">@csvPreview</pre>
-                    }
-                }
-                else if (tab == "help")
+                    <span class="kn-s6-date-pill">
+                        <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
+                        @DateTime.Now.ToString("dddd, MMM d")
+                    </span>
+                </div>
+
+                @if (overview is null)
                 {
-                    @foreach (var a in helpArticles)
-                    {
-                        <details style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);">
-                            <summary><strong>@a.Title</strong> <span class="kn-chip kn-chip--neutral">@a.Category</span></summary>
-                            <p style="margin:0.5rem 0 0;opacity:0.9;">@a.Body</p>
-                        </details>
-                    }
+                    <div class="kn-s3-loading-block" role="status"><span class="kn-s3-spinner" aria-hidden="true"></span><p>Loading overview…</p></div>
                 }
                 else
                 {
-                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                        <input class="kn-field" placeholder="Asset name" @bind="assetName" />
-                        <select class="kn-field" @bind="assetType">
-                            <option value="hardware">Hardware</option>
-                            <option value="license">License</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="CreateAsset">Add</button>
-                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="RemindRenewals">Renewal reminders</button>
-                    </div>
-                    @foreach (var a in assets)
-                    {
-                        <div style="padding:0.55rem 0;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                            <strong>@a.Name</strong>
-                            <span class="kn-chip kn-chip--neutral">@a.AssetType</span>
-                            <span class="kn-chip kn-chip--neutral">@a.Status</span>
-                            @if (!string.IsNullOrEmpty(a.AssignedUserName)) { <span>â†’ @a.AssignedUserName</span> }
-                            @if (a.RenewalDate is not null) { <small>renew @a.RenewalDate</small> }
-                            @if (a.Status != "retired")
-                            {
-                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => AssignAsset(a.Id)">Assign me</button>
-                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => RetireAsset(a.Id)">Retire</button>
-                            }
+                    <div class="kn-s6-metric-grid">
+                        <div class="kn-s6-metric kn-s6-metric--indigo">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">confirmation_number</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Open tickets</div>
+                                <div class="kn-s6-metric__value">@overview.OpenTickets</div>
+                                <div class="kn-s6-metric__hint">@overview.ActiveChats active chats</div>
+                            </div>
                         </div>
+                        <div class="kn-s6-metric kn-s6-metric--amber">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">engineering</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Eng in progress</div>
+                                <div class="kn-s6-metric__value">@overview.EngTasksInProgress</div>
+                                <div class="kn-s6-metric__hint">@overview.PendingApprovals pending approvals</div>
+                            </div>
+                        </div>
+                        <div class="kn-s6-metric kn-s6-metric--rose">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">warning</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Incidents</div>
+                                <div class="kn-s6-metric__value">@overview.OpenIncidents</div>
+                                <div class="kn-s6-metric__hint">@overview.UnreadNotifications unread alerts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kn-s6-panel-grid">
+                        <section class="kn-s6-panel">
+                            <h3 class="kn-s6-panel__title">Attention queue</h3>
+                            <div class="kn-s6-urgency-list">
+                                <div class="kn-s6-urgency-item">
+                                    <div>
+                                        <strong>Support backlog</strong>
+                                        <span>Open tickets + live chats</span>
+                                    </div>
+                                    <span class="kn-chip @(overview.OpenTickets + overview.ActiveChats > 0 ? "kn-chip--warn" : "kn-chip--success")">
+                                        @(overview.OpenTickets + overview.ActiveChats)
+                                    </span>
+                                </div>
+                                <div class="kn-s6-urgency-item">
+                                    <div>
+                                        <strong>People approvals</strong>
+                                        <span>Time edits waiting on managers</span>
+                                    </div>
+                                    <span class="kn-chip @(overview.PendingApprovals > 0 ? "kn-chip--warn" : "kn-chip--success")">@overview.PendingApprovals</span>
+                                </div>
+                                <div class="kn-s6-urgency-item">
+                                    <div>
+                                        <strong>Incidents</strong>
+                                        <span>Open operational incidents</span>
+                                    </div>
+                                    <span class="kn-chip @(overview.OpenIncidents > 0 ? "kn-chip--danger" : "kn-chip--success")">@overview.OpenIncidents</span>
+                                </div>
+                                <div class="kn-s6-urgency-item">
+                                    <div>
+                                        <strong>Notifications</strong>
+                                        <span>Unread in-app alerts</span>
+                                    </div>
+                                    <span class="kn-chip kn-chip--neutral">@overview.UnreadNotifications</span>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="kn-s6-panel">
+                            <h3 class="kn-s6-panel__title">Workload mix</h3>
+                            <div class="kn-s6-bar-list">
+                                @foreach (var row in WorkloadBars(overview))
+                                {
+                                    <div class="kn-s6-bar-row">
+                                        <span class="kn-s6-bar-row__name">@row.Label</span>
+                                        <div class="kn-s6-bar-track"><div class="kn-s6-bar-fill" style="width:@row.Pct%"></div></div>
+                                        <span class="kn-s6-bar-row__val">@row.Value</span>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="kn-s5-stats">
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Active chats</div><div class="kn-s5-stat__value">@overview.ActiveChats</div></div>
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Open tickets</div><div class="kn-s5-stat__value">@overview.OpenTickets</div></div>
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Incidents</div><div class="kn-s5-stat__value">@overview.OpenIncidents</div></div>
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Eng tasks</div><div class="kn-s5-stat__value">@overview.EngTasksInProgress</div></div>
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Approvals</div><div class="kn-s5-stat__value">@overview.PendingApprovals</div></div>
+                        <div class="kn-s5-stat"><div class="kn-s5-stat__label">Alerts</div><div class="kn-s5-stat__value">@overview.UnreadNotifications</div></div>
+                    </div>
+                }
+            }
+            else if (tab == "cross")
+            {
+                <div class="kn-s5-page-head">
+                    <div>
+                        <p class="kn-s3-eyebrow">Analytics</p>
+                        <h2>All products</h2>
+                        <p>Cross-brand totals from the ops API</p>
+                    </div>
+                </div>
+
+                @if (cross is null)
+                {
+                    <div class="kn-s3-loading-block" role="status"><span class="kn-s3-spinner" aria-hidden="true"></span><p>Loading cross-product…</p></div>
+                }
+                else
+                {
+                    <div class="kn-s6-metric-grid" style="margin-bottom:1rem;">
+                        <div class="kn-s6-metric kn-s6-metric--indigo">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">confirmation_number</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Open tickets</div>
+                                <div class="kn-s6-metric__value">@cross.TotalOpenTickets</div>
+                            </div>
+                        </div>
+                        <div class="kn-s6-metric kn-s6-metric--amber">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">forum</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Active chats</div>
+                                <div class="kn-s6-metric__value">@cross.TotalActiveChats</div>
+                            </div>
+                        </div>
+                        <div class="kn-s6-metric kn-s6-metric--rose">
+                            <div class="kn-s6-metric__icon" aria-hidden="true"><span class="material-symbols-outlined">warning</span></div>
+                            <div>
+                                <div class="kn-s6-metric__label">Incidents + approvals</div>
+                                <div class="kn-s6-metric__value">@(cross.TotalOpenIncidents + cross.TotalPendingApprovals)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kn-s6-product-strip" aria-label="Products by activity">
+                        @foreach (var p in cross.Products.OrderByDescending(x => x.OpenTickets + x.ActiveChats))
+                        {
+                            <div class="kn-s6-product-chip">
+                                <strong>@p.DisplayName</strong>
+                                <span>@p.OpenTickets tickets · @p.ActiveChats chats</span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="kn-s6-panel">
+                        <h3 class="kn-s6-panel__title">Product load</h3>
+                        @if (cross.Products.Count == 0)
+                        {
+                            <p style="margin:0;font-size:0.8125rem;color:var(--kn-text-muted);">No products returned.</p>
+                        }
+                        else
+                        {
+                            <div class="kn-s6-bar-list">
+                                @{
+                                    var maxLoad = Math.Max(1, cross.Products.Max(p => p.OpenTickets + p.ActiveChats + p.OpenIncidents));
+                                }
+                                @foreach (var p in cross.Products.OrderByDescending(x => x.OpenTickets + x.ActiveChats))
+                                {
+                                    var load = p.OpenTickets + p.ActiveChats + p.OpenIncidents;
+                                    var pct = (int)Math.Round(100.0 * load / maxLoad);
+                                    <div class="kn-s6-bar-row">
+                                        <span class="kn-s6-bar-row__name" title="@p.TenantId">@p.DisplayName</span>
+                                        <div class="kn-s6-bar-track"><div class="kn-s6-bar-fill" style="width:@pct%"></div></div>
+                                        <span class="kn-s6-bar-row__val">@load</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <div style="margin-top:1rem;display:grid;gap:0.75rem;">
+                        @foreach (var p in cross.Products.OrderBy(x => x.DisplayName))
+                        {
+                            <article class="kn-s5-card">
+                                <div class="kn-s5-card__head">
+                                    <span class="kn-s5-card__title">@p.DisplayName</span>
+                                    <span class="kn-chip kn-chip--neutral">@p.TenantId</span>
+                                </div>
+                                <div class="kn-s5-card__meta">
+                                    <span>@p.OpenTickets tickets</span>
+                                    <span>@p.ActiveChats chats</span>
+                                    <span>@p.OpenIncidents incidents</span>
+                                    <span>@p.EngTasksInProgress eng</span>
+                                    <span>@p.PendingApprovals approvals</span>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="kn-s5-page-head">
+                    <div>
+                        <p class="kn-s3-eyebrow">Analytics</p>
+                        <h2>Reports</h2>
+                        <p>Export tickets, time, payroll, and audit data for @SupportApi.DisplayName</p>
+                    </div>
+                </div>
+
+                <div class="kn-s5-toolbar">
+                    <select @bind="reportType">
+                        <option value="tickets">Tickets</option>
+                        <option value="time">Time</option>
+                        <option value="payroll">Payroll</option>
+                        <option value="audit">Audit</option>
+                    </select>
+                    <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="RunReport">
+                        <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                        Run export
+                    </button>
+                </div>
+
+                @if (reports.Count == 0)
+                {
+                    <div class="kn-s5-empty">
+                        <span class="material-symbols-outlined" aria-hidden="true">description</span>
+                        <strong>No reports yet</strong>
+                        <p>Run an export to generate CSV data.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="kn-s5-table-wrap">
+                        <table class="kn-s5-table">
+                            <thead>
+                                <tr>
+                                    <th>Label</th>
+                                    <th>Type</th>
+                                    <th>Rows</th>
+                                    <th>Created</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in reports.OrderByDescending(x => x.CreatedAt))
+                                {
+                                    <tr>
+                                        <td><strong>@r.Label</strong></td>
+                                        <td>@r.ReportType</td>
+                                        <td>@r.RowCount</td>
+                                        <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
+                                        <td><button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => ShowCsv(r.Id)">Preview</button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (!string.IsNullOrEmpty(csvPreview))
+                    {
+                        <pre class="kn-s6-pre">@csvPreview</pre>
                     }
                 }
+            }
         </div>
     </ChildContent>
 </KnHubShell>
 }
 
 @code {
-    private bool ready;
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
     private string tab = "overview";
     private string? msg;
+    private bool msgIsError;
     private bool busy;
-    private string workspaceKey = "";
+    private int workspaceEpoch;
+    private string workspaceKey => $"{SupportApi.TenantId}:{workspaceEpoch}";
     private OverviewDto? overview;
     private CrossProductOverviewDto? cross;
     private List<ReportRunDto> reports = [];
-    private List<PlatformHelpArticleDto> helpArticles = [];
-    private List<AssetDto> assets = [];
     private string reportType = "tickets";
     private string? csvPreview;
-    private string assetName = "";
-    private string assetType = "hardware";
+    private string? userEmail;
 
-    private string TabTitle => tab switch
+    private string Greeting
     {
-        "cross" => "All products",
-        "reports" => "Reports",
-        "help" => "Platform help",
-        "assets" => "Assets",
-        _ => "Overview"
-    };
+        get
+        {
+            var hour = DateTime.Now.Hour;
+            if (hour < 12) return "Good morning";
+            if (hour < 17) return "Good afternoon";
+            return "Good evening";
+        }
+    }
+
+    private string FirstName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(userEmail)) return "there";
+            var local = userEmail.Split('@')[0];
+            var part = local.Split(new[] { '.', '_', '-' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+            if (string.IsNullOrEmpty(part)) return "there";
+            return char.ToUpperInvariant(part[0]) + part.Substring(1);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
         if (user == null || session == null)
         {
+            isCheckingAuth = false;
             Navigation.NavigateTo("/admin/login");
             return;
         }
+        userEmail = user.Email;
+        isAuthenticated = true;
+        isCheckingAuth = false;
         SupportApi.TenantChanged += OnTenantChanged;
-        workspaceKey = SupportApi.TenantId;
+        Navigation.LocationChanged += OnLocationChanged;
         ApplyTabFromQuery();
-        ready = true;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
         await LoadTab();
+    }
+
+    private sealed record WorkloadBar(string Label, int Value, int Pct);
+
+    private static IEnumerable<WorkloadBar> WorkloadBars(OverviewDto o)
+    {
+        var items = new[]
+        {
+            new WorkloadBar("Tickets", o.OpenTickets, 0),
+            new WorkloadBar("Chats", o.ActiveChats, 0),
+            new WorkloadBar("Eng tasks", o.EngTasksInProgress, 0),
+            new WorkloadBar("Approvals", o.PendingApprovals, 0),
+            new WorkloadBar("Incidents", o.OpenIncidents, 0),
+        };
+        var max = Math.Max(1, items.Max(i => i.Value));
+        return items.Select(i => i with { Pct = (int)Math.Round(100.0 * i.Value / max) });
     }
 
     private void ApplyTabFromQuery()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        var query = uri.Query.TrimStart('?');
+        var query = Navigation.ToAbsoluteUri(Navigation.Uri).Query.TrimStart('?');
         if (string.IsNullOrEmpty(query)) return;
         foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -203,17 +389,15 @@
             if (pair.Length == 2 && string.Equals(Uri.UnescapeDataString(pair[0]), "tab", StringComparison.OrdinalIgnoreCase))
             {
                 var t = Uri.UnescapeDataString(pair[1]);
-                if (t is "overview" or "cross" or "reports" or "help" or "assets")
+                if (t is "overview" or "cross" or "reports")
                     tab = t;
             }
         }
     }
 
-    private void OnTenantChanged()
-    {
-        workspaceKey = SupportApi.TenantId;
-        _ = InvokeAsync(async () => { await LoadTab(); StateHasChanged(); });
-    }
+    private void OnTenantChanged() => _ = InvokeAsync(async () => { workspaceEpoch++; await LoadTab(); StateHasChanged(); });
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        _ = InvokeAsync(async () => { ApplyTabFromQuery(); await LoadTab(); StateHasChanged(); });
 
     private async Task SetTab(string t)
     {
@@ -233,34 +417,22 @@
             {
                 var r = await SupportApi.GetOverviewAsync();
                 overview = r.Success ? r.Data : null;
-                if (!r.Success) msg = r.Message;
+                if (!r.Success) Show(r.Message ?? "Failed", true);
             }
             else if (tab == "cross")
             {
                 var r = await SupportApi.GetCrossProductOverviewAsync();
                 cross = r.Success ? r.Data : null;
-                if (!r.Success) msg = r.Message;
-            }
-            else if (tab == "reports")
-            {
-                var r = await SupportApi.GetReportsAsync();
-                reports = r.Data ?? [];
-                if (!r.Success) msg = r.Message;
-            }
-            else if (tab == "help")
-            {
-                var r = await SupportApi.GetPlatformHelpAsync();
-                helpArticles = r.Data ?? [];
-                if (!r.Success) msg = r.Message;
+                if (!r.Success) Show(r.Message ?? "Failed", true);
             }
             else
             {
-                var r = await SupportApi.GetAssetsAsync();
-                assets = r.Data ?? [];
-                if (!r.Success) msg = r.Message;
+                var r = await SupportApi.GetReportsAsync();
+                reports = r.Data ?? [];
+                if (!r.Success) Show(r.Message ?? "Failed", true);
             }
         }
-        catch (Exception ex) { msg = ex.Message; }
+        catch (Exception ex) { Show(ex.Message, true); }
     }
 
     private async Task RunReport()
@@ -269,7 +441,7 @@
         try
         {
             var r = await SupportApi.RunReportAsync(reportType);
-            msg = r.Success ? $"Generated {r.Data!.RowCount} rows" : r.Message;
+            Show(r.Success ? $"Generated {r.Data!.RowCount} rows" : r.Message ?? "Failed", !r.Success);
             await LoadTab();
         }
         finally { busy = false; }
@@ -281,55 +453,15 @@
         csvPreview = r.Success ? r.Data : r.Message;
     }
 
-    private async Task CreateAsset()
+    private void Show(string text, bool error)
     {
-        if (string.IsNullOrWhiteSpace(assetName)) return;
-        busy = true;
-        try
-        {
-            var r = await SupportApi.CreateAssetAsync(assetName.Trim(), assetType,
-                DateOnly.FromDateTime(DateTime.UtcNow.AddDays(60)));
-            msg = r.Success ? "Asset added" : r.Message;
-            assetName = "";
-            await LoadTab();
-        }
-        finally { busy = false; }
+        msg = text;
+        msgIsError = error;
     }
 
-    private async Task AssignAsset(Guid id)
+    public void Dispose()
     {
-        busy = true;
-        try
-        {
-            var r = await SupportApi.AssignAssetAsync(id, "Me");
-            msg = r.Success ? "Assigned" : r.Message;
-            await LoadTab();
-        }
-        finally { busy = false; }
+        SupportApi.TenantChanged -= OnTenantChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
-
-    private async Task RetireAsset(Guid id)
-    {
-        busy = true;
-        try
-        {
-            var r = await SupportApi.RetireAssetAsync(id);
-            msg = r.Success ? "Retired" : r.Message;
-            await LoadTab();
-        }
-        finally { busy = false; }
-    }
-
-    private async Task RemindRenewals()
-    {
-        busy = true;
-        try
-        {
-            var r = await SupportApi.SendAssetRenewalRemindersAsync();
-            msg = r.Success ? $"Sent {r.Data} reminders" : r.Message;
-        }
-        finally { busy = false; }
-    }
-
-    public void Dispose() => SupportApi.TenantChanged -= OnTenantChanged;
 }

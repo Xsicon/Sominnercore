@@ -1,0 +1,162 @@
+@page "/admin/profile"
+@layout Components.Layout.AdminLayout
+@using KobNeti.Services
+@using KobNeti.Services.Support
+@using Microsoft.JSInterop
+@inject SupabaseAuthService AuthService
+@inject SupportApiClient SupportApi
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Profile - KobNeti</PageTitle>
+
+@if (isCheckingAuth)
+{
+    <div class="kn-hub-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
+}
+else
+{
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <ChildContent>
+        <div class="kn-s3-page kn-s6-page">
+            <div class="kn-s5-page-head">
+                <div>
+                    <p class="kn-s3-eyebrow">Account</p>
+                    <h2>Profile</h2>
+                    <p>Your identity, role, and display preferences</p>
+                </div>
+            </div>
+
+            <div class="kn-s6-profile-card">
+                <div class="kn-s6-profile-card__avatar">@Initials</div>
+                <div>
+                    <h2>@DisplayName</h2>
+                    <p>@email</p>
+                    <div style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.35rem;">
+                        <span class="kn-chip kn-chip--neutral">@(string.IsNullOrWhiteSpace(SupportApi.AgentRole) ? "staff" : SupportApi.AgentRole)</span>
+                        <span class="kn-chip kn-chip--neutral">@SupportApi.DisplayName</span>
+                        @if (SupportApi.IsPlatformAdmin)
+                        {
+                            <span class="kn-chip kn-chip--success">Platform admin</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="kn-s6-prefs">
+                <div class="kn-s6-pref-row">
+                    <div>
+                        <strong>Active product</strong>
+                        <span>Support Hub and ops data are scoped to this brand</span>
+                    </div>
+                    <span class="kn-chip kn-chip--neutral">@SupportApi.TenantId</span>
+                </div>
+                <div class="kn-s6-pref-row">
+                    <div>
+                        <strong>Appearance</strong>
+                        <span>Theme preference is stored on this device</span>
+                    </div>
+                    <div class="kn-s6-theme-btns">
+                        <button type="button" class="@(themeMode == "light" ? "is-active" : "")" @onclick='() => SetTheme("light")'>Light</button>
+                        <button type="button" class="@(themeMode == "dark" ? "is-active" : "")" @onclick='() => SetTheme("dark")'>Dark</button>
+                        <button type="button" class="@(themeMode == "system" ? "is-active" : "")" @onclick='() => SetTheme("system")'>System</button>
+                    </div>
+                </div>
+                <div class="kn-s6-pref-row">
+                    <div>
+                        <strong>Help Center</strong>
+                        <span>Internal staff documentation for KobNeti modules</span>
+                    </div>
+                    <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/help">Open Help</a>
+                </div>
+                <div class="kn-s6-pref-row">
+                    <div>
+                        <strong>Password</strong>
+                        <span>Use the login page forgot-password flow to reset via email</span>
+                    </div>
+                    <a class="kn-btn kn-btn--outline kn-btn--sm" href="/admin/login">Login page</a>
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+</KnHubShell>
+}
+
+@code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
+    private string email = "";
+    private string themeMode = "light";
+
+    private string DisplayName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(email)) return "Staff";
+            var local = email.Split('@')[0];
+            return string.Join(' ', local.Split(['.', '_', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+        }
+    }
+
+    private string Initials
+    {
+        get
+        {
+            var parts = DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return "?";
+            if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
+        if (user == null || session == null)
+        {
+            isCheckingAuth = false;
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        email = user.Email ?? "";
+        isAuthenticated = true;
+        isCheckingAuth = false;
+        try { await SupportApi.EnsureAgentTokenAsync(); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            themeMode = await JS.InvokeAsync<string>("eval", "localStorage.getItem('sominnercore-ui-theme') || 'light'");
+            StateHasChanged();
+        }
+        catch { /* ignore */ }
+    }
+
+    private async Task SetTheme(string mode)
+    {
+        themeMode = mode;
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    var KEY = 'sominnercore-ui-theme';
+                    var mode = '{mode}';
+                    localStorage.setItem(KEY, mode);
+                    var resolved = mode === 'system'
+                        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                        : mode;
+                    document.documentElement.classList.toggle('dark', resolved === 'dark');
+                }})();
+            ");
+        }
+        catch { /* ignore */ }
+    }
+}

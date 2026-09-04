@@ -6,223 +6,377 @@
 @inject SupportApiClient SupportApi
 @inject NavigationManager Navigation
 
-<PageTitle>Staff - KobNeti</PageTitle>
+<PageTitle>Users - KobNeti</PageTitle>
 
-<div class="ops-page">
-    <KnPageHeader Title="Users" Subtitle="Invite, deactivate, and assign product access." />
-
-    @if (!string.IsNullOrEmpty(error))
-    {
-        <p class="ops-error">@error</p>
-    }
-
-    @if (!SupportApi.IsPlatformAdmin)
-    {
-        <p class="ops-error">Platform admin role required.</p>
-    }
-    else
-    {
-        <section class="ops-card">
-            <h2>Embed key (@SupportApi.DisplayName)</h2>
-            <p class="ops-muted">Public key used by storefront widgets (`X-Tenant-Key`).</p>
-            <div class="ops-form-row">
-                <code class="ops-code">@SupportApi.TenantKey</code>
-                <button type="button" class="ops-btn ops-btn--ghost" @onclick="LoadSnippetAsync" disabled="@busy">Show snippet</button>
-                <button type="button" class="ops-btn" @onclick="RotateKeyAsync" disabled="@busy">Rotate key</button>
+@if (isCheckingAuth)
+{
+    <div class="kn-hub-loading"><p>Loading...</p></div>
+}
+else if (!isAuthenticated)
+{
+    <div class="kn-hub-loading"><p>Redirecting to login...</p></div>
+}
+else
+{
+<KnHubShell BodyClass="kn-hub__body--scroll">
+    <ChildContent>
+        <div class="kn-s3-page kn-s6-page">
+            <div class="kn-s5-page-head">
+                <div>
+                    <p class="kn-s3-eyebrow">People &amp; Teams</p>
+                    <h2>Users</h2>
+                    <p>Invite staff, manage access, and rotate product embed keys</p>
+                </div>
+                @if (SupportApi.IsPlatformAdmin)
+                {
+                    <div class="kn-s5-page-head__actions">
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" @onclick="() => showEmbed = !showEmbed">
+                            <span class="material-symbols-outlined" aria-hidden="true">key</span>
+                            Embed key
+                        </button>
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" @onclick="() => showInvite = !showInvite">
+                            <span class="material-symbols-outlined" aria-hidden="true">@(showInvite ? "close" : "person_add")</span>
+                            @(showInvite ? "Close" : "Invite user")
+                        </button>
+                    </div>
+                }
             </div>
-            @if (!string.IsNullOrWhiteSpace(widgetSnippet))
-            {
-                <pre class="ops-pre">@widgetSnippet</pre>
-            }
-        </section>
 
-        <section class="ops-card">
-            <h2>Invite staff</h2>
-            <div class="ops-form-row">
-                <input @bind="inviteEmail" placeholder="email@company.com" />
-                <input @bind="inviteName" placeholder="Display name" />
-                <select @bind="inviteRole">
-                    <option value="support">support</option>
-                    <option value="manager">manager</option>
-                    <option value="engineer">engineer</option>
-                    <option value="admin">admin</option>
-                </select>
-                <input @bind="inviteProducts" placeholder="products (comma: muuqwear,salguri)" />
-                <button type="button" class="ops-btn" @onclick="InviteAsync" disabled="@busy">Invite</button>
-            </div>
-        </section>
-
-        <section class="ops-card">
-            <h2>Directory</h2>
-            @if (loading)
+            @if (!string.IsNullOrEmpty(msg))
             {
-                <p>Loading…</p>
+                <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
             }
-            else if (staff.Count == 0)
+
+            @if (!SupportApi.IsPlatformAdmin)
             {
-                <p class="ops-muted">No staff profiles yet.</p>
+                <div class="kn-s5-empty">
+                    <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                    <strong>Platform admin required</strong>
+                    <p>Only platform admins can manage users and embed keys.</p>
+                </div>
             }
             else
             {
-                <table class="ops-table">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Name</th>
-                            <th>Role</th>
-                            <th>Products</th>
-                            <th>Status</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var s in staff)
+                <div class="kn-s6-summary">
+                    <div class="kn-s5-stat kn-s5-stat--accent-indigo">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">group</span></div>
+                        <div><div class="kn-s5-stat__label">Total</div><div class="kn-s5-stat__value">@staff.Count</div></div>
+                    </div>
+                    <div class="kn-s5-stat kn-s5-stat--accent-blue">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">check_circle</span></div>
+                        <div><div class="kn-s5-stat__label">Active</div><div class="kn-s5-stat__value">@staff.Count(s => s.Active)</div></div>
+                    </div>
+                    <div class="kn-s5-stat kn-s5-stat--accent-slate">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">person_off</span></div>
+                        <div><div class="kn-s5-stat__label">Inactive</div><div class="kn-s5-stat__value">@staff.Count(s => !s.Active)</div></div>
+                    </div>
+                    <div class="kn-s5-stat kn-s5-stat--accent-amber">
+                        <div class="kn-s5-stat__icon" aria-hidden="true"><span class="material-symbols-outlined">admin_panel_settings</span></div>
+                        <div><div class="kn-s5-stat__label">Admins</div><div class="kn-s5-stat__value">@staff.Count(s => s.Role == "admin")</div></div>
+                    </div>
+                </div>
+
+                @if (showEmbed)
+                {
+                    <section class="kn-s6-embed-panel" aria-label="Embed key">
+                        <h3>Embed key — @SupportApi.DisplayName</h3>
+                        <p style="margin:0.35rem 0 0;font-size:0.8125rem;color:var(--kn-text-muted);">Public key used by storefront widgets (<code>X-Tenant-Key</code>).</p>
+                        <code class="kn-s6-code">@SupportApi.TenantKey</code>
+                        <div class="kn-s6-form-actions" style="border:none;padding-top:0;margin-top:0.5rem;">
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="LoadSnippetAsync">Show snippet</button>
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="RotateKeyAsync">Rotate key</button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(widgetSnippet))
                         {
-                            <tr>
-                                <td>@s.Email</td>
-                                <td>@(s.DisplayName ?? "—")</td>
-                                <td>@s.Role</td>
-                                <td>@(s.ProductSlugs.Count == 0 ? "—" : string.Join(", ", s.ProductSlugs))</td>
-                                <td>@(s.Active ? "active" : "inactive")</td>
-                                <td>
-                                    @if (s.Active)
-                                    {
-                                        <button type="button" class="ops-btn ops-btn--ghost" @onclick="() => DeactivateAsync(s.Id)" disabled="@busy">Deactivate</button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="ops-btn ops-btn--ghost" @onclick="() => ActivateAsync(s.Id)" disabled="@busy">Activate</button>
-                                    }
-                                </td>
-                            </tr>
+                            <pre class="kn-s6-pre">@widgetSnippet</pre>
                         }
-                    </tbody>
-                </table>
+                    </section>
+                }
+
+                @if (showInvite)
+                {
+                    <section class="kn-s6-invite-panel" aria-label="Invite user">
+                        <div class="kn-s6-invite-panel__head">
+                            <h3>Invite user</h3>
+                        </div>
+                        <div class="kn-s6-form-grid">
+                            <label class="kn-s6-field">
+                                <span>Email</span>
+                                <input type="email" @bind="inviteEmail" disabled="@busy" placeholder="email@company.com" />
+                            </label>
+                            <label class="kn-s6-field">
+                                <span>Display name</span>
+                                <input type="text" @bind="inviteName" disabled="@busy" placeholder="Full name" />
+                            </label>
+                            <label class="kn-s6-field">
+                                <span>Role</span>
+                                <select @bind="inviteRole" disabled="@busy">
+                                    <option value="support">Support</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="engineer">Engineer</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </label>
+                            <label class="kn-s6-field kn-s6-field--wide">
+                                <span>Products <small style="font-weight:500;color:var(--kn-text-muted);">(comma-separated slugs)</small></span>
+                                <input type="text" @bind="inviteProducts" disabled="@busy" placeholder="muuqwear, salguri, gaarx" />
+                            </label>
+                        </div>
+                        <div class="kn-s6-form-actions">
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy || string.IsNullOrWhiteSpace(inviteEmail)" @onclick="InviteAsync">
+                                <span class="material-symbols-outlined" aria-hidden="true">send</span>
+                                Send invite
+                            </button>
+                        </div>
+                    </section>
+                }
+
+                <div class="kn-s5-toolbar">
+                    <div class="kn-s5-search">
+                        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                        <input type="search" placeholder="Search name or email…" @bind="search" @bind:event="oninput" />
+                    </div>
+                    <select @bind="roleFilter">
+                        <option value="all">All roles</option>
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="engineer">Engineer</option>
+                        <option value="support">Support</option>
+                    </select>
+                    <select @bind="statusFilter">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+
+                @if (loading)
+                {
+                    <div class="kn-s3-loading-block" role="status"><span class="kn-s3-spinner" aria-hidden="true"></span><p>Loading users…</p></div>
+                }
+                else if (!Filtered.Any())
+                {
+                    <div class="kn-s5-empty">
+                        <span class="material-symbols-outlined" aria-hidden="true">group_off</span>
+                        <strong>No users found</strong>
+                        <p>@(staff.Count == 0 ? "Invite your first teammate to get started." : "Try adjusting search or filters.")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="kn-s5-table-wrap">
+                        <table class="kn-s5-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    <th>Products</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in Filtered)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="kn-s6-user-cell">
+                                                <span class="kn-s6-user-avatar">@Initials(s)</span>
+                                                <div class="kn-s6-user-cell__meta">
+                                                    <strong>@(string.IsNullOrWhiteSpace(s.DisplayName) ? s.Email : s.DisplayName)</strong>
+                                                    <span>@s.Email</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span class="kn-chip kn-chip--neutral">@s.Role</span></td>
+                                        <td>
+                                            <div class="kn-s6-chip-row">
+                                                @if (s.ProductSlugs.Count == 0)
+                                                {
+                                                    <span style="color:#94a3b8;font-size:0.8125rem;">—</span>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var p in s.ProductSlugs.Take(4))
+                                                    {
+                                                        <span class="kn-chip kn-chip--neutral">@p</span>
+                                                    }
+                                                    @if (s.ProductSlugs.Count > 4)
+                                                    {
+                                                        <span class="kn-chip kn-chip--neutral">+@(s.ProductSlugs.Count - 4)</span>
+                                                    }
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="kn-chip @(s.Active ? "kn-chip--success" : "kn-chip--neutral")">
+                                                @(s.Active ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (s.Active)
+                                            {
+                                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => DeactivateAsync(s.Id)">Deactivate</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => ActivateAsync(s.Id)">Activate</button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             }
-        </section>
-    }
-</div>
+        </div>
+    </ChildContent>
+</KnHubShell>
+}
 
 @code {
+    private bool isCheckingAuth = true;
+    private bool isAuthenticated;
     private List<StaffMemberDto> staff = [];
     private bool loading = true;
     private bool busy;
-    private string? error;
+    private bool showInvite;
+    private bool showEmbed;
+    private string? msg;
+    private bool msgIsError;
     private string inviteEmail = "";
     private string inviteName = "";
     private string inviteRole = "support";
     private string inviteProducts = "muuqwear";
     private string? widgetSnippet;
+    private string search = "";
+    private string roleFilter = "all";
+    private string statusFilter = "all";
+
+    private IEnumerable<StaffMemberDto> Filtered => staff
+        .Where(s =>
+        {
+            if (roleFilter != "all" && !string.Equals(s.Role, roleFilter, StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (statusFilter == "active" && !s.Active) return false;
+            if (statusFilter == "inactive" && s.Active) return false;
+            if (string.IsNullOrWhiteSpace(search)) return true;
+            var q = search.Trim();
+            return s.Email.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || (s.DisplayName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
+        })
+        .OrderByDescending(s => s.Active)
+        .ThenBy(s => s.DisplayName ?? s.Email);
 
     protected override async Task OnInitializedAsync()
     {
         var (user, session) = await AuthService.GetAuthenticatedAdminAsync();
         if (user == null || session == null)
         {
+            isCheckingAuth = false;
             Navigation.NavigateTo("/admin/login");
             return;
         }
-
+        isAuthenticated = true;
+        isCheckingAuth = false;
         try
         {
             await SupportApi.EnsureAgentTokenAsync();
-            if (!SupportApi.IsPlatformAdmin)
-            {
+            if (SupportApi.IsPlatformAdmin)
+                await ReloadAsync();
+            else
                 loading = false;
-                return;
-            }
-
-            await ReloadAsync();
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            Show(ex.Message, true);
             loading = false;
         }
+    }
+
+    private static string Initials(StaffMemberDto s)
+    {
+        var name = string.IsNullOrWhiteSpace(s.DisplayName) ? s.Email : s.DisplayName!;
+        var parts = name.Split([' ', '.', '@', '_', '-'], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant();
+        return $"{char.ToUpperInvariant(parts[0][0])}{char.ToUpperInvariant(parts[1][0])}";
     }
 
     private async Task LoadSnippetAsync()
     {
         busy = true;
-        error = null;
         var result = await SupportApi.GetWidgetSnippetAsync(SupportApi.TenantId);
+        if (!result.Success) Show(result.Message ?? "Failed", true);
+        else widgetSnippet = result.Data?.WidgetSnippet;
         busy = false;
-        if (!result.Success)
-        {
-            error = result.Message;
-            return;
-        }
-
-        widgetSnippet = result.Data?.WidgetSnippet;
     }
 
     private async Task RotateKeyAsync()
     {
         busy = true;
-        error = null;
         var result = await SupportApi.RotateEmbedKeyAsync(SupportApi.TenantId);
+        if (!result.Success) Show(result.Message ?? "Failed", true);
+        else
+        {
+            widgetSnippet = result.Data?.WidgetSnippet;
+            if (result.Data is not null)
+            {
+                SupportApi.SetTenant(SupportApi.TenantId, result.Data.PublicKey, SupportApi.DisplayName, SupportApi.PublicHelpCenterUrl);
+            }
+            Show("Embed key rotated.", false);
+        }
         busy = false;
-        if (!result.Success)
-        {
-            error = result.Message;
-            return;
-        }
-
-        widgetSnippet = result.Data?.WidgetSnippet;
-        if (result.Data is not null)
-        {
-            SupportApi.SetTenant(
-                SupportApi.TenantId,
-                result.Data.PublicKey,
-                SupportApi.DisplayName,
-                SupportApi.PublicHelpCenterUrl);
-        }
     }
 
     private async Task ReloadAsync()
     {
         loading = true;
-        error = null;
         var result = await SupportApi.GetStaffAsync();
         staff = result.Success ? result.Data ?? [] : [];
-        if (!result.Success)
-            error = result.Message;
+        if (!result.Success) Show(result.Message ?? "Failed", true);
         loading = false;
     }
 
     private async Task InviteAsync()
     {
         busy = true;
-        error = null;
         var slugs = inviteProducts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var result = await SupportApi.InviteStaffAsync(inviteEmail, inviteName, inviteRole, slugs);
-        busy = false;
-        if (!result.Success)
+        if (!result.Success) Show(result.Message ?? "Failed", true);
+        else
         {
-            error = result.Message;
-            return;
+            Show("Invite sent.", false);
+            inviteEmail = "";
+            inviteName = "";
+            showInvite = false;
+            await ReloadAsync();
         }
-
-        inviteEmail = "";
-        inviteName = "";
-        await ReloadAsync();
+        busy = false;
     }
 
     private async Task DeactivateAsync(Guid id)
     {
         busy = true;
         var result = await SupportApi.DeactivateStaffAsync(id);
-        busy = false;
-        if (!result.Success) error = result.Message;
+        Show(result.Success ? "User deactivated." : result.Message ?? "Failed", !result.Success);
         await ReloadAsync();
+        busy = false;
     }
 
     private async Task ActivateAsync(Guid id)
     {
         busy = true;
         var result = await SupportApi.ActivateStaffAsync(id);
-        busy = false;
-        if (!result.Success) error = result.Message;
+        Show(result.Success ? "User activated." : result.Message ?? "Failed", !result.Success);
         await ReloadAsync();
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
     }
 }

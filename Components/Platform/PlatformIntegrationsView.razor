@@ -1,0 +1,106 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Platform</p>
+            <h2>Integrations</h2>
+            <p>Connect GitHub, email, and other platform services</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    @if (!SupportApi.IsPlatformAdmin)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+            <strong>Platform admin required</strong>
+            <p>Only platform admins can manage integrations.</p>
+        </div>
+    }
+    else if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading integrations…</p>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-integration-grid">
+            @foreach (var i in integrations)
+            {
+                <article class="kn-s5-integration">
+                    <div class="kn-s5-integration__head">
+                        <span class="kn-s5-integration__name">@i.DisplayName</span>
+                        <span class="kn-chip @(i.Status == "connected" ? "kn-chip--success" : "kn-chip--neutral")">@i.Status</span>
+                    </div>
+                    <p style="margin:0 0 0.75rem;font-size:0.8125rem;color:var(--kn-text-muted);">@i.Provider</p>
+                    @if (i.HasSecrets)
+                    {
+                        <span class="kn-chip kn-chip--neutral" style="margin-bottom:0.5rem;">Secrets stored</span>
+                    }
+                    <div class="kn-s3-actions">
+                        @if (i.Status != "connected")
+                        {
+                            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="() => Connect(i.Provider)">Connect</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => Disconnect(i.Provider)">Disconnect</button>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private bool msgIsError;
+    private List<IntegrationDto> integrations = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        if (!SupportApi.IsPlatformAdmin) { loading = false; return; }
+        var r = await SupportApi.GetIntegrationsAsync();
+        integrations = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) Show(r.Message ?? "Failed", true);
+        loading = false;
+    }
+
+    private async Task Connect(string provider)
+    {
+        busy = true;
+        var r = await SupportApi.ConnectIntegrationAsync(provider, "dev-secret-token");
+        Show(r.Success ? "Connected" : r.Message ?? "Failed", !r.Success);
+        await Load();
+        busy = false;
+    }
+
+    private async Task Disconnect(string provider)
+    {
+        busy = true;
+        var r = await SupportApi.DisconnectIntegrationAsync(provider);
+        Show(r.Success ? "Disconnected" : r.Message ?? "Failed", !r.Success);
+        await Load();
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}

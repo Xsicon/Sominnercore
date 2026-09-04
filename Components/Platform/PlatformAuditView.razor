@@ -1,0 +1,103 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Platform</p>
+            <h2>Audit Logs</h2>
+            <p>Append-only record of sensitive actions across @SupportApi.DisplayName</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast kn-s5-toast--error" role="alert">@msg</div>
+    }
+
+    <div class="kn-s5-toolbar">
+        <div class="kn-s5-search">
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input type="search" placeholder="Search actor, action, entity…" @bind="search" @bind:event="oninput" @onkeydown="OnSearchKey" />
+        </div>
+        <select @bind="actionFilter" @bind:after="Load">
+            <option value="">All actions</option>
+            @foreach (var a in actionOptions)
+            {
+                <option value="@a">@a</option>
+            }
+        </select>
+        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@loading" @onclick="Load">Search</button>
+    </div>
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading audit events…</p>
+        </div>
+    }
+    else if (audit.Count == 0)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">history</span>
+            <strong>No audit events</strong>
+            <p>Try a different search or check API connectivity.</p>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-table-wrap">
+            <table class="kn-s5-table">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Actor</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in audit.OrderByDescending(x => x.CreatedAt))
+                    {
+                        <tr>
+                            <td>@a.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(a.ActorName ?? "—")</td>
+                            <td><strong>@a.Action</strong></td>
+                            <td>@a.EntityType/@(a.EntityId ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private string? msg;
+    private string search = "";
+    private string actionFilter = "";
+    private List<AuditEventDto> audit = [];
+    private List<string> actionOptions = [];
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        msg = null;
+        var r = await SupportApi.SearchAuditAsync(
+            string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+            string.IsNullOrWhiteSpace(actionFilter) ? null : actionFilter);
+        audit = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) msg = r.Message;
+        actionOptions = audit.Select(a => a.Action).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+        loading = false;
+    }
+
+    private async Task OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Load();
+    }
+}

@@ -1,0 +1,137 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Platform</p>
+            <h2>Notifications</h2>
+            <p>In-app alerts and delivery preferences</p>
+        </div>
+        <div class="kn-s5-page-head__actions">
+            <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="SavePrefs">Save preferences</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    <section class="kn-s5-prefs">
+        <label class="kn-s5-pref">
+            <input type="checkbox" @bind="prefs.AssignEnabled" />
+            <div>
+                <strong>Assignments</strong>
+                <span>When a ticket or task is assigned to you</span>
+            </div>
+        </label>
+        <label class="kn-s5-pref">
+            <input type="checkbox" @bind="prefs.ApprovalEnabled" />
+            <div>
+                <strong>Approvals</strong>
+                <span>Time edits and payroll requests</span>
+            </div>
+        </label>
+        <label class="kn-s5-pref">
+            <input type="checkbox" @bind="prefs.EscalationEnabled" />
+            <div>
+                <strong>Escalations</strong>
+                <span>Incidents and priority escalations</span>
+            </div>
+        </label>
+        <label class="kn-s5-pref">
+            <input type="checkbox" @bind="prefs.ReminderEnabled" />
+            <div>
+                <strong>Reminders</strong>
+                <span>Calendar and asset renewal reminders</span>
+            </div>
+        </label>
+    </section>
+
+    <h3 style="margin:0 0 0.75rem;font-size:1rem;">Inbox</h3>
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading notifications…</p>
+        </div>
+    }
+    else if (notes.Count == 0)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+            <strong>No notifications</strong>
+            <p>You're all caught up.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var n in notes.OrderByDescending(x => x.CreatedAt))
+        {
+            var unread = !n.IsRead && n.ReadAt is null;
+            <article class="kn-s5-inbox-item @(unread ? "is-unread" : "")">
+                <div>
+                    <div class="kn-s5-inbox-item__title">@n.Title</div>
+                    @if (!string.IsNullOrWhiteSpace(n.Body))
+                    {
+                        <p class="kn-s5-inbox-item__body">@n.Body</p>
+                    }
+                    <time datetime="@n.CreatedAt.ToString("O")">@n.CreatedAt.ToLocalTime().ToString("g")</time>
+                </div>
+                @if (unread)
+                {
+                    <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => MarkRead(n.Id)">Mark read</button>
+                }
+            </article>
+        }
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private bool msgIsError;
+    private List<NotificationDto> notes = [];
+    private NotificationPrefsDto prefs = new();
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var notesTask = SupportApi.GetNotificationsAsync();
+        var prefsTask = SupportApi.GetNotificationPrefsAsync();
+        await Task.WhenAll(notesTask, prefsTask);
+        var n = await notesTask;
+        var p = await prefsTask;
+        notes = n.Success ? n.Data ?? [] : [];
+        if (p.Success && p.Data is not null) prefs = p.Data;
+        if (!n.Success) Show(n.Message ?? "Failed", true);
+        loading = false;
+    }
+
+    private async Task SavePrefs()
+    {
+        busy = true;
+        var r = await SupportApi.SaveNotificationPrefsAsync(prefs);
+        Show(r.Success ? "Preferences saved" : r.Message ?? "Failed", !r.Success);
+        busy = false;
+    }
+
+    private async Task MarkRead(Guid id)
+    {
+        busy = true;
+        await SupportApi.MarkNotificationReadAsync(id);
+        await Load();
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}

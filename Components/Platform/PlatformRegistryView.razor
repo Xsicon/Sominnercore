@@ -1,0 +1,204 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Products</p>
+            <h2>Product Registry</h2>
+            <p>Manage brands, API URLs, and linked repositories</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    @if (loading)
+    {
+        <div class="kn-s3-loading-block" role="status" aria-busy="true">
+            <span class="kn-s3-spinner" aria-hidden="true"></span>
+            <p>Loading product registry…</p>
+        </div>
+    }
+    else if (products.Count == 0)
+    {
+        <div class="kn-s5-empty">
+            <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            <strong>No products in registry</strong>
+            <p>Apply <code>products_registry.sql</code> on the API database.</p>
+        </div>
+    }
+    else
+    {
+        <div class="kn-s5-registry-grid">
+            @foreach (var p in products.OrderBy(x => x.DisplayName))
+            {
+                var upstreamDraft = GetUpstreamDraft(p.TenantId);
+                var status = statusBySlug.GetValueOrDefault(p.TenantId);
+                <article class="kn-s5-product-card">
+                    <div class="kn-s5-product-card__head">
+                        <div>
+                            <h3>@p.DisplayName</h3>
+                            <div class="kn-s5-product-card__slug">@p.TenantId</div>
+                        </div>
+                        <span class="kn-chip @(p.Enabled ? "kn-chip--success" : "kn-chip--neutral")">@(p.Enabled ? "enabled" : "disabled")</span>
+                    </div>
+
+                    <div class="kn-s5-card__meta" style="margin-bottom:0.5rem;">
+                        <span class="kn-chip kn-chip--neutral">@p.ProductType</span>
+                        <span class="kn-chip kn-chip--neutral">@p.SupportTier</span>
+                        <span class="kn-chip kn-chip--neutral" title="Embed key">@p.PublicKey</span>
+                    </div>
+
+                    <label style="font-size:0.75rem;font-weight:600;color:var(--kn-text-muted);">Product API URL</label>
+                    <div class="kn-s5-field-row">
+                        <input type="url"
+                               placeholder="https://api.example.com/"
+                               value="@GetUpstreamDraft(p.TenantId)"
+                               @onchange="e => OnUpstreamChanged(p.TenantId, e)"
+                               disabled="@busy" />
+                        <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="() => SaveUpstream(p)">Save</button>
+                        <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => TestUpstream(p.TenantId)">Test</button>
+                    </div>
+                    @if (status is not null)
+                    {
+                        <p style="margin:0.35rem 0 0;font-size:0.8125rem;color:@(status.Reachable ? "#065f46" : "#64748b");">
+                            @(status.Reachable ? "API online" : status.Message)
+                        </p>
+                    }
+
+                    <h4 style="margin:1rem 0 0.5rem;font-size:0.85rem;">Linked repositories</h4>
+                    @if (p.LinkedRepos.Count == 0)
+                    {
+                        <p style="font-size:0.8125rem;color:var(--kn-text-muted);margin:0 0 0.5rem;">No repos linked yet.</p>
+                    }
+                    else
+                    {
+                        <ul style="margin:0 0 0.5rem;padding-left:1.1rem;font-size:0.8125rem;">
+                            @foreach (var repo in p.LinkedRepos)
+                            {
+                                <li><strong>@repo.RepoKind</strong> — @(repo.Title ?? repo.GithubRepoUrl)</li>
+                            }
+                        </ul>
+                    }
+
+                    @if (SupportApi.IsPlatformAdmin)
+                    {
+                        <div class="kn-s5-field-row">
+                            <select value="@GetRepoKind(p.TenantId)"
+                                    @onchange="e => OnRepoKindChanged(p.TenantId, e)"
+                                    disabled="@busy">
+                                <option value="web_app">web_app</option>
+                                <option value="api">api</option>
+                            </select>
+                            <input type="url"
+                                   placeholder="https://github.com/org/repo"
+                                   value="@GetRepoUrl(p.TenantId)"
+                                   @onchange="e => OnRepoUrlChanged(p.TenantId, e)"
+                                   disabled="@busy" />
+                            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="() => SaveRepo(p.TenantId)">Link repo</button>
+                        </div>
+                    }
+                </article>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private bool msgIsError;
+    private List<ProductRegistryDto> products = [];
+    private readonly Dictionary<string, string> upstreamDrafts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ProductUpstreamStatusDto> statusBySlug = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> repoKindDrafts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> repoUrlDrafts = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var r = await SupportApi.GetProductRegistryAsync();
+        products = r.Success ? r.Data ?? [] : [];
+        foreach (var p in products)
+        {
+            upstreamDrafts[p.TenantId] = p.UpstreamApiBaseUrl ?? "";
+            repoKindDrafts.TryAdd(p.TenantId, "web_app");
+            repoUrlDrafts.TryAdd(p.TenantId, "");
+        }
+        if (!r.Success) Show(r.Message ?? "Failed", true);
+        loading = false;
+    }
+
+    private string GetUpstreamDraft(string slug) =>
+        upstreamDrafts.TryGetValue(slug, out var v) ? v : "";
+
+    private void SetUpstreamDraft(string slug, string value) => upstreamDrafts[slug] = value;
+
+    private string GetRepoKind(string slug)
+    {
+        if (!repoKindDrafts.ContainsKey(slug)) repoKindDrafts[slug] = "web_app";
+        return repoKindDrafts[slug];
+    }
+
+    private void SetRepoKind(string slug, string value) => repoKindDrafts[slug] = value;
+
+    private string GetRepoUrl(string slug)
+    {
+        if (!repoUrlDrafts.ContainsKey(slug)) repoUrlDrafts[slug] = "";
+        return repoUrlDrafts[slug];
+    }
+
+    private void SetRepoUrl(string slug, string value) => repoUrlDrafts[slug] = value;
+
+    private void OnUpstreamChanged(string slug, ChangeEventArgs e) =>
+        SetUpstreamDraft(slug, e.Value?.ToString() ?? "");
+
+    private void OnRepoKindChanged(string slug, ChangeEventArgs e) =>
+        SetRepoKind(slug, e.Value?.ToString() ?? "web_app");
+
+    private void OnRepoUrlChanged(string slug, ChangeEventArgs e) =>
+        SetRepoUrl(slug, e.Value?.ToString() ?? "");
+
+    private async Task SaveUpstream(ProductRegistryDto p)
+    {
+        busy = true;
+        var url = GetUpstreamDraft(p.TenantId);
+        var r = await SupportApi.UpdateProductUpstreamUrlAsync(p.TenantId, string.IsNullOrWhiteSpace(url) ? null : url.Trim());
+        Show(r.Success ? "API URL saved" : r.Message ?? "Failed", !r.Success);
+        await Load();
+        busy = false;
+    }
+
+    private async Task TestUpstream(string slug)
+    {
+        busy = true;
+        var r = await SupportApi.GetProductUpstreamStatusAsync(slug);
+        if (r.Success && r.Data is not null) statusBySlug[slug] = r.Data;
+        Show(r.Success ? (r.Data?.Reachable == true ? "API reachable" : r.Data?.Message ?? "Not reachable") : r.Message ?? "Failed", !r.Success);
+        busy = false;
+    }
+
+    private async Task SaveRepo(string slug)
+    {
+        busy = true;
+        var url = GetRepoUrl(slug);
+        if (string.IsNullOrWhiteSpace(url)) { Show("Enter a GitHub URL", true); busy = false; return; }
+        var r = await SupportApi.UpsertProductRepoAsync(slug, GetRepoKind(slug), url.Trim());
+        Show(r.Success ? "Repository linked" : r.Message ?? "Failed", !r.Success);
+        repoUrlDrafts[slug] = "";
+        await Load();
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}

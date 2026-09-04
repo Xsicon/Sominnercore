@@ -37,7 +37,7 @@ JwtSecret for the bridge must match MuuqWear `Authentication:JwtSecret` (Support
 
 Cutover notes: `../Sominnercore-SupportApi/docs/support-muuqwear-cutover.md`  
 Schema SQL: `../Sominnercore-SupportApi/supabase/support_schema.sql` (schema name remains `sominnercore`)  
-Also apply: `products_registry.sql`, `product_repos.sql`, `staff_access.sql`, `teams.sql`, `support_w2_intake.sql`, `support_w2_lifecycle.sql`, `support_w3_incidents.sql`, `support_w4_engineering.sql`, `support_w5_people_ops.sql`, `support_w6_platform_glue.sql`, `support_w7_insights.sql`.
+Also apply: `products_registry.sql`, `product_repos.sql`, `staff_access.sql`, `teams.sql`, `support_w2_intake.sql`, `support_w2_lifecycle.sql`, `support_w3_incidents.sql`, `support_w4_engineering.sql`, `support_w5_people_ops.sql`, `support_w6_platform_glue.sql`, `support_w7_insights.sql`, **`storage_buckets.sql`** (creates `ops-files` bucket for File Management uploads).
 
 ## Linked repos (web + API)
 
@@ -85,3 +85,9 @@ Hub sidebar **Project** switcher calls `GET api/Support/tenants`, then sets `X-T
 ```
 
 Local `dotnet run` uses `wwwroot/appsettings.Development.json` → `http://localhost:5241/`.
+
+## Engineering + People (S4)
+
+- **Assignable staff:** `GET api/Staff/assignable` — used by the task board/modal member picker. Restart KobNetiApi after deploy.
+- **Clock-in timezone:** each punch stores `@tz:{ianaId}@` in `ops_time_entries.notes` (browser timezone at clock-in). Shared accounts show each punch in the timezone where it was started.
+- **Payroll:** `GET/POST api/PeopleOps/pay-*` — periods, rates, calculate, submit, CSV export.

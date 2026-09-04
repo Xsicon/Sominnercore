@@ -1,0 +1,153 @@
+@using KobNeti.Services.Support
+@inject SupportApiClient SupportApi
+
+<div class="kn-s3-page kn-s5-platform-page">
+    <div class="kn-s5-page-head">
+        <div>
+            <p class="kn-s3-eyebrow">Platform</p>
+            <h2>Calendar</h2>
+            <p>Team events and milestone reminders for @SupportApi.DisplayName</p>
+        </div>
+        <div class="kn-s5-page-head__actions">
+            <button type="button" class="kn-btn kn-btn--outline kn-btn--sm" disabled="@busy" @onclick="SendReminders">
+                <span class="material-symbols-outlined" aria-hidden="true">notifications_active</span>
+                Send reminders
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="kn-s5-toast @(msgIsError ? "kn-s5-toast--error" : "")" role="status">@msg</div>
+    }
+
+    <div class="kn-s5-stats">
+        <div class="kn-s5-stat">
+            <div class="kn-s5-stat__label">Upcoming</div>
+            <div class="kn-s5-stat__value">@upcoming.Count</div>
+        </div>
+        <div class="kn-s5-stat">
+            <div class="kn-s5-stat__label">This week</div>
+            <div class="kn-s5-stat__value">@thisWeekCount</div>
+        </div>
+        <div class="kn-s5-stat">
+            <div class="kn-s5-stat__label">Milestones</div>
+            <div class="kn-s5-stat__value">@events.Count(e => e.EventType == "milestone")</div>
+        </div>
+    </div>
+
+    <div class="kn-s5-calendar-grid">
+        <section class="kn-s5-card">
+            <h3 class="kn-s5-card__title">Add event</h3>
+            <div class="kn-s5-toolbar" style="margin:0.75rem 0 0;padding:0;border:none;background:transparent;">
+                <input type="text" placeholder="Event title" @bind="title" disabled="@busy" style="flex:1;" />
+                <select class="kn-s3-field__select" @bind="eventType" disabled="@busy">
+                    <option value="meeting">Meeting</option>
+                    <option value="milestone">Milestone</option>
+                    <option value="reminder">Reminder</option>
+                </select>
+                <input type="datetime-local" @bind="starts" disabled="@busy" />
+                <button type="button" class="kn-btn kn-btn--primary kn-btn--sm" disabled="@busy" @onclick="Create">Add</button>
+            </div>
+        </section>
+
+        <section>
+            @if (loading)
+            {
+                <div class="kn-s3-loading-block" role="status" aria-busy="true">
+                    <span class="kn-s3-spinner" aria-hidden="true"></span>
+                    <p>Loading events…</p>
+                </div>
+            }
+            else if (upcoming.Count == 0)
+            {
+                <div class="kn-s5-empty">
+                    <span class="material-symbols-outlined" aria-hidden="true">event</span>
+                    <strong>No upcoming events</strong>
+                    <p>Add a meeting or milestone above.</p>
+                </div>
+            }
+            else
+            {
+                <div class="kn-s5-event-list">
+                    @foreach (var e in upcoming)
+                    {
+                        var local = e.StartsAt.ToLocalTime();
+                        <article class="kn-s5-event">
+                            <div class="kn-s5-event__date">
+                                <span>@local.Day</span>
+                                @local.ToString("MMM")
+                            </div>
+                            <div>
+                                <strong>@e.Title</strong>
+                                <div class="kn-s5-card__meta">
+                                    <span class="kn-chip kn-chip--neutral">@e.EventType</span>
+                                    <span>@local.ToString("ddd, h:mm tt")</span>
+                                    @if (!string.IsNullOrEmpty(e.SourceEntityType))
+                                    {
+                                        <span>from @e.SourceEntityType</span>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private string? msg;
+    private bool msgIsError;
+    private string title = "";
+    private string eventType = "meeting";
+    private DateTime? starts = DateTime.Now.AddDays(1);
+    private List<CalendarEventDto> events = [];
+
+    private List<CalendarEventDto> upcoming =>
+        events.Where(e => e.StartsAt >= DateTime.UtcNow.AddHours(-1))
+            .OrderBy(e => e.StartsAt)
+            .ToList();
+
+    private int thisWeekCount =>
+        events.Count(e => e.StartsAt >= DateTime.UtcNow.Date && e.StartsAt < DateTime.UtcNow.Date.AddDays(7));
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        var r = await SupportApi.GetCalendarEventsAsync();
+        events = r.Success ? r.Data ?? [] : [];
+        if (!r.Success) Show(r.Message ?? "Failed to load", true);
+        loading = false;
+    }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(title) || starts is null) return;
+        busy = true;
+        var r = await SupportApi.CreateCalendarEventAsync(title.Trim(), starts.Value.ToUniversalTime(), eventType);
+        Show(r.Success ? "Event created" : r.Message ?? "Failed", !r.Success);
+        if (r.Success) title = "";
+        await Load();
+        busy = false;
+    }
+
+    private async Task SendReminders()
+    {
+        busy = true;
+        var r = await SupportApi.SendCalendarRemindersAsync();
+        Show(r.Success ? $"Sent {r.Data} reminder(s)" : r.Message ?? "Failed", !r.Success);
+        busy = false;
+    }
+
+    private void Show(string text, bool error)
+    {
+        msg = text;
+        msgIsError = error;
+    }
+}
